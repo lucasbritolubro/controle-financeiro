@@ -4,3 +4,4 @@
 .env.*
 config.local.js
 .vercel
+supabase/.temp

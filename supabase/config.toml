@@ -1,4 +1,5 @@
+# Preenchido automaticamente por scripts/setup-online.sh
 project_id = ""
 
 [db]
-major_version = 15
+major_version = 17

@@ -202,9 +202,60 @@ fi
 
 echo "→ URL: $SUPABASE_URL"
 
+write_supabase_config() {
+  cat > supabase/config.toml <<EOF
+project_id = "$PROJECT_REF"
+
+[db]
+major_version = 17
+EOF
+}
+
+apply_migrations() {
+  export PROJECT_REF DB_PASSWORD
+  write_supabase_config
+
+  if [[ -z "${DB_PASSWORD:-}" ]]; then
+    read -rsp "Senha do banco Postgres (definida ao criar o projeto): " DB_PASSWORD
+    echo ""
+  fi
+
+  supabase link --project-ref "$PROJECT_REF" --password "$DB_PASSWORD" --yes 2>/dev/null \
+    || supabase link --project-ref "$PROJECT_REF" --yes
+
+  if supabase db push --linked --password "$DB_PASSWORD" --yes; then
+    return 0
+  fi
+
+  echo "→ db push falhou, tentando via psql..."
+  local migration="$ROOT/supabase/migrations/20260714190000_app_storage.sql"
+  local pooler_file="$ROOT/supabase/.temp/pooler-url"
+
+  if [[ -f "$pooler_file" ]] && command -v psql >/dev/null 2>&1; then
+    local pooler_url db_url
+    pooler_url=$(cat "$pooler_file")
+    db_url=$(python3 -c "
+from urllib.parse import urlparse, urlunparse
+import os
+u = urlparse('$pooler_url')
+user = u.username or 'postgres'
+host_user = user if '.' in user else f'postgres.{os.environ['PROJECT_REF']}'
+netloc = f'{host_user}:{os.environ['DB_PASSWORD']}@{u.hostname}:{u.port or 5432}'
+print(urlunparse((u.scheme, netloc, u.path, '', '', '')))
+" 2>/dev/null)
+    if [[ -n "$db_url" ]] && psql "$db_url" -f "$migration" -v ON_ERROR_STOP=1; then
+      return 0
+    fi
+  fi
+
+  echo ""
+  echo "ERRO: Não foi possível aplicar as migrations automaticamente."
+  echo "Cole o conteúdo de supabase/schema.sql no SQL Editor do Supabase e rode o script de novo."
+  return 1
+}
+
 echo "→ Aplicando migrations..."
-supabase link --project-ref "$PROJECT_REF" --yes
-supabase db push --yes
+PROJECT_REF="$PROJECT_REF" DB_PASSWORD="${DB_PASSWORD:-}" apply_migrations || exit 1
 
 echo "→ Criando usuário de login..."
 USER_RESP=$(curl -sS -X POST \
