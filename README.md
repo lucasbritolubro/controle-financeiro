@@ -1,20 +1,53 @@
 # Controle Financeiro
 
-Painel financeiro pessoal em HTML, CSS e JavaScript — sem dependências externas.
+Painel financeiro pessoal em HTML, CSS e JavaScript com dados na nuvem (Supabase).
 
-## Como usar
+## Publicar online (Vercel + Supabase)
 
-Abra o arquivo `index.html` no navegador ou sirva localmente:
+### 1. Banco de dados no Supabase
+
+1. Abra [supabase.com](https://supabase.com) → seu projeto → **SQL Editor**
+2. Cole e execute o conteúdo de [`supabase/schema.sql`](supabase/schema.sql)
+
+### 2. Criar seu usuário
+
+1. No Supabase: **Authentication** → **Users** → **Add user**
+2. Cadastre seu e-mail e senha
+3. (Recomendado, uso solo) **Authentication** → **Providers** → **Email** → desative **Confirm email**
+
+### 3. Chaves do projeto
+
+No Supabase: **Project Settings** → **API**
+
+- `Project URL` → variável `SUPABASE_URL`
+- `anon public` → variável `SUPABASE_ANON_KEY`
+
+### 4. Deploy na Vercel
+
+1. Abra [vercel.com](https://vercel.com) → **Add New Project**
+2. Importe o repositório `lubrosolutions/controle-financeiro`
+3. Em **Environment Variables**, adicione:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+4. Clique em **Deploy**
+
+O site ficará em um endereço como `https://controle-financeiro.vercel.app`.
+
+### 5. Testar localmente (opcional)
 
 ```bash
-python3 -m http.server 8000
+cp config.local.example.js config.local.js
+# edite config.local.js com suas chaves
+
+npx vercel dev
 ```
 
-Depois acesse [http://localhost:8000](http://localhost:8000).
+Ou use `python3 -m http.server` apenas para ver o layout — login e banco exigem `vercel dev` ou o deploy.
 
-## Funcionalidades
+## Estrutura dos dados
 
-- Controle de receitas e despesas
-- Perfis financeiros
-- Visualização por categorias
-- Interface responsiva
+Cada perfil (Lucas, Lubro, Nexo) e as contas a pagar são salvos como JSON na tabela `app_storage`, isolados pelo seu usuário (Row Level Security).
+
+## Repositório
+
+https://github.com/lubrosolutions/controle-financeiro

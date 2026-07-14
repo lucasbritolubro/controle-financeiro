@@ -2,3 +2,5 @@
 *.log
 .env
 .env.*
+config.local.js
+.vercel
