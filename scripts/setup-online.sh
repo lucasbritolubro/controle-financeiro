@@ -110,12 +110,15 @@ if [[ -z "$PROJECT_REF" ]]; then
   echo ""
   echo "Nenhum projeto encontrado."
   read -rp "Criar novo projeto? (s/N): " CREATE_CHOICE
-  if [[ "${CREATE_CHOICE,,}" != "s" ]]; then
+  case "$CREATE_CHOICE" in
+    s|S) ;;
+    *)
     echo ""
     echo "Crie um projeto em https://supabase.com/dashboard e rode de novo informando o ref:"
     echo "  SUPABASE_PROJECT_REF=seu_ref ./scripts/setup-online.sh"
     exit 1
-  fi
+    ;;
+  esac
 
   ORGS_JSON=$(curl -sS "${HDR[@]}" "$API/organizations")
   ORG_ID=$(echo "$ORGS_JSON" | python3 -c "
