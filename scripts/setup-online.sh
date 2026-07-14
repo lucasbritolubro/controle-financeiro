@@ -159,23 +159,48 @@ fi
 echo "→ Projeto selecionado: $PROJECT_REF"
 
 PROJECT=$(curl -sS "${HDR[@]}" "$API/projects/$PROJECT_REF")
-SUPABASE_URL=$(echo "$PROJECT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('endpoint',''))")
 KEYS=$(curl -sS "${HDR[@]}" "$API/projects/$PROJECT_REF/api-keys")
-SUPABASE_ANON_KEY=$(echo "$KEYS" | python3 -c "import json,sys
-for k in json.load(sys.stdin):
-    if k.get('name')=='anon':
-        print(k['api_key']); break")
-SERVICE_ROLE_KEY=$(echo "$KEYS" | python3 -c "import json,sys
-for k in json.load(sys.stdin):
-    if k.get('name')=='service_role':
-        print(k['api_key']); break")
+
+read -r SUPABASE_URL SUPABASE_ANON_KEY SERVICE_ROLE_KEY < <(
+  PROJECT_REF="$PROJECT_REF" PROJECT_JSON="$PROJECT" KEYS_JSON="$KEYS" python3 <<'PY'
+import json, os
+
+project = json.loads(os.environ["PROJECT_JSON"])
+keys = json.loads(os.environ["KEYS_JSON"])
+ref = project.get("ref") or project.get("id") or os.environ["PROJECT_REF"]
+url = project.get("endpoint") or f"https://{ref}.supabase.co"
+
+anon = ""
+service = ""
+for k in keys:
+    api_key = k.get("api_key", "")
+    if not api_key or "···" in api_key:
+        continue
+    if k.get("name") == "anon":
+        anon = api_key
+    elif k.get("name") == "service_role":
+        service = api_key
+
+for k in keys:
+    api_key = k.get("api_key", "")
+    if not api_key or "···" in api_key:
+        continue
+    if not anon and k.get("type") == "publishable":
+        anon = api_key
+    if not service and k.get("type") == "secret":
+        service = api_key
+
+print(url, anon, service)
+PY
+)
 
 if [[ -z "$SUPABASE_URL" || -z "$SUPABASE_ANON_KEY" || -z "$SERVICE_ROLE_KEY" ]]; then
   echo "ERRO: Não foi possível obter as chaves do projeto."
-  echo "PROJECT=$PROJECT"
-  echo "KEYS=$KEYS"
+  echo "URL: ${SUPABASE_URL:-vazio} | anon: ${SUPABASE_ANON_KEY:+ok} | service: ${SERVICE_ROLE_KEY:+ok}"
   exit 1
 fi
+
+echo "→ URL: $SUPABASE_URL"
 
 echo "→ Aplicando migrations..."
 supabase link --project-ref "$PROJECT_REF" --yes
