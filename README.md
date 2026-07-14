@@ -33,7 +33,27 @@ No Supabase: **Project Settings** → **API**
 
 O site ficará em um endereço como `https://controle-financeiro.vercel.app`.
 
-### 5. Testar localmente (opcional)
+### 5. Domínio próprio (financeiro.lubro.com.br)
+
+**Na Vercel** (ou via script):
+
+```bash
+./scripts/add-domain.sh
+```
+
+**No DNS** (onde `lubro.com.br` é gerenciado):
+
+| Campo | Valor |
+|-------|-------|
+| Tipo | CNAME |
+| Nome | `financeiro` |
+| Destino | `cname.vercel-dns.com` |
+
+Ou pelo painel: [vercel.com/lubro/controle-financeiro/settings/domains](https://vercel.com/lubro/controle-financeiro/settings/domains) → Add → `financeiro.lubro.com.br`
+
+Aguarde alguns minutos e acesse `https://financeiro.lubro.com.br`.
+
+### 6. Testar localmente (opcional)
 
 ```bash
 cp config.local.example.js config.local.js
