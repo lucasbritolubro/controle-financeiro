@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="/opt/homebrew/bin:$PATH"
 
-DOMAIN="${DOMAIN:-lubrosolutions.com}"
+DOMAIN="${DOMAIN:-financas.lubrosolutions.com}"
 PROD_URL="${PROD_URL:-controle-financeiro-two-bice.vercel.app}"
 
 echo "=== Domínio personalizado: $DOMAIN ==="
@@ -19,15 +19,6 @@ vercel domains add "$DOMAIN" --token "$VERCEL_TOKEN" 2>/dev/null || true
 echo "→ Vinculando ao projeto controle-financeiro..."
 vercel alias set "$PROD_URL" "$DOMAIN" --token "$VERCEL_TOKEN" --scope lubro 2>/dev/null \
   || vercel alias set "$PROD_URL" "$DOMAIN" --token "$VERCEL_TOKEN"
-
-# www opcional
-if [[ "$DOMAIN" != www.* ]]; then
-  WWW="www.$DOMAIN"
-  echo "→ Adicionando $WWW ..."
-  vercel domains add "$WWW" --token "$VERCEL_TOKEN" 2>/dev/null || true
-  vercel alias set "$PROD_URL" "$WWW" --token "$VERCEL_TOKEN" --scope lubro 2>/dev/null \
-    || vercel alias set "$PROD_URL" "$WWW" --token "$VERCEL_TOKEN"
-fi
 
 echo ""
 echo "============================================"
