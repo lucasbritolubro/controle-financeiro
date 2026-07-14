@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="/opt/homebrew/bin:$PATH"
 
-DOMAIN="${DOMAIN:-financeiro.lubro.com.br}"
+DOMAIN="${DOMAIN:-lubrosolutions.com}"
 PROD_URL="${PROD_URL:-controle-financeiro-two-bice.vercel.app}"
 
 echo "=== Domínio personalizado: $DOMAIN ==="
@@ -20,17 +20,39 @@ echo "→ Vinculando ao projeto controle-financeiro..."
 vercel alias set "$PROD_URL" "$DOMAIN" --token "$VERCEL_TOKEN" --scope lubro 2>/dev/null \
   || vercel alias set "$PROD_URL" "$DOMAIN" --token "$VERCEL_TOKEN"
 
+# www opcional
+if [[ "$DOMAIN" != www.* ]]; then
+  WWW="www.$DOMAIN"
+  echo "→ Adicionando $WWW ..."
+  vercel domains add "$WWW" --token "$VERCEL_TOKEN" 2>/dev/null || true
+  vercel alias set "$PROD_URL" "$WWW" --token "$VERCEL_TOKEN" --scope lubro 2>/dev/null \
+    || vercel alias set "$PROD_URL" "$WWW" --token "$VERCEL_TOKEN"
+fi
+
 echo ""
 echo "============================================"
 echo "Domínio registrado na Vercel!"
 echo ""
-echo "Agora configure o DNS onde lubro.com.br é gerenciado"
-echo "(Registro.br, Cloudflare, Hostinger, etc.):"
+echo "Configure o DNS onde $DOMAIN é gerenciado:"
 echo ""
-echo "  Tipo:  CNAME"
-echo "  Nome:  financeiro"
-echo "  Valor: cname.vercel-dns.com"
-echo "  TTL:   automático (ou 3600)"
+
+if [[ "$DOMAIN" == *.*.* ]]; then
+  SUB="${DOMAIN%%.*}"
+  echo "  Tipo:  CNAME"
+  echo "  Nome:  $SUB"
+  echo "  Valor: cname.vercel-dns.com"
+else
+  echo "  Registro A (domínio raiz):"
+  echo "    Nome:  @"
+  echo "    Valor: 76.76.21.21"
+  echo ""
+  echo "  Registro CNAME (www):"
+  echo "    Nome:  www"
+  echo "    Valor: cname.vercel-dns.com"
+fi
+
+echo ""
+echo "  TTL: automático (ou 3600)"
 echo ""
 echo "Se usar Cloudflare, deixe o proxy DESLIGADO (nuvem cinza)"
 echo "na primeira vez, para o SSL da Vercel validar."
