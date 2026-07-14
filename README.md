@@ -45,9 +45,13 @@ O site ficará em um endereço como `https://controle-financeiro.vercel.app`.
 
 | Tipo | Nome | Destino |
 |------|------|---------|
-| CNAME | `financas` | `cname.vercel-dns.com` |
+| CNAME | `financas` | *(valor exato que a Vercel mostrar)* |
 
-Ou pelo painel: [vercel.com/lubro/controle-financeiro/settings/domains](https://vercel.com/lubro/controle-financeiro/settings/domains) → Add → `financas.lubrosolutions.com`
+**Importante:** adicione pelo painel do projeto (não use `vercel alias`):
+
+[vercel.com/lubro/controle-financeiro/settings/domains](https://vercel.com/lubro/controle-financeiro/settings/domains) → **Add** → `financas.lubrosolutions.com`
+
+Copie o CNAME que a Vercel exibir (pode ser `cname.vercel-dns.com` ou um endereço `*.vercel-dns-017.com`).
 
 Aguarde alguns minutos e acesse `https://financas.lubrosolutions.com`.
 
