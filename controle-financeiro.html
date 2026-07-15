@@ -1063,6 +1063,11 @@
       </div>
       <p class="bt-hint">Se escolher "Não", fica marcado como pago, mas não gera lançamento de saída.</p>
     </div>
+    <div class="field" id="markPaidFolhaDateWrap" style="display:none; margin-top:12px; max-width:280px;">
+      <label>Data do pagamento efetivado (opcional)</label>
+      <input type="date" id="markPaidFolhaDate">
+      <p class="bt-hint" style="margin-top:6px;">Se vazio, usa a data de hoje. Essa data entra no lançamento de saída.</p>
+    </div>
     <div style="display:flex; gap:10px; margin-top:16px;">
       <button type="button" class="btn-mini ghost" id="markPaidModalCancel" style="flex:1; padding:11px;">Cancelar</button>
       <button type="button" class="btn-add" id="markPaidModalConfirm" style="flex:1; justify-content:center;">Confirmar</button>
@@ -2177,6 +2182,10 @@ function openMarkPaidModal(type, id, afterCallback){
   markPaidCountBalance = (item.countInBalance===false) ? 'nao' : 'sim';
   document.getElementById('markPaidModalSub').textContent = type==='folha' ? `${item.desc} (${item.tipo})` : item.desc;
   document.querySelectorAll('[data-mpbal]').forEach(x=>x.classList.toggle('active', x.dataset.mpbal===markPaidCountBalance));
+  const folhaDateWrap = document.getElementById('markPaidFolhaDateWrap');
+  const folhaDateInput = document.getElementById('markPaidFolhaDate');
+  if(folhaDateWrap) folhaDateWrap.style.display = type==='folha' ? 'block' : 'none';
+  if(folhaDateInput) folhaDateInput.value = todayISO();
   document.getElementById('markPaidModal').style.display = 'flex';
 }
 function closeMarkPaidModal(){
@@ -2190,10 +2199,12 @@ document.getElementById('markPaidModalConfirm').addEventListener('click', async 
   if(!markPaidModalTarget) return;
   const { type, id } = markPaidModalTarget;
   const countInBalance = markPaidCountBalance !== 'nao';
+  const folhaDateInput = document.getElementById('markPaidFolhaDate');
+  const paidDate = (type==='folha' && folhaDateInput && folhaDateInput.value) ? folhaDateInput.value : null;
   const cb = markPaidModalCallback;
   closeMarkPaidModal();
   if(type==='bill') await toggleBillPaid(id, { countInBalance });
-  else if(type==='folha') await toggleFolhaPaid(id, { countInBalance });
+  else if(type==='folha') await toggleFolhaPaid(id, { countInBalance, paidDate });
   if(cb) cb();
 });
 
@@ -2439,15 +2450,18 @@ async function toggleFolhaPaid(id, opts){
   const p = PROFILES.find(x=>x.id===f.classification) || currentProfile;
   try{
     if(!wasPaid){
+      const payDate = (opts && opts.paidDate) ? opts.paidDate : todayISO();
+      f.paidDate = payDate;
       if(f.countInBalance !== false){
         const cat = defaultOutCategory(p);
-        const tx = { id: uid(), desc: `Folha: ${f.desc} (${f.tipo})`, value: f.value, category: cat, date: todayISO(), type: 'saida' };
+        const tx = { id: uid(), desc: `Folha: ${f.desc} (${f.tipo})`, value: f.value, category: cat, date: payDate, type: 'saida' };
         await addTransactionToProfile(p.id, tx);
         f.paidTxId = tx.id;
       }
     } else {
       if(f.paidTxId) await removeTransactionFromProfile(p.id, f.paidTxId);
       f.paidTxId = null;
+      f.paidDate = null;
     }
   }catch(err){ console.error('Erro ao sincronizar folha', err); }
   await saveFolha();
@@ -2472,6 +2486,7 @@ function renderFolha(){
     else if(urg==='urgent'){ statusLabel = dLeft<0 ? 'Vencido' : 'Vence em breve'; statusColor='var(--rose)'; cardCls='bill-urgent'; }
     else { statusLabel='Pendente'; statusColor='var(--amber)'; cardCls='bill-pending'; }
     const dateFmt = new Date(f.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
+    const paidDateFmt = f.paid && f.paidDate ? new Date(f.paidDate+'T00:00:00').toLocaleDateString('pt-BR') : null;
     const bd = f.bankDetails;
     const bdHtml = bd ? `<div class="folha-bank-details">
       ${bd.nome?`<span><b>Favorecido:</b> ${escapeHtml(bd.nome)}</span>`:''}
@@ -2493,7 +2508,7 @@ function renderFolha(){
         </span>
       </div>
       <div class="goal-meta" style="margin-top:8px;">
-        <span>Vence em ${dateFmt} &middot; ${fmtBRL(f.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
+        <span>Vence em ${dateFmt}${paidDateFmt ? ` &middot; Pago em ${paidDateFmt}` : ''} &middot; ${fmtBRL(f.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
           <button class="btn-mini ${f.paid?'ghost':''}" onclick="${f.paid ? `toggleFolhaPaid('${f.id}')` : `openMarkPaidModal('folha','${f.id}')`}">${f.paid ? 'Desmarcar' : 'Marcar como pago'}</button>
           <button class="icon-btn" title="Editar" onclick="editFolha('${f.id}')">✎</button>
