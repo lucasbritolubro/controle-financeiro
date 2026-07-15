@@ -2313,8 +2313,7 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     contasSubActive = btn.dataset.sub;
-    if(contasSubActive === 'todas') populateBillsMonthSelect(false, BILLS_MONTH_ALL);
-    else if(contasSubActive === 'nao-recorrentes') populateBillsMonthSelect(false);
+    if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(false);
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
     else renderContasTotals();
@@ -3178,7 +3177,7 @@ function currentMonthKeyNow(){ return monthKey(todayISO()); }
 function getContasMonthKey(){
   const el = document.getElementById('billsMonthSelect');
   if(el && el.value) return el.value;
-  return contasSubActive === 'todas' ? BILLS_MONTH_ALL : currentMonthKeyNow();
+  return currentMonthKeyNow();
 }
 function populateBillsMonthSelect(preserveSelection, forceValue){
   const keys = new Set(getAllBillsForDisplay().map(b=>monthKey(b.dueDate)));
@@ -3194,10 +3193,10 @@ function populateBillsMonthSelect(preserveSelection, forceValue){
   el.innerHTML = html;
   if(forceValue) el.value = forceValue;
   else if(preserveSelection && (prev === BILLS_MONTH_ALL || sortedKeys.includes(prev))) el.value = prev;
-  else el.value = contasSubActive === 'todas' ? BILLS_MONTH_ALL : currentMonthKeyNow();
+  else el.value = currentMonthKeyNow();
 }
 function resetBillsMonthFilter(){
-  populateBillsMonthSelect(false, contasSubActive === 'todas' ? BILLS_MONTH_ALL : null);
+  populateBillsMonthSelect(false);
 }
 document.getElementById('billsMonthSelect').addEventListener('change', async ()=>{
   await renderContasTab();
@@ -3551,7 +3550,7 @@ async function runInit(){
   const now = new Date();
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   await ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth());
-  populateBillsMonthSelect(false, BILLS_MONTH_ALL);
+  populateBillsMonthSelect(false);
   populateFolhaMonthSelect(false);
   renderAll();
   renderRecurringList();
