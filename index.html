@@ -1375,7 +1375,22 @@ function billDisplayKind(b){
     if(inst && catUpper(inst.category) === 'CARTÃO DE CRÉDITO') return 'CARTÃO DE CRÉDITO';
     return null;
   }
+  if(b.recurringId){
+    const r = recurringBills.find(x=>x.id===b.recurringId);
+    if(r && r.billKind) return r.billKind;
+  }
   return b.billKind || null;
+}
+function syncBillKindsFromRecurring(){
+  let changed = false;
+  bills.forEach(b=>{
+    if(!b.recurringId) return;
+    const r = recurringBills.find(x=>x.id===b.recurringId);
+    if(!r || !r.billKind) return;
+    const kind = catUpper(r.billKind);
+    if(b.billKind !== kind){ b.billKind = kind; changed = true; }
+  });
+  return changed;
 }
 function billKindChipClass(b){
   const kind = billDisplayKind(b);
@@ -1520,8 +1535,8 @@ async function ensureRecurringInstancesForMonth(year, month){
   recurringBills.forEach(r=>{
     const dueDates = recurringDueDatesInMonth(r, year, month);
     dueDates.forEach(dd=>{
-      const exists = bills.some(b => b.recurringId === r.id && b.dueDate === dd);
-      if(!exists){
+      const inst = bills.find(b => b.recurringId === r.id && b.dueDate === dd);
+      if(!inst){
         const isVariable = r.mode === 'variable';
         const autoNote = isVariable ? 'Valor variável — confira e ajuste o valor deste mês.' : null;
         const notes = [r.notes, autoNote].filter(Boolean).join(' ') || null;
@@ -1529,6 +1544,9 @@ async function ensureRecurringInstancesForMonth(year, month){
           id: uid(), desc: r.desc, value: r.value, dueDate: dd,
           classification: r.classification, billKind: r.billKind || null, notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
         });
+        changed = true;
+      } else if(r.billKind && inst.billKind !== catUpper(r.billKind)){
+        inst.billKind = catUpper(r.billKind);
         changed = true;
       }
     });
@@ -2132,7 +2150,13 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
       b.desc=desc; b.value=valor; b.dueDate=vencimento; b.classification=classificacao; b.billKind=billKind; b.notes = obs || null; b.bank = banco; b.countInBalance = billCountBalance!=='nao';
       if(b.recurringId){
         const r = recurringBills.find(x=>x.id===b.recurringId);
-        if(r && r.mode === 'variable'){ r.value = valor; await saveRecurring(); renderRecurringList(); }
+        if(r){
+          if(r.mode === 'variable') r.value = valor;
+          r.billKind = billKind;
+          bills.forEach(x=>{ if(x.recurringId===b.recurringId) x.billKind = billKind; });
+          await saveRecurring();
+          renderRecurringList();
+        }
       }
     }
     editingBillId = null;
@@ -2159,7 +2183,7 @@ function editBill(id){
   document.getElementById('bValor').value = toCurrencyDisplay(b.value);
   document.getElementById('bVencimento').value = b.dueDate;
   document.getElementById('bClassificacao').value = b.classification;
-  setBillKindValue('bKind', 'bKindCustomWrap', 'bKindCustom', b.billKind || null);
+  setBillKindValue('bKind', 'bKindCustomWrap', 'bKindCustom', billDisplayKind(b));
   document.getElementById('bObs').value = b.notes || '';
   setBankValue('bBanco', 'bBancoCustom', 'bBancoCustomWrap', b.bank || null);
   billCountBalance = (b.countInBalance===false) ? 'nao' : 'sim';
@@ -3015,7 +3039,7 @@ function renderBillCard(b){
         <span class="goal-name">${b.desc}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
-          ${billKindTagHTML(b.billKind)}
+          ${billKindTagHTML(billDisplayKind(b))}
           ${bankTagHTML(b.bank)}
           ${b.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'}
           ${classTagHTML(b.classification)}
@@ -3371,6 +3395,7 @@ async function runInit(){
   await loadBillKinds();
   await loadBills();
   await loadRecurring();
+  if(syncBillKindsFromRecurring()) await saveBills();
   normalizeBillKindsFromData();
   await saveBillKinds();
   populateBillKindSelect('bKind');
