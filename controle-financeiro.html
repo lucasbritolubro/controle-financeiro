@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260715d -->
+<!-- deploy-v20260715f -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1261,6 +1261,14 @@ let billsStorageReady = false;
 let billsStorageError = false;
 let recurringStorageReady = false;
 let recurringStorageError = false;
+let stateStorageReady = false;
+let stateStorageError = false;
+let contasDataLock = Promise.resolve();
+function withContasLock(fn){
+  const next = contasDataLock.then(() => fn());
+  contasDataLock = next.catch(() => {});
+  return next;
+}
 window.storage = {
   async get(key){
     if(!supabaseClient) return { error: true };
@@ -1341,21 +1349,36 @@ function tagClass(cat){
 }
 
 async function loadState(){
+  const previousState = state;
+  stateStorageReady = false;
+  stateStorageError = false;
   state = { transactions: [], goals: [], installments: [], customCategoriesIn: [], customCategoriesOut: [] };
   try{
     const res = await window.storage.get(storageKey(currentProfile.id));
-    if(res && !res.error){
-      const parsed = parseStoredJson(res.value, {});
-      state.transactions = parsed.transactions || [];
-      state.goals = parsed.goals || [];
-      state.installments = parsed.installments || [];
-      state.customCategoriesIn = parsed.customCategoriesIn || [];
-      state.customCategoriesOut = parsed.customCategoriesOut || [];
-      normalizeStoredCategories();
+    if(!res || res.error){
+      stateStorageError = true;
+      state = previousState;
+      return;
     }
-  }catch(e){}
+    if(res.missing){
+      stateStorageReady = true;
+      return;
+    }
+    const parsed = parseStoredJson(res.value, {});
+    state.transactions = parsed.transactions || [];
+    state.goals = parsed.goals || [];
+    state.installments = parsed.installments || [];
+    state.customCategoriesIn = parsed.customCategoriesIn || [];
+    state.customCategoriesOut = parsed.customCategoriesOut || [];
+    normalizeStoredCategories();
+    stateStorageReady = true;
+  }catch(e){
+    stateStorageError = true;
+    state = previousState;
+  }
 }
 async function saveState(){
+  if(stateStorageError) return;
   try{ await window.storage.set(storageKey(currentProfile.id), JSON.stringify(state), false); }
   catch(e){ console.error('Falha ao salvar', e); }
 }
@@ -1392,20 +1415,37 @@ function setupBillKindToggle(selectId, wrapId, customId){
     else { wrap.style.display = 'none'; document.getElementById(customId).value = ''; }
   });
 }
-async function resolveBillKind(selectId, customId){
+function readBillKindFromForm(selectId, customId){
   let kind = document.getElementById(selectId).value;
   if(kind === '__new__'){
     const nova = catUpper(document.getElementById(customId).value.trim());
     if(!nova) return null;
     kind = nova;
-    if(!getBillKindList().includes(kind)){
-      billKindCustom.push(kind);
-      await saveBillKinds();
-      populateBillKindSelect('bKind');
-      populateBillKindSelect('rKind');
-    }
   }
   return normalizeBillKind(kind);
+}
+async function persistBillKindIfNew(kind){
+  if(!kind || getBillKindList().includes(kind)) return;
+  billKindCustom.push(kind);
+  await saveBillKinds();
+  refreshBillKindSelects(kind);
+}
+function refreshBillKindSelects(selectedKind){
+  populateBillKindSelect('bKind');
+  populateBillKindSelect('rKind');
+  if(!selectedKind) return;
+  ['bKind','rKind'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && getBillKindList().includes(selectedKind)) el.value = selectedKind;
+  });
+  ['bKindCustomWrap','rKindCustomWrap'].forEach(id=>{
+    const wrap = document.getElementById(id);
+    if(wrap) wrap.style.display = 'none';
+  });
+  ['bKindCustom','rKindCustom'].forEach(id=>{
+    const input = document.getElementById(id);
+    if(input) input.value = '';
+  });
 }
 function setBillKindValue(selectId, wrapId, customId, kind){
   populateBillKindSelect(selectId);
@@ -1454,14 +1494,19 @@ function billKindChipClass(b){
   return ` chip-${billKindCssClass(kind)}`;
 }
 function billKindTagHTML(kind){
-  const k = normalizeBillKind(kind);
-  if(!k) return '';
-  const cls = billKindCssClass(k);
-  if(cls === 'bkind-other'){
-    const color = categoryColor(k);
-    return `<span class="class-tag bkind-other" style="background:${color}22;color:${color}">${escapeHtml(k)}</span>`;
+  try{
+    const k = normalizeBillKind(kind);
+    if(!k) return '';
+    const cls = billKindCssClass(k);
+    if(cls === 'bkind-other'){
+      const color = catColor(k);
+      return `<span class="class-tag bkind-other" style="background:${color}22;color:${color}">${escapeHtml(k)}</span>`;
+    }
+    return `<span class="class-tag ${cls}">${escapeHtml(k)}</span>`;
+  }catch(e){
+    const k = normalizeBillKind(kind);
+    return k ? `<span class="class-tag bkind-other">${escapeHtml(k)}</span>` : '';
   }
-  return `<span class="class-tag ${cls}">${escapeHtml(k)}</span>`;
 }
 function normalizeBillKindsFromData(){
   const add = k=>{
@@ -1473,32 +1518,45 @@ function normalizeBillKindsFromData(){
   recurringBills.forEach(r=>{ if(r.billKind){ r.billKind = normalizeBillKind(r.billKind); add(r.billKind); } });
 }
 async function loadBills(){
-  bills = [];
+  const previousBills = bills;
   billsStorageReady = false;
   billsStorageError = false;
   try{
     const res = await window.storage.get(BILLS_KEY);
-    if(!res || res.error){ billsStorageError = true; return; }
+    if(!res || res.error){
+      billsStorageError = true;
+      bills = previousBills;
+      return;
+    }
     bills = parseStoredList(res.value);
     billsStorageReady = true;
-  }catch(e){ billsStorageError = true; }
+  }catch(e){
+    billsStorageError = true;
+    bills = previousBills;
+  }
   bills.forEach(b=>{ if(b.billKind) b.billKind = normalizeBillKind(b.billKind); });
 }
 async function saveBills(){
   if(billsStorageError) return;
-  try{ await window.storage.set(BILLS_KEY, JSON.stringify(bills), false); }
-  catch(e){ console.error('Falha ao salvar contas', e); }
+  return withContasLock(async ()=> saveBillsUnlocked());
 }
 async function loadRecurring(){
-  recurringBills = [];
+  const previousRecurring = recurringBills;
   recurringStorageReady = false;
   recurringStorageError = false;
   try{
     const res = await window.storage.get(RECURRING_KEY);
-    if(!res || res.error){ recurringStorageError = true; return; }
+    if(!res || res.error){
+      recurringStorageError = true;
+      recurringBills = previousRecurring;
+      return;
+    }
     recurringBills = parseStoredList(res.value);
     recurringStorageReady = true;
-  }catch(e){ recurringStorageError = true; }
+  }catch(e){
+    recurringStorageError = true;
+    recurringBills = previousRecurring;
+  }
   recurringBills.forEach(r=>{ if(r.billKind) r.billKind = normalizeBillKind(r.billKind); });
 }
 function recoverRecurringTemplatesFromBills(){
@@ -1533,16 +1591,30 @@ function recoverRecurringTemplatesFromBills(){
   return changed;
 }
 async function syncContasData(){
-  await loadBills();
-  await loadRecurring();
-  let changed = false;
-  if(recoverRecurringTemplatesFromBills()){ await saveRecurring(); changed = true; }
-  if(syncBillKindsFromRecurring()){ await saveBills(); changed = true; }
-  return changed;
+  return withContasLock(async ()=>{
+    await loadBills();
+    await loadRecurring();
+    let changed = false;
+    if(recoverRecurringTemplatesFromBills()){ await saveRecurringUnlocked(); changed = true; }
+    if(syncBillKindsFromRecurring()){ await saveBillsUnlocked(); changed = true; }
+    return changed;
+  });
+}
+async function saveBillsUnlocked(){
+  if(billsStorageError) return;
+  const snapshot = bills.slice();
+  try{ await window.storage.set(BILLS_KEY, JSON.stringify(snapshot), false); }
+  catch(e){ console.error('Falha ao salvar contas', e); }
 }
 async function saveRecurring(){
   if(recurringStorageError) return;
-  try{ await window.storage.set(RECURRING_KEY, JSON.stringify(recurringBills), false); }
+  const snapshot = recurringBills.slice();
+  return withContasLock(async ()=> saveRecurringUnlocked(snapshot));
+}
+async function saveRecurringUnlocked(snapshot){
+  if(recurringStorageError) return;
+  const data = snapshot || recurringBills.slice();
+  try{ await window.storage.set(RECURRING_KEY, JSON.stringify(data), false); }
   catch(e){ console.error('Falha ao salvar contas recorrentes', e); }
 }
 async function loadFolha(){
@@ -1741,7 +1813,24 @@ async function switchProfile(id){
   await loadState();
   populateCategorySelect();
   document.getElementById('fCategoriaCustomWrap').style.display = 'none';
-  renderAll();
+  await loadBillKinds();
+  await syncContasData();
+  normalizeBillKindsFromData();
+  refreshBillKindSelects();
+  await loadFolha();
+  await loadFolhaRecurring();
+  const now = new Date();
+  await ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth());
+  await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
+  populateBillsMonthSelect(false);
+  populateFolhaMonthSelect(false);
+  updateContasSubUI();
+  await renderAll();
+  if(document.getElementById('contas').classList.contains('active')){
+    if(contasSubActive === 'recorrentes') await renderRecurringTab();
+    else await renderContasTab();
+    renderRecurringTemplatesList();
+  }
 }
 
 function getCategoryList(type){
@@ -2249,8 +2338,9 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
   const classificacao = document.getElementById('bClassificacao').value;
   const obs = document.getElementById('bObs').value.trim();
   const banco = readBankValue('bBanco', 'bBancoCustom');
-  const billKind = await resolveBillKind('bKind', 'bKindCustom');
+  const billKind = readBillKindFromForm('bKind', 'bKindCustom');
   if(!desc || isNaN(valor) || valor<=0 || !vencimento || !billKind) return;
+  await persistBillKindIfNew(billKind);
 
   if(editingBillId){
     const b = bills.find(x=>x.id===editingBillId);
@@ -2380,8 +2470,9 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
   const classificacao = document.getElementById('rClassificacao').value;
   const obs = document.getElementById('rObs').value.trim();
   const banco = readBankValue('rBanco', 'rBancoCustom');
-  const billKind = await resolveBillKind('rKind', 'rKindCustom');
+  const billKind = readBillKindFromForm('rKind', 'rKindCustom');
   if(!desc || isNaN(valor) || valor<=0 || !billKind) return;
+  await persistBillKindIfNew(billKind);
 
   let dueDay = null, baseDate = null;
   if(freq === 'mensal'){
