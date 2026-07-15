@@ -2027,6 +2027,7 @@ function editBill(id){
   editingBillId = id;
   document.getElementById('billSubmitLabel').textContent = 'Salvar edição';
   document.querySelector('[data-tab="contas"]').click();
+  showContasSub(b.recurringId ? 'recorrentes' : 'nao-recorrentes');
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
