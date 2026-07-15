@@ -1,0 +1,8 @@
+supabase/
+scripts/
+controle-financeiro_2.html
+controle-financeiro.html
+.env*
+.DS_Store
+README.md
+.git/
