@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260715b -->
+<!-- deploy-v20260715c -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1295,7 +1295,10 @@ document.addEventListener('input', (e)=>{
     e.target.value = digits ? (parseInt(digits,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) : '';
   }
 });
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayISO(){
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+}
 function monthKey(dateStr){ return dateStr.slice(0,7); }
 function monthLabel(key){
   const [y,m] = key.split('-');
@@ -2321,7 +2324,7 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     contasSubActive = btn.dataset.sub;
-    if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(false);
+    if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(true);
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
     else {
@@ -3185,11 +3188,12 @@ function getContasMonthKey(){
   return currentMonthKeyNow();
 }
 function populateBillsMonthSelect(preserveSelection, forceValue){
-  const keys = new Set(getAllBillsForDisplay().map(b=>monthKey(b.dueDate)));
-  keys.add(currentMonthKeyNow());
-  const sortedKeys = Array.from(keys).sort();
   const el = document.getElementById('billsMonthSelect');
   const prev = el.value;
+  const keys = new Set(getAllBillsForDisplay().map(b=>monthKey(b.dueDate)));
+  keys.add(currentMonthKeyNow());
+  if(prev && prev !== BILLS_MONTH_ALL && /^\d{4}-\d{2}$/.test(prev)) keys.add(prev);
+  const sortedKeys = Array.from(keys).sort();
   let html = '';
   if(contasSubActive === 'todas'){
     html += `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
