@@ -770,8 +770,8 @@
     <p class="empty-note" style="margin:0 0 16px;">O calendário de vencimentos agora fica no Painel. Aqui você cadastra e gerencia todas as contas.</p>
 
     <div class="type-toggle" id="contasSubtabs" style="max-width:560px; margin-bottom:16px;">
-      <button type="button" class="sel-sub" data-sub="todas">TODAS AS CONTAS</button>
-      <button type="button" class="sel-sub active" data-sub="nao-recorrentes">NÃO RECORRENTES</button>
+      <button type="button" class="sel-sub active" data-sub="todas">TODAS AS CONTAS</button>
+      <button type="button" class="sel-sub" data-sub="nao-recorrentes">NÃO RECORRENTES</button>
       <button type="button" class="sel-sub" data-sub="recorrentes">RECORRENTES</button>
     </div>
 
@@ -1204,6 +1204,7 @@ function normalizeStoredCategories(){
 }
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
 const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL', 'CARTÃO DE CRÉDITO'];
+const BILLS_MONTH_ALL = '__all__';
 const BILL_KINDS_KEY = 'painel-financeiro:tipos-conta';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
 const RECURRING_KEY = 'painel-financeiro:contas-recorrentes';
@@ -1771,10 +1772,8 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.getElementById(btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'contas'){
       const now = new Date();
-      ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth()).then(()=>{
-        resetBillsMonthFilter();
-        renderContasTab();
-      });
+      resetBillsMonthFilter();
+      renderContasTab();
     }
     if(btn.dataset.tab === 'folha'){
       const now = new Date();
@@ -2217,7 +2216,7 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
   billCountBalance = 'sim';
   document.querySelectorAll('[data-bbal]').forEach(x=>x.classList.toggle('active', x.dataset.bbal==='sim'));
   populateBillsMonthSelect(true);
-  renderContasTab();
+  await renderContasTab();
 });
 
 function editBill(id){
@@ -2240,7 +2239,7 @@ function editBill(id){
 }
 
 /* ===== Contas recorrentes ===== */
-let contasSubActive = 'nao-recorrentes';
+let contasSubActive = 'todas';
 let contasKindFilter = 'todas';
 function getContasKindFilterOptions(){
   const kinds = new Set(getBillKindList().map(normalizeBillKind).filter(Boolean));
@@ -2266,11 +2265,11 @@ function renderContasKindFilter(){
     return `<button type="button" class="kind-filter-btn ${kfCls}${active}" data-kind="${escapeHtml(b.id)}">${escapeHtml(b.label)}</button>`;
   }).join('');
   chips.querySelectorAll('[data-kind]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('click', async ()=>{
       contasKindFilter = btn.dataset.kind;
       renderContasKindFilter();
       if(contasSubActive === 'recorrentes') renderRecurringList();
-      else renderContasTab();
+      else await renderContasTab();
     });
   });
 }
@@ -2292,26 +2291,26 @@ function updateContasSubUI(){
   const titleEl = document.getElementById('billsListTitle');
   if(titleEl){
     const filterTxt = contasKindFilter !== 'todas' ? ` · ${contasKindFilter}` : '';
-    titleEl.textContent = sub === 'todas' ? `Todas as contas do mês${filterTxt}` : `Contas NÃO RECORRENTES do mês${filterTxt}`;
+    const monthTxt = (sub === 'todas' && getContasMonthKey() === BILLS_MONTH_ALL) ? '' : ' do mês';
+    titleEl.textContent = sub === 'todas' ? `Todas as contas${monthTxt}${filterTxt}` : `Contas NÃO RECORRENTES do mês${filterTxt}`;
   }
   const emptyEl = document.getElementById('billsEmpty');
   if(emptyEl){
     const filterNote = contasKindFilter !== 'todas' ? ` na categoria ${contasKindFilter}` : '';
-    emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${filterNote} neste mês.` : `Nenhuma conta NÃO RECORRENTE${filterNote} neste mês.`;
+    const monthNote = (sub === 'todas' && getContasMonthKey() === BILLS_MONTH_ALL) ? '' : ' neste mês';
+    emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${filterNote}${monthNote}.` : `Nenhuma conta NÃO RECORRENTE${filterNote} neste mês.`;
   }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+  btn.addEventListener('click', async ()=>{
     document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     contasSubActive = btn.dataset.sub;
+    if(contasSubActive === 'todas') populateBillsMonthSelect(false, BILLS_MONTH_ALL);
+    else if(contasSubActive === 'nao-recorrentes') populateBillsMonthSelect(false);
     updateContasSubUI();
-    if(contasSubActive !== 'recorrentes'){
-      resetBillsMonthFilter();
-      renderContasTab();
-    } else {
-      renderContasTotals();
-    }
+    if(contasSubActive !== 'recorrentes') await renderContasTab();
+    else renderContasTotals();
   });
 });
 function showContasSub(sub){
@@ -2393,7 +2392,7 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
   }
   renderRecurringList();
   populateBillsMonthSelect(true);
-  renderContasTab();
+  await renderContasTab();
 });
 
 function editRecurring(id){
@@ -2591,13 +2590,13 @@ async function toggleBillPaid(id, opts){
   await saveBills();
   renderAll();
   populateBillsMonthSelect(true);
-  renderContasTab();
+  await renderContasTab();
 }
 async function deleteBill(id){
   bills = bills.filter(b=>b.id!==id);
   await saveBills();
   populateBillsMonthSelect(true);
-  renderContasTab();
+  await renderContasTab();
 }
 
 function classTagHTML(profileId){
@@ -3171,24 +3170,52 @@ function fullMonthLabelUpper(mk){
 function currentMonthKeyNow(){ return monthKey(todayISO()); }
 function getContasMonthKey(){
   const el = document.getElementById('billsMonthSelect');
-  return (el && el.value) ? el.value : currentMonthKeyNow();
+  if(el && el.value) return el.value;
+  return contasSubActive === 'todas' ? BILLS_MONTH_ALL : currentMonthKeyNow();
 }
-function populateBillsMonthSelect(preserveSelection){
-  const keys = new Set(getAllBillsForDisplay().filter(b=>!b.isInstallment).map(b=>monthKey(b.dueDate)));
+function populateBillsMonthSelect(preserveSelection, forceValue){
+  const keys = new Set(getAllBillsForDisplay().map(b=>monthKey(b.dueDate)));
   keys.add(currentMonthKeyNow());
   const sortedKeys = Array.from(keys).sort();
   const el = document.getElementById('billsMonthSelect');
   const prev = el.value;
-  el.innerHTML = sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
-  if(preserveSelection && sortedKeys.includes(prev)) el.value = prev;
-  else el.value = currentMonthKeyNow();
+  let html = '';
+  if(contasSubActive === 'todas'){
+    html += `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
+  }
+  html += sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
+  el.innerHTML = html;
+  if(forceValue) el.value = forceValue;
+  else if(preserveSelection && (prev === BILLS_MONTH_ALL || sortedKeys.includes(prev))) el.value = prev;
+  else el.value = contasSubActive === 'todas' ? BILLS_MONTH_ALL : currentMonthKeyNow();
 }
 function resetBillsMonthFilter(){
-  populateBillsMonthSelect(false);
+  populateBillsMonthSelect(false, contasSubActive === 'todas' ? BILLS_MONTH_ALL : null);
 }
-document.getElementById('billsMonthSelect').addEventListener('change', ()=>{
-  renderContasTab();
+document.getElementById('billsMonthSelect').addEventListener('change', async ()=>{
+  await renderContasTab();
 });
+async function ensureRecurringForVisibleMonths(){
+  const sel = getContasMonthKey();
+  let changed = false;
+  if(sel === BILLS_MONTH_ALL){
+    const monthKeys = new Set(getAllBillsForDisplay().map(b=>monthKey(b.dueDate)));
+    monthKeys.add(currentMonthKeyNow());
+    const now = new Date();
+    for(let i=0; i<=18; i++){
+      const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      monthKeys.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    }
+    for(const mk of monthKeys){
+      const [y,m] = mk.split('-').map(Number);
+      if(await ensureRecurringInstancesForMonth(y, m-1)) changed = true;
+    }
+  } else {
+    const [y,m] = sel.split('-').map(Number);
+    if(await ensureRecurringInstancesForMonth(y, m-1)) changed = true;
+  }
+  if(changed) await saveBills();
+}
 function isNonRecurringBill(b){
   return !b.isInstallment && !b.recurringId;
 }
@@ -3198,8 +3225,13 @@ function isRecurringBillInstance(b){
 function sumBillsValue(items){
   return items.reduce((s,b)=>s+(b.value||0),0);
 }
+function getBillsForContasMonth(selMonth){
+  const all = getAllBillsForDisplay();
+  if(selMonth === BILLS_MONTH_ALL) return all;
+  return all.filter(b=> monthKey(b.dueDate) === selMonth);
+}
 function getBillsByCategoryForMonth(selMonth){
-  const all = getAllBillsForDisplay().filter(b=> monthKey(b.dueDate) === selMonth);
+  const all = getBillsForContasMonth(selMonth);
   return {
     todas: all,
     naoRecorrentes: all.filter(isNonRecurringBill),
@@ -3210,7 +3242,7 @@ function renderContasTotals(){
   const selMonth = getContasMonthKey();
   const cats = getBillsByCategoryForMonth(selMonth);
   const titleEl = document.getElementById('contasTotalsTitle');
-  if(titleEl) titleEl.textContent = `Totais de ${fullMonthLabelUpper(selMonth)}`;
+  if(titleEl) titleEl.textContent = selMonth === BILLS_MONTH_ALL ? 'Totais · todos os meses' : `Totais de ${fullMonthLabelUpper(selMonth)}`;
   const naoRecEl = document.getElementById('contasTotalNaoRec');
   const recEl = document.getElementById('contasTotalRec');
   const todasEl = document.getElementById('contasTotalTodas');
@@ -3223,9 +3255,7 @@ function renderBillsList(){
   const empty = document.getElementById('billsEmpty');
   if(!list) return;
 
-  let items = getAllBillsForDisplay().sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
-  const selectedMonth = getContasMonthKey();
-  items = items.filter(b=> monthKey(b.dueDate) === selectedMonth);
+  let items = getBillsForContasMonth(getContasMonthKey()).sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
   if(contasSubActive === 'nao-recorrentes') items = items.filter(isNonRecurringBill);
   if(contasKindFilter !== 'todas') items = items.filter(billMatchesKindFilter);
 
@@ -3234,8 +3264,8 @@ function renderBillsList(){
   list.innerHTML = items.map(renderBillCard).join('');
 }
 
-
-function renderContasTab(){
+async function renderContasTab(){
+  await ensureRecurringForVisibleMonths();
   renderBillsList();
   renderContasTotals();
   renderAlerts();
@@ -3513,12 +3543,12 @@ async function runInit(){
   const now = new Date();
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   await ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth());
-  populateBillsMonthSelect(false);
+  populateBillsMonthSelect(false, BILLS_MONTH_ALL);
   populateFolhaMonthSelect(false);
   renderAll();
   renderRecurringList();
   updateContasSubUI();
-  renderContasTab();
+  await renderContasTab();
   renderFolha();
 }
 
