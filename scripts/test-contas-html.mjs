@@ -3,6 +3,7 @@
  * node scripts/test-contas-html.mjs
  */
 import { readFileSync } from 'fs';
+import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -20,6 +21,8 @@ const checks = [
   ['proteção saveBills em erro de storage', /if\(billsStorageError\) return/],
   ['subaba padrão todas', /data-sub="todas".*active/s],
   ['deploy tag atual', /deploy-v20260715c/],
+  ['renderContasTotals usa getBillsByCategoryForMonth', /function renderContasTotals\(\)[\s\S]*?getBillsByCategoryForMonth\(selMonth\)/],
+  ['total todas = sumBillsValue\(cats\.todas\)', /contasTotalTodas.*sumBillsValue\(cats\.todas\)/s],
 ];
 
 let failed = 0;
@@ -37,3 +40,9 @@ if (failed) {
   process.exit(1);
 }
 console.log('\nOK: index.html consistente com as regras das abas Contas.');
+
+for (const script of ['test-contas-views.mjs', 'test-contas-integration.mjs', 'test-contas-totals.mjs']) {
+  const r = spawnSync('node', [join(root, script)], { stdio: 'inherit' });
+  if (r.status !== 0) process.exit(r.status || 1);
+}
+console.log('\n✓ SUÍTE COMPLETA OK — visualizações e totais validados.');
