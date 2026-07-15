@@ -334,7 +334,8 @@
   .cal-day.selected .cal-chip{ background:rgba(255,255,255,0.16); color:#fff; }
   @media (max-width:640px){ .cal-day{ min-height:56px; padding:4px 5px; } .cal-chip{ font-size:8.5px; padding:1.5px 4px; } }
 
-  .class-tag{ display:inline-block; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; }
+  .class-tag{ display:inline-block; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; text-transform:uppercase; }
+  span.tag{ text-transform:uppercase; }
   .class-lucas{ background:rgba(17,17,20,0.08); color:var(--ink); }
   .class-lubro{ background:rgba(56,189,248,0.14); color:#0369A1; }
   .class-nexo{ background:var(--mint-soft); color:var(--mint); }
@@ -657,8 +658,8 @@
         <div class="field">
           <label>Categoria</label>
           <select id="iCategoria">
-            <option value="Cartão de Crédito">Cartão de Crédito</option>
-            <option value="Empréstimo">Empréstimo</option>
+            <option value="CARTÃO DE CRÉDITO">CARTÃO DE CRÉDITO</option>
+            <option value="EMPRÉSTIMO">EMPRÉSTIMO</option>
           </select>
         </div>
         <div class="field">
@@ -746,13 +747,13 @@
     <p class="empty-note" style="margin:0 0 16px;">O calendário de vencimentos agora fica no Painel. Aqui você cadastra e gerencia todas as contas.</p>
 
     <div class="type-toggle" id="contasSubtabs" style="max-width:400px; margin-bottom:16px;">
-      <button type="button" class="sel-sub active" data-sub="nao-recorrentes">Não recorrentes</button>
-      <button type="button" class="sel-sub" data-sub="recorrentes">Recorrentes</button>
+      <button type="button" class="sel-sub active" data-sub="nao-recorrentes">NÃO RECORRENTES</button>
+      <button type="button" class="sel-sub" data-sub="recorrentes">RECORRENTES</button>
     </div>
 
     <div id="contasSubLista">
       <div class="panel">
-        <h2 class="panel-title">Nova conta não recorrente</h2>
+        <h2 class="panel-title">Nova conta NÃO RECORRENTE</h2>
         <form id="billForm">
           <div class="bill-form-row1">
             <div class="field">
@@ -799,11 +800,11 @@
       </div>
 
       <h2 class="panel-title" style="margin-top:22px;">
-        Contas não recorrentes do mês
+        Contas NÃO RECORRENTES do mês
         <select class="month-select" id="billsMonthSelect"></select>
       </h2>
       <div class="bills-list" id="billsList" style="margin-top:16px;"></div>
-      <p class="empty-note" id="billsEmpty" style="display:none;">Nenhuma conta não recorrente neste mês.</p>
+      <p class="empty-note" id="billsEmpty" style="display:none;">Nenhuma conta NÃO RECORRENTE neste mês.</p>
     </div>
 
     <div id="contasSubRecorrentes" style="display:none;">
@@ -882,10 +883,10 @@
           <div class="field">
             <label>Tipo</label>
             <select id="foTipo">
-              <option value="Conta">Conta</option>
-              <option value="Despesa">Despesa</option>
-              <option value="Salário">Salário</option>
-              <option value="Outro">Outro</option>
+              <option value="CONTA">CONTA</option>
+              <option value="DESPESA">DESPESA</option>
+              <option value="SALÁRIO">SALÁRIO</option>
+              <option value="OUTRO">OUTRO</option>
             </select>
           </div>
           <div class="field">
@@ -1072,27 +1073,40 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/api/config"></script>
 <script>
-const ENTRADA_CATEGORIES = ['Recebimento','Salário','Lucro','Vendas','Outros'];
+const ENTRADA_CATEGORIES = ['RECEBIMENTO','SALÁRIO','LUCRO','VENDAS','OUTROS'];
 const PROFILES = [
   {
-    id:'lucas', name:'Lucas Brito', subtitle:'Finanças pessoais', initials:'LB', billLabel:'Pessoal',
+    id:'lucas', name:'Lucas Brito', subtitle:'Finanças pessoais', initials:'LB', billLabel:'PESSOAL',
     mark:'linear-gradient(135deg, #3A3A46, #0B0B0D)', calDot:'#3A3A46',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Alimentação','Transporte','Moradia','Lazer','Saúde','Educação','Assinaturas','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['ALIMENTAÇÃO','TRANSPORTE','MORADIA','LAZER','SAÚDE','EDUCAÇÃO','ASSINATURAS','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
   },
   {
-    id:'lubro', name:'Lubro Comunicação e Marketing', subtitle:'Painel financeiro da agência', initials:'LUBRO', billLabel:'Lubro Comunicação e Marketing',
+    id:'lubro', name:'Lubro Comunicação e Marketing', subtitle:'Painel financeiro da agência', initials:'LUBRO', billLabel:'LUBRO COMUNICAÇÃO E MARKETING',
     mark:'linear-gradient(135deg, #45454F, #0B0B0D)', calDot:'#0369A1',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Impostos','Fornecedores','Equipe/Freelancers','Ferramentas/Software','Marketing próprio','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE/FREELANCERS','FERRAMENTAS/SOFTWARE','MARKETING PRÓPRIO','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
   },
   {
-    id:'nexo', name:'Nexo Hub', subtitle:'Painel financeiro', initials:'NEXO', billLabel:'Nexo Hub',
+    id:'nexo', name:'Nexo Hub', subtitle:'Painel financeiro', initials:'NEXO', billLabel:'NEXO HUB',
     mark:'linear-gradient(135deg, #2E2E36, #0B0B0D)', calDot:'#0F9D63',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Impostos','Fornecedores','Equipe','Infraestrutura/Ferramentas','Marketing','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE','INFRAESTRUTURA/FERRAMENTAS','MARKETING','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
   }
 ];
+function catUpper(s){ return String(s||'').trim().toLocaleUpperCase('pt-BR'); }
+function defaultOutCategory(p){
+  if(p.categoriesOut.includes('EQUIPE/FREELANCERS')) return 'EQUIPE/FREELANCERS';
+  if(p.categoriesOut.includes('EQUIPE')) return 'EQUIPE';
+  if(p.categoriesOut.includes('CONTAS A PAGAR')) return 'CONTAS A PAGAR';
+  return p.categoriesOut[p.categoriesOut.length-1];
+}
+function normalizeStoredCategories(){
+  (state.transactions||[]).forEach(t=>{ if(t.category) t.category = catUpper(t.category); });
+  (state.installments||[]).forEach(i=>{ if(i.category) i.category = catUpper(i.category); });
+  state.customCategoriesIn = (state.customCategoriesIn||[]).map(catUpper);
+  state.customCategoriesOut = (state.customCategoriesOut||[]).map(catUpper);
+}
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
 const RECURRING_KEY = 'painel-financeiro:contas-recorrentes';
@@ -1199,9 +1213,10 @@ function catColor(cat){
   return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
 }
 function tagClass(cat){
-  if(cat === 'Impostos' || cat === 'Empréstimo') return 'tag tax';
-  if(cat === 'Cartão de Crédito') return 'tag credit';
-  if(cat === 'Contas a Pagar') return 'tag bill';
+  const c = catUpper(cat);
+  if(c === 'IMPOSTOS' || c === 'EMPRÉSTIMO') return 'tag tax';
+  if(c === 'CARTÃO DE CRÉDITO') return 'tag credit';
+  if(c === 'CONTAS A PAGAR') return 'tag bill';
   return 'tag';
 }
 
@@ -1216,6 +1231,7 @@ async function loadState(){
       state.installments = parsed.installments || [];
       state.customCategoriesIn = parsed.customCategoriesIn || [];
       state.customCategoriesOut = parsed.customCategoriesOut || [];
+      normalizeStoredCategories();
     }
   }catch(e){}
 }
@@ -1446,7 +1462,7 @@ function getCategoryList(type){
   const base = type==='entrada' ? currentProfile.categoriesIn : currentProfile.categoriesOut;
   const custom = type==='entrada' ? (state.customCategoriesIn||[]) : (state.customCategoriesOut||[]);
   const list = base.slice();
-  const outrosIdx = list.indexOf('Outros');
+  const outrosIdx = list.indexOf('OUTROS');
   custom.forEach(c=>{
     if(!list.includes(c)){
       if(outrosIdx>=0) list.splice(list.length-1, 0, c);
@@ -1462,10 +1478,10 @@ function populateCategorySelect(){
     `<option value="__new__">+ Nova categoria...</option>`;
 }
 function populateBillClassificationSelect(){
-  document.getElementById('bClassificacao').innerHTML = PROFILES.map(p=>`<option value="${p.id}">${p.billLabel}</option>`).join('');
+  document.getElementById('bClassificacao').innerHTML = PROFILES.map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
 }
 function populateRecurringClassificationSelect(){
-  document.getElementById('rClassificacao').innerHTML = PROFILES.map(p=>`<option value="${p.id}">${p.billLabel}</option>`).join('');
+  document.getElementById('rClassificacao').innerHTML = PROFILES.map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
 }
 
 function populateBankSelect(id){
@@ -1557,7 +1573,7 @@ document.querySelectorAll('.type-toggle button[data-type]').forEach(b=>{
 function updateCartaoFieldVisibility(){
   const cat = document.getElementById('fCategoria').value;
   const wrap = document.getElementById('fCartaoWrap');
-  if(cat === 'Cartão de Crédito' && currentType === 'saida'){ wrap.style.display = 'block'; }
+  if(catUpper(cat) === 'CARTÃO DE CRÉDITO' && currentType === 'saida'){ wrap.style.display = 'block'; }
   else { wrap.style.display = 'none'; }
 }
 document.getElementById('fCategoria').addEventListener('change', (e)=>{
@@ -1581,14 +1597,16 @@ document.getElementById('entryForm').addEventListener('submit', async (e)=>{
   if(categoria === '__new__'){
     const novaCategoria = document.getElementById('fCategoriaCustom').value.trim();
     if(!novaCategoria){ document.getElementById('fCategoriaCustom').focus(); return; }
-    categoria = novaCategoria;
+    categoria = catUpper(novaCategoria);
     const listKey = currentType==='entrada' ? 'customCategoriesIn' : 'customCategoriesOut';
     if(!getCategoryList(currentType).includes(categoria)) state[listKey].push(categoria);
+  } else {
+    categoria = catUpper(categoria);
   }
 
   // dados de cartão de crédito
   let cardBank = null, cardParcelas = null;
-  if(categoria === 'Cartão de Crédito' && currentType === 'saida'){
+  if(catUpper(categoria) === 'CARTÃO DE CRÉDITO' && currentType === 'saida'){
     cardBank = readBankValue('fCartaoBanco', 'fCartaoBancoCustom');
     const p = parseInt(document.getElementById('fCartaoParcelas').value, 10);
     cardParcelas = (!isNaN(p) && p>0) ? p : null;
@@ -1625,7 +1643,7 @@ function editTransaction(id){
   document.getElementById('fCategoria').value = t.category;
   document.getElementById('fCategoriaCustomWrap').style.display = 'none';
   updateCartaoFieldVisibility();
-  if(t.category === 'Cartão de Crédito' && t.type==='saida'){
+  if(catUpper(t.category) === 'CARTÃO DE CRÉDITO' && t.type==='saida'){
     setBankValue('fCartaoBanco','fCartaoBancoCustom','fCartaoBancoCustomWrap', t.cardBank || null);
     document.getElementById('fCartaoParcelas').value = t.cardParcelas || '';
   }
@@ -1801,7 +1819,7 @@ document.getElementById('payModalForm').addEventListener('submit', async (e)=>{
   if(inst.mode==='variable') inst.referenceValue = val;
   const parcelaNum = inst.paidInstallments;
   const label = inst.totalInstallments ? `${parcelaNum}/${inst.totalInstallments}` : `nº ${parcelaNum}`;
-  const tipo = inst.category==='Empréstimo' ? 'parcela' : 'fatura';
+  const tipo = catUpper(inst.category)==='EMPRÉSTIMO' ? 'parcela' : 'fatura';
   let txId = null;
   if(payModalCountBalance !== 'nao'){
     txId = uid();
@@ -1864,7 +1882,7 @@ function renderInstallments(){
     const restanteValor = Math.max(0, totalDebt - paidTotal);
     const pctValor = totalDebt>0 ? Math.min(100, Math.round((paidTotal/totalDebt)*100)) : (inst.totalInstallments? Math.round((inst.paidInstallments/inst.totalInstallments)*100):0);
     const quitado = (inst.totalInstallments && inst.paidInstallments >= inst.totalInstallments) || (totalDebt>0 && paidTotal>=totalDebt);
-    const modeLabel = inst.mode==='fixed' ? 'Fixo' : 'Variável';
+    const modeLabel = inst.mode==='fixed' ? 'FIXO' : 'VARIÁVEL';
     const parcelasTxt = inst.totalInstallments ? `${inst.paidInstallments} de ${inst.totalInstallments} parcelas` : `${inst.paidInstallments} pagamentos · recorrente`;
     const valorTxt = totalDebt>0 ? `pago ${fmtBRL(paidTotal)} de ${fmtBRL(totalDebt)} &middot; falta ${fmtBRL(restanteValor)}` : (inst.referenceValue? 'última: '+fmtBRL(inst.referenceValue) : 'sem valor total informado');
     const ultimo = inst.lastPaymentDate ? ` &middot; último pgto: ${new Date(inst.lastPaymentDate+'T00:00:00').toLocaleDateString('pt-BR')}` : '';
@@ -2116,7 +2134,7 @@ function renderRecurringList(){
       <div class="goal-top">
         <span class="goal-name">${escapeHtml(r.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-          <span class="mode-label">${isVariable ? 'Variável' : 'Fixo'}</span>
+          <span class="mode-label">${isVariable ? 'VARIÁVEL' : 'FIXO'}</span>
           ${bankTagHTML(r.bank)}
           ${classTagHTML(r.classification)}
         </span>
@@ -2189,7 +2207,7 @@ async function toggleBillPaid(id, opts){
     if(!wasPaid){
       if(bill.countInBalance !== false){
         const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
-        const cat = p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1];
+        const cat = defaultOutCategory(p);
         const tx = { id: uid(), desc: `Conta: ${bill.desc}`, value: bill.value, category: cat, date: todayISO(), type: 'saida' };
         await addTransactionToProfile(p.id, tx);
         bill.paidTxId = tx.id;
@@ -2218,19 +2236,19 @@ function classTagHTML(profileId){
   const p = PROFILES.find(x=>x.id===profileId);
   if(!p) return '';
   const cls = profileId==='lucas' ? 'class-lucas' : (profileId==='lubro' ? 'class-lubro' : 'class-nexo');
-  return `<span class="class-tag ${cls}">${p.billLabel}</span>`;
+  return `<span class="class-tag ${cls}">${catUpper(p.billLabel)}</span>`;
 }
 
 /* ===== Folha de pagamento ===== */
 function populateFolhaClassificationSelect(){
   document.getElementById('foClassificacao').innerHTML = PROFILES
     .filter(p=>FOLHA_PROFILES.includes(p.id))
-    .map(p=>`<option value="${p.id}">${p.billLabel}</option>`).join('');
+    .map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
 }
 function updateFolhaTipoFields(){
   const tipo = document.getElementById('foTipo').value;
-  document.getElementById('foTipoOutroWrap').style.display = tipo==='Outro' ? 'block' : 'none';
-  document.getElementById('foSalarioWrap').style.display = tipo==='Salário' ? 'block' : 'none';
+  document.getElementById('foTipoOutroWrap').style.display = tipo==='OUTRO' ? 'block' : 'none';
+  document.getElementById('foSalarioWrap').style.display = tipo==='SALÁRIO' ? 'block' : 'none';
 }
 document.getElementById('foTipo').addEventListener('change', updateFolhaTipoFields);
 let folhaCountBalance = 'sim';
@@ -2287,10 +2305,12 @@ document.getElementById('folhaMonthSelect').addEventListener('change', renderFol
 document.getElementById('folhaForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   let tipo = document.getElementById('foTipo').value;
-  if(tipo === 'Outro'){
+  if(tipo === 'OUTRO'){
     const outro = document.getElementById('foTipoOutro').value.trim();
     if(!outro){ document.getElementById('foTipoOutro').focus(); return; }
-    tipo = outro;
+    tipo = catUpper(outro);
+  } else {
+    tipo = catUpper(tipo);
   }
   const desc = document.getElementById('foDesc').value.trim();
   const valor = parseCurrencyValue(document.getElementById('foValor'));
@@ -2300,7 +2320,7 @@ document.getElementById('folhaForm').addEventListener('submit', async (e)=>{
   const obs = document.getElementById('foObs').value.trim();
   if(!desc || isNaN(valor) || valor<=0 || !vencimento) return;
 
-  const isSalario = document.getElementById('foTipo').value === 'Salário';
+  const isSalario = document.getElementById('foTipo').value === 'SALÁRIO';
   let bankDetails = null;
   if(isSalario){
     const nome = document.getElementById('foFavNome').value.trim();
@@ -2366,12 +2386,13 @@ document.getElementById('folhaForm').addEventListener('submit', async (e)=>{
 function editFolha(id){
   const f = folha.find(x=>x.id===id);
   if(!f) return;
-  const tiposFixos = ['Conta','Despesa','Salário'];
-  if(tiposFixos.includes(f.tipo)){
-    document.getElementById('foTipo').value = f.tipo;
+  const tiposFixos = ['CONTA','DESPESA','SALÁRIO'];
+  const tipoNorm = catUpper(f.tipo);
+  if(tiposFixos.includes(tipoNorm)){
+    document.getElementById('foTipo').value = tipoNorm;
     document.getElementById('foTipoOutro').value = '';
   } else {
-    document.getElementById('foTipo').value = 'Outro';
+    document.getElementById('foTipo').value = 'OUTRO';
     document.getElementById('foTipoOutro').value = f.tipo;
   }
   updateFolhaTipoFields();
@@ -2419,7 +2440,7 @@ async function toggleFolhaPaid(id, opts){
   try{
     if(!wasPaid){
       if(f.countInBalance !== false){
-        const cat = p.categoriesOut.includes('Equipe') ? 'Equipe' : (p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1]);
+        const cat = defaultOutCategory(p);
         const tx = { id: uid(), desc: `Folha: ${f.desc} (${f.tipo})`, value: f.value, category: cat, date: todayISO(), type: 'saida' };
         await addTransactionToProfile(p.id, tx);
         f.paidTxId = tx.id;
@@ -2506,7 +2527,7 @@ function getInstallmentBills(){
       const m = mIndex % 12;
       const dueDate = clampDueDate(y, m, inst.dueDay);
       const numLabel = total ? `${parcelaIndex+1}/${total}` : `nº ${parcelaIndex+1}`;
-      const tipo = inst.category==='Empréstimo' ? 'Parcela empréstimo' : 'Fatura cartão';
+      const tipo = catUpper(inst.category)==='EMPRÉSTIMO' ? 'Parcela empréstimo' : 'Fatura cartão';
       out.push({
         id: `inst:${inst.id}:${parcelaIndex}`,
         installmentId: inst.id,
@@ -2640,9 +2661,9 @@ function renderDayDetail(){
       if(i.urg==='paid'){ stCls='st-paid'; stTxt='Pago'; stColor='var(--mint)'; }
       else if(i.urg==='urgent'){ stCls='st-urgent'; stTxt='Vence hoje/atrasado'; stColor='var(--rose)'; }
       else { stCls='st-pending'; stTxt='Pendente'; stColor='var(--amber)'; }
-      const tipoTag = i.kind==='parcela' ? '<span class="class-tag class-inst">Parcela</span>'
-        : (i.kind==='folha' ? '<span class="class-tag class-bank">Folha</span>'
-        : (i.ref.recurringId ? '<span class="class-tag class-inst">Recorrente</span>' : '<span class="class-tag class-nrec">Não recorrente</span>'));
+      const tipoTag = i.kind==='parcela' ? '<span class="class-tag class-inst">PARCELA</span>'
+        : (i.kind==='folha' ? '<span class="class-tag class-bank">FOLHA</span>'
+        : (i.ref.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'));
       const classTag = i.classification ? classTagHTML(i.classification) : '';
       const bankTag = i.bank ? bankTagHTML(i.bank) : '';
       // ação de pagar
@@ -2730,7 +2751,7 @@ function renderBillCard(b){
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${foraSaldo ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${bankTagHTML(b.bank)}
-          <span class="class-tag class-inst">Parcelas</span>
+          <span class="class-tag class-inst">PARCELAS</span>
         </span>
       </div>
       <div class="goal-meta" style="margin-top:8px;">
@@ -2751,7 +2772,7 @@ function renderBillCard(b){
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${bankTagHTML(b.bank)}
-          <span class="class-tag class-nrec">Não recorrente</span>
+          <span class="class-tag class-nrec">NÃO RECORRENTE</span>
           ${classTagHTML(b.classification)}
         </span>
       </div>
@@ -2832,7 +2853,7 @@ function renderAlerts(){
     const quando = d < 0 ? `vencida há ${Math.abs(d)} dia(s)` : (d===0 ? 'vence hoje' : (d===1 ? 'vence amanhã' : `vence em ${d} dias`));
     const dateFmt = new Date(b.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
     const p = PROFILES.find(x=>x.id===b.classification);
-    const origem = p ? p.billLabel : '';
+    const origem = p ? catUpper(p.billLabel) : '';
     return `
     <div class="alert-row">
       <div>
