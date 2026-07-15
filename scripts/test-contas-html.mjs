@@ -20,7 +20,9 @@ const checks = [
   ['subaba recorrentes usa renderRecurringList', /renderRecurringList\(\)/],
   ['proteção saveBills em erro de storage', /if\(billsStorageError\) return/],
   ['subaba padrão todas', /data-sub="todas".*active/s],
-  ['deploy tag atual', /deploy-v20260715c/],
+  ['deploy tag atual', /deploy-v20260715d/],
+  ['filtro de mês visível em recorrentes', /monthFilter\) monthFilter\.style\.display = 'flex'/],
+  ['recorrentes filtra instâncias por mês', /filter\(isRecurringBillInstance\)/],
   ['renderContasTotals usa getBillsByCategoryForMonth', /function renderContasTotals\(\)[\s\S]*?getBillsByCategoryForMonth\(selMonth\)/],
   ['total todas = sumBillsValue\(cats\.todas\)', /contasTotalTodas.*sumBillsValue\(cats\.todas\)/s],
 ];

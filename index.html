@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260715c -->
+<!-- deploy-v20260715d -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -900,8 +900,13 @@
         </form>
       </div>
 
-      <div class="inst-list" id="recurringList" style="margin-top:16px;"></div>
-      <p class="empty-note" id="recurringEmpty" style="display:none;">Nenhuma conta recorrente cadastrada ainda.</p>
+      <h2 class="panel-title" id="recurringListTitle" style="margin-top:22px;">Contas RECORRENTES do mês</h2>
+      <div class="bills-list" id="recurringList" style="margin-top:16px;"></div>
+      <p class="empty-note" id="recurringEmpty" style="display:none;">Nenhuma conta recorrente neste mês.</p>
+
+      <h2 class="panel-title" id="recurringTemplatesTitle" style="margin-top:28px;">Cadastros recorrentes</h2>
+      <div class="inst-list" id="recurringTemplatesList" style="margin-top:16px;"></div>
+      <p class="empty-note" id="recurringTemplatesEmpty" style="display:none;">Nenhum cadastro recorrente ainda.</p>
     </div>
 
     <div class="panel" id="contasTotalsPanel" style="margin-top:24px;">
@@ -1829,8 +1834,10 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     if(btn.dataset.tab === 'contas'){
       syncContasData().then(async ()=>{
         resetBillsMonthFilter();
-        await renderContasTab();
-        renderRecurringList();
+        updateContasSubUI();
+        if(contasSubActive === 'recorrentes') await renderRecurringTab();
+        else await renderContasTab();
+        renderRecurringTemplatesList();
       });
     }
     if(btn.dataset.tab === 'folha'){
@@ -2256,7 +2263,8 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
           r.billKind = billKind;
           bills.forEach(x=>{ if(x.recurringId===b.recurringId) x.billKind = billKind; });
           await saveRecurring();
-          renderRecurringList();
+          renderRecurringTemplatesList();
+          if(contasSubActive === 'recorrentes') await renderRecurringTab();
         }
       }
     }
@@ -2307,7 +2315,7 @@ function updateContasSubUI(){
   const formPanel = document.getElementById('billFormPanel');
   if(formPanel) formPanel.style.display = sub === 'nao-recorrentes' ? 'block' : 'none';
   const monthFilter = document.getElementById('contasMonthFilter');
-  if(monthFilter) monthFilter.style.display = showLista ? 'flex' : 'none';
+  if(monthFilter) monthFilter.style.display = 'flex';
   const titleEl = document.getElementById('billsListTitle');
   if(titleEl){
     const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
@@ -2318,19 +2326,21 @@ function updateContasSubUI(){
     const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
     emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${monthNote}.` : 'Nenhuma conta NÃO RECORRENTE neste mês.';
   }
+  const recTitleEl = document.getElementById('recurringListTitle');
+  if(recTitleEl){
+    const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
+    recTitleEl.textContent = `Contas RECORRENTES${monthTxt}`;
+  }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     contasSubActive = btn.dataset.sub;
-    if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(true);
+    populateBillsMonthSelect(true);
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
-    else {
-      renderRecurringList();
-      renderContasTotals();
-    }
+    else await renderRecurringTab();
   });
 });
 function showContasSub(sub){
@@ -2410,9 +2420,10 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
   if(calViewDate.getFullYear()!==now.getFullYear() || calViewDate.getMonth()!==now.getMonth()){
     await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
   }
-  renderRecurringList();
+  renderRecurringTemplatesList();
   populateBillsMonthSelect(true);
-  await renderContasTab();
+  if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else await renderContasTab();
 });
 
 function editRecurring(id){
@@ -2437,8 +2448,12 @@ function editRecurring(id){
 }
 async function deleteRecurring(id){
   recurringBills = recurringBills.filter(x=>x.id!==id);
+  bills = bills.filter(b=>!sameId(b.recurringId, id));
   await saveRecurring();
-  renderRecurringList();
+  await saveBills();
+  renderRecurringTemplatesList();
+  if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else await renderContasTab();
 }
 function freqLabel(r){
   const freq = r.freq || 'mensal';
@@ -2450,13 +2465,32 @@ function freqLabel(r){
 function renderRecurringList(){
   const list = document.getElementById('recurringList');
   const empty = document.getElementById('recurringEmpty');
-  if(recurringBills.length===0){
+  if(!list) return;
+  const items = getBillsForContasMonth(getContasMonthKey())
+    .filter(isRecurringBillInstance)
+    .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
+  if(items.length===0){
     list.innerHTML='';
     empty.style.display='block';
-    empty.textContent = 'Nenhuma conta recorrente cadastrada ainda.';
+    const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
+    empty.textContent = recurringBills.length===0
+      ? 'Nenhuma conta recorrente cadastrada ainda.'
+      : `Nenhuma conta recorrente${monthNote}.`;
     return;
   }
   empty.style.display='none';
+  list.innerHTML = items.map(renderBillCard).join('');
+}
+function renderRecurringTemplatesList(){
+  const list = document.getElementById('recurringTemplatesList');
+  const empty = document.getElementById('recurringTemplatesEmpty');
+  if(!list) return;
+  if(recurringBills.length===0){
+    list.innerHTML='';
+    if(empty){ empty.style.display='block'; empty.textContent = 'Nenhum cadastro recorrente ainda.'; }
+    return;
+  }
+  if(empty) empty.style.display='none';
   list.innerHTML = recurringBills.map(r=>{
     const isVariable = r.mode === 'variable';
     const per = freqLabel(r);
@@ -2577,7 +2611,7 @@ async function toggleBillPaid(id, opts){
       if(isVariable && opts && opts.paidValue != null && !isNaN(opts.paidValue) && opts.paidValue > 0){
         bill.value = opts.paidValue;
         const r = recurringBills.find(x=>x.id===bill.recurringId);
-        if(r){ r.value = opts.paidValue; await saveRecurring(); renderRecurringList(); }
+        if(r){ r.value = opts.paidValue; await saveRecurring(); renderRecurringTemplatesList(); if(contasSubActive === 'recorrentes') renderRecurringList(); }
       }
       const payDate = isVariable ? ((opts && opts.paidDate) ? opts.paidDate : todayISO()) : todayISO();
       if(isVariable) bill.paidDate = payDate;
@@ -2604,13 +2638,15 @@ async function toggleBillPaid(id, opts){
   await saveBills();
   renderAll();
   populateBillsMonthSelect(true);
-  await renderContasTab();
+  if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else await renderContasTab();
 }
 async function deleteBill(id){
   bills = bills.filter(b=>b.id!==id);
   await saveBills();
   populateBillsMonthSelect(true);
-  await renderContasTab();
+  if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else await renderContasTab();
 }
 
 function classTagHTML(profileId){
@@ -3195,7 +3231,7 @@ function populateBillsMonthSelect(preserveSelection, forceValue){
   if(prev && prev !== BILLS_MONTH_ALL && /^\d{4}-\d{2}$/.test(prev)) keys.add(prev);
   const sortedKeys = Array.from(keys).sort();
   let html = '';
-  if(contasSubActive === 'todas'){
+  if(contasSubActive === 'todas' || contasSubActive === 'recorrentes'){
     html += `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
   }
   html += sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
@@ -3208,8 +3244,16 @@ function resetBillsMonthFilter(){
   populateBillsMonthSelect(false);
 }
 document.getElementById('billsMonthSelect').addEventListener('change', async ()=>{
-  await renderContasTab();
+  updateContasSubUI();
+  if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else await renderContasTab();
 });
+async function renderRecurringTab(){
+  await ensureRecurringForVisibleMonths();
+  renderRecurringList();
+  renderRecurringTemplatesList();
+  renderContasTotals();
+}
 async function ensureRecurringForVisibleMonths(){
   const sel = getContasMonthKey();
   let changed = false;
@@ -3566,6 +3610,7 @@ async function runInit(){
   await renderAll();
   await renderContasTab();
   renderRecurringList();
+  renderRecurringTemplatesList();
   renderFolha();
 }
 
