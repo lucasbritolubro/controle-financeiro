@@ -354,19 +354,6 @@
   .bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
   .bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
 
-  .contas-kind-filter{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  .contas-kind-filter .kf-label{ font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--ink-soft); flex:0 0 auto; }
-  .kind-filter-chips{ display:flex; gap:8px; flex-wrap:wrap; }
-  .kind-filter-btn{
-    padding:7px 12px; border-radius:999px; border:1.5px solid var(--card-border); background:var(--card-raised);
-    font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:700; cursor:pointer; text-transform:uppercase;
-    color:var(--ink-soft); transition:all .15s ease;
-  }
-  .kind-filter-btn.active{ border-color:var(--black); background:var(--black); color:#fff; }
-  .kind-filter-btn.kf-casa:not(.active){ background:rgba(14,142,139,0.12); color:var(--teal); border-color:rgba(14,142,139,0.25); }
-  .kind-filter-btn.kf-pessoal:not(.active){ background:rgba(99,102,241,0.12); color:#4338CA; border-color:rgba(99,102,241,0.25); }
-  .kind-filter-btn.kf-cartao:not(.active){ background:var(--orange-soft); color:var(--orange); border-color:rgba(194,87,12,0.25); }
-  .kind-filter-btn.kf-emprestimo:not(.active){ background:var(--rose-soft); color:var(--rose); border-color:rgba(220,53,69,0.2); }
   .bkind-emprestimo{ background:var(--rose-soft); color:var(--rose); }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
@@ -781,11 +768,6 @@
     <div id="contasMonthFilter" style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
       <span style="font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--ink-soft);">MÊS</span>
       <select class="month-select" id="billsMonthSelect"></select>
-    </div>
-
-    <div class="contas-kind-filter" id="contasKindFilter" style="display:none;">
-      <span class="kf-label">CATEGORIA</span>
-      <div class="kind-filter-chips" id="contasKindChips"></div>
     </div>
 
     <div id="contasSubLista">
@@ -1406,14 +1388,6 @@ function billKindCssClass(kind){
   if(k === 'CARTÃO DE CRÉDITO') return 'bkind-cartao';
   if(k === 'EMPRÉSTIMO') return 'bkind-emprestimo';
   return 'bkind-other';
-}
-function billKindFilterCssClass(kind){
-  const cls = billKindCssClass(kind);
-  if(cls === 'bkind-casa') return 'kf-casa';
-  if(cls === 'bkind-pessoal') return 'kf-pessoal';
-  if(cls === 'bkind-cartao') return 'kf-cartao';
-  if(cls === 'bkind-emprestimo') return 'kf-emprestimo';
-  return '';
 }
 function billDisplayKind(b){
   if(b.isInstallment){
@@ -2246,44 +2220,6 @@ function editBill(id){
 
 /* ===== Contas recorrentes ===== */
 let contasSubActive = 'todas';
-let contasKindFilter = 'todas';
-function getContasKindFilterOptions(){
-  const kinds = new Set();
-  getBillKindList().forEach(k=>{ const n = normalizeBillKind(k); if(n) kinds.add(n); });
-  getAllBillsForDisplay().forEach(b=>{ const k = billDisplayKind(b); if(k) kinds.add(k); });
-  recurringBills.forEach(r=>{ const k = normalizeBillKind(r.billKind); if(k) kinds.add(k); });
-  (state.installments||[]).forEach(i=>{ const k = normalizeBillKind(i.category); if(k) kinds.add(k); });
-  const ordered = [];
-  BILL_KIND_DEFAULTS.forEach(k=> ordered.push(k));
-  Array.from(kinds).sort().forEach(k=>{ if(!ordered.includes(k)) ordered.push(k); });
-  return ordered;
-}
-function renderContasKindFilter(){
-  const wrap = document.getElementById('contasKindFilter');
-  const chips = document.getElementById('contasKindChips');
-  if(!wrap || !chips) return;
-  wrap.style.display = 'flex';
-  const kinds = getContasKindFilterOptions();
-  if(contasKindFilter !== 'todas' && !kinds.includes(contasKindFilter)) contasKindFilter = 'todas';
-  const btns = [{ id:'todas', label:'TODAS AS CATEGORIAS' }].concat(kinds.map(k=>({ id:k, label:k })));
-  chips.innerHTML = btns.map(b=>{
-    const kfCls = b.id === 'todas' ? '' : billKindFilterCssClass(b.id);
-    const active = contasKindFilter === b.id ? ' active' : '';
-    return `<button type="button" class="kind-filter-btn ${kfCls}${active}" data-kind="${escapeHtml(b.id)}">${escapeHtml(b.label)}</button>`;
-  }).join('');
-  chips.querySelectorAll('[data-kind]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      contasKindFilter = btn.dataset.kind;
-      renderContasKindFilter();
-      if(contasSubActive === 'recorrentes') renderRecurringList();
-      else await renderContasTab();
-    });
-  });
-}
-function billMatchesKindFilter(b){
-  if(contasKindFilter === 'todas') return true;
-  return billDisplayKind(b) === contasKindFilter;
-}
 function updateContasSubUI(){
   const sub = contasSubActive;
   const showRecurring = sub === 'recorrentes';
@@ -2294,18 +2230,15 @@ function updateContasSubUI(){
   if(formPanel) formPanel.style.display = sub === 'nao-recorrentes' ? 'block' : 'none';
   const monthFilter = document.getElementById('contasMonthFilter');
   if(monthFilter) monthFilter.style.display = showLista ? 'flex' : 'none';
-  renderContasKindFilter();
   const titleEl = document.getElementById('billsListTitle');
   if(titleEl){
-    const filterTxt = contasKindFilter !== 'todas' ? ` · ${contasKindFilter}` : '';
-    const monthTxt = (sub === 'todas' && getContasMonthKey() === BILLS_MONTH_ALL) ? '' : ' do mês';
-    titleEl.textContent = sub === 'todas' ? `Todas as contas${monthTxt}${filterTxt}` : `Contas NÃO RECORRENTES do mês${filterTxt}`;
+    const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
+    titleEl.textContent = sub === 'todas' ? `Todas as contas${monthTxt}` : 'Contas NÃO RECORRENTES do mês';
   }
   const emptyEl = document.getElementById('billsEmpty');
   if(emptyEl){
-    const filterNote = contasKindFilter !== 'todas' ? ` na categoria ${contasKindFilter}` : '';
-    const monthNote = (sub === 'todas' && getContasMonthKey() === BILLS_MONTH_ALL) ? '' : ' neste mês';
-    emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${filterNote}${monthNote}.` : `Nenhuma conta NÃO RECORRENTE${filterNote} neste mês.`;
+    const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
+    emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${monthNote}.` : 'Nenhuma conta NÃO RECORRENTE neste mês.';
   }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
@@ -2316,7 +2249,7 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(false);
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
-    else renderContasTotals();
+    else { renderRecurringList(); renderContasTotals(); }
   });
 });
 function showContasSub(sub){
@@ -2436,20 +2369,14 @@ function freqLabel(r){
 function renderRecurringList(){
   const list = document.getElementById('recurringList');
   const empty = document.getElementById('recurringEmpty');
-  let items = recurringBills.slice();
-  if(contasKindFilter !== 'todas'){
-    items = items.filter(r=> normalizeBillKind(r.billKind) === contasKindFilter);
-  }
-  if(items.length===0){
+  if(recurringBills.length===0){
     list.innerHTML='';
     empty.style.display='block';
-    empty.textContent = contasKindFilter !== 'todas'
-      ? `Nenhuma conta recorrente na categoria ${contasKindFilter}.`
-      : 'Nenhuma conta recorrente cadastrada ainda.';
+    empty.textContent = 'Nenhuma conta recorrente cadastrada ainda.';
     return;
   }
   empty.style.display='none';
-  list.innerHTML = items.map(r=>{
+  list.innerHTML = recurringBills.map(r=>{
     const isVariable = r.mode === 'variable';
     const per = freqLabel(r);
     const valueLine = isVariable
@@ -3263,7 +3190,6 @@ function renderBillsList(){
 
   let items = getBillsForContasMonth(getContasMonthKey()).sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
   if(contasSubActive === 'nao-recorrentes') items = items.filter(isNonRecurringBill);
-  if(contasKindFilter !== 'todas') items = items.filter(billMatchesKindFilter);
 
   if(items.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
@@ -3544,7 +3470,6 @@ async function runInit(){
   await saveBillKinds();
   populateBillKindSelect('bKind');
   populateBillKindSelect('rKind');
-  renderContasKindFilter();
   await loadFolha();
   await loadFolhaRecurring();
   const now = new Date();
