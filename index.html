@@ -353,6 +353,19 @@
   .bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
   .bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
 
+  .contas-kind-filter{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .contas-kind-filter .kf-label{ font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--ink-soft); flex:0 0 auto; }
+  .kind-filter-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .kind-filter-btn{
+    padding:7px 12px; border-radius:999px; border:1.5px solid var(--card-border); background:var(--card-raised);
+    font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:700; cursor:pointer; text-transform:uppercase;
+    color:var(--ink-soft); transition:all .15s ease;
+  }
+  .kind-filter-btn.active{ border-color:var(--black); background:var(--black); color:#fff; }
+  .kind-filter-btn.kf-casa:not(.active){ background:rgba(14,142,139,0.12); color:var(--teal); border-color:rgba(14,142,139,0.25); }
+  .kind-filter-btn.kf-pessoal:not(.active){ background:rgba(99,102,241,0.12); color:#4338CA; border-color:rgba(99,102,241,0.25); }
+  .kind-filter-btn.kf-cartao:not(.active){ background:var(--orange-soft); color:var(--orange); border-color:rgba(194,87,12,0.25); }
+
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
   ::placeholder{ color:var(--ink-faint); }
 
@@ -767,6 +780,11 @@
       <select class="month-select" id="billsMonthSelect"></select>
     </div>
 
+    <div class="contas-kind-filter" id="contasKindFilter" style="display:none;">
+      <span class="kf-label">CATEGORIA</span>
+      <div class="kind-filter-chips" id="contasKindChips"></div>
+    </div>
+
     <div id="contasSubLista">
       <div class="panel" id="billFormPanel">
         <h2 class="panel-title">Nova conta NÃO RECORRENTE</h2>
@@ -1158,6 +1176,20 @@ const PROFILES = [
   }
 ];
 function catUpper(s){ return String(s||'').trim().toLocaleUpperCase('pt-BR'); }
+function stripAccents(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function normalizeBillKind(kind){
+  if(!kind) return null;
+  const k = catUpper(kind);
+  const plain = catUpper(stripAccents(k));
+  if(plain === 'CASA') return 'CASA';
+  if(plain === 'PESSOAL') return 'PESSOAL';
+  if(plain === 'CARTAO DE CREDITO' || k === 'CARTÃO DE CRÉDITO') return 'CARTÃO DE CRÉDITO';
+  if(plain.includes('CARTAO') && plain.includes('CREDIT')) return 'CARTÃO DE CRÉDITO';
+  return k;
+}
+function sameId(a, b){ return String(a) === String(b); }
 function defaultOutCategory(p){
   if(p.categoriesOut.includes('EQUIPE/FREELANCERS')) return 'EQUIPE/FREELANCERS';
   if(p.categoriesOut.includes('EQUIPE')) return 'EQUIPE';
@@ -1351,7 +1383,7 @@ async function resolveBillKind(selectId, customId){
       populateBillKindSelect('rKind');
     }
   }
-  return catUpper(kind);
+  return normalizeBillKind(kind);
 }
 function setBillKindValue(selectId, wrapId, customId, kind){
   populateBillKindSelect(selectId);
@@ -1363,32 +1395,40 @@ function setBillKindValue(selectId, wrapId, customId, kind){
   else { el.value = '__new__'; wrap.style.display = 'block'; document.getElementById(customId).value = k; }
 }
 function billKindCssClass(kind){
-  const k = catUpper(kind);
+  const k = normalizeBillKind(kind);
   if(k === 'CASA') return 'bkind-casa';
   if(k === 'PESSOAL') return 'bkind-pessoal';
   if(k === 'CARTÃO DE CRÉDITO') return 'bkind-cartao';
   return 'bkind-other';
 }
+function billKindFilterCssClass(kind){
+  const cls = billKindCssClass(kind);
+  if(cls === 'bkind-casa') return 'kf-casa';
+  if(cls === 'bkind-pessoal') return 'kf-pessoal';
+  if(cls === 'bkind-cartao') return 'kf-cartao';
+  return '';
+}
 function billDisplayKind(b){
   if(b.isInstallment){
-    const inst = state.installments.find(x=>x.id===b.installmentId);
-    if(inst && catUpper(inst.category) === 'CARTÃO DE CRÉDITO') return 'CARTÃO DE CRÉDITO';
+    if(b.billKind) return normalizeBillKind(b.billKind);
+    const inst = state.installments.find(x=>sameId(x.id, b.installmentId));
+    if(inst) return normalizeBillKind(inst.category);
     return null;
   }
   if(b.recurringId){
-    const r = recurringBills.find(x=>x.id===b.recurringId);
-    if(r && r.billKind) return r.billKind;
+    const r = recurringBills.find(x=>sameId(x.id, b.recurringId));
+    if(r && r.billKind) return normalizeBillKind(r.billKind);
   }
-  return b.billKind || null;
+  return normalizeBillKind(b.billKind);
 }
 function syncBillKindsFromRecurring(){
   let changed = false;
   bills.forEach(b=>{
     if(!b.recurringId) return;
-    const r = recurringBills.find(x=>x.id===b.recurringId);
+    const r = recurringBills.find(x=>sameId(x.id, b.recurringId));
     if(!r || !r.billKind) return;
-    const kind = catUpper(r.billKind);
-    if(b.billKind !== kind){ b.billKind = kind; changed = true; }
+    const kind = normalizeBillKind(r.billKind);
+    if(normalizeBillKind(b.billKind) !== kind){ b.billKind = kind; changed = true; }
   });
   return changed;
 }
@@ -1398,13 +1438,14 @@ function billKindChipClass(b){
   return ` chip-${billKindCssClass(kind)}`;
 }
 function billKindTagHTML(kind){
-  if(!kind) return '';
-  const cls = billKindCssClass(kind);
+  const k = normalizeBillKind(kind);
+  if(!k) return '';
+  const cls = billKindCssClass(k);
   if(cls === 'bkind-other'){
-    const color = categoryColor(catUpper(kind));
-    return `<span class="class-tag bkind-other" style="background:${color}22;color:${color}">${escapeHtml(catUpper(kind))}</span>`;
+    const color = categoryColor(k);
+    return `<span class="class-tag bkind-other" style="background:${color}22;color:${color}">${escapeHtml(k)}</span>`;
   }
-  return `<span class="class-tag ${cls}">${escapeHtml(catUpper(kind))}</span>`;
+  return `<span class="class-tag ${cls}">${escapeHtml(k)}</span>`;
 }
 function normalizeBillKindsFromData(){
   const add = k=>{
@@ -1412,8 +1453,8 @@ function normalizeBillKindsFromData(){
     if(!u) return;
     if(!BILL_KIND_DEFAULTS.includes(u) && !billKindCustom.includes(u)) billKindCustom.push(u);
   };
-  bills.forEach(b=>{ if(b.billKind) b.billKind = catUpper(b.billKind); add(b.billKind); });
-  recurringBills.forEach(r=>{ if(r.billKind) r.billKind = catUpper(r.billKind); add(r.billKind); });
+  bills.forEach(b=>{ if(b.billKind){ b.billKind = normalizeBillKind(b.billKind); add(b.billKind); } });
+  recurringBills.forEach(r=>{ if(r.billKind){ r.billKind = normalizeBillKind(r.billKind); add(r.billKind); } });
 }
 async function loadBills(){
   bills = [];
@@ -1421,7 +1462,7 @@ async function loadBills(){
     const res = await window.storage.get(BILLS_KEY, false);
     if(res && res.value) bills = JSON.parse(res.value) || [];
   }catch(e){}
-  bills.forEach(b=>{ if(b.billKind) b.billKind = catUpper(b.billKind); });
+  bills.forEach(b=>{ if(b.billKind) b.billKind = normalizeBillKind(b.billKind); });
 }
 async function saveBills(){
   try{ await window.storage.set(BILLS_KEY, JSON.stringify(bills), false); }
@@ -1433,7 +1474,7 @@ async function loadRecurring(){
     const res = await window.storage.get(RECURRING_KEY, false);
     if(res && res.value) recurringBills = JSON.parse(res.value) || [];
   }catch(e){}
-  recurringBills.forEach(r=>{ if(r.billKind) r.billKind = catUpper(r.billKind); });
+  recurringBills.forEach(r=>{ if(r.billKind) r.billKind = normalizeBillKind(r.billKind); });
 }
 async function saveRecurring(){
   try{ await window.storage.set(RECURRING_KEY, JSON.stringify(recurringBills), false); }
@@ -1535,19 +1576,22 @@ async function ensureRecurringInstancesForMonth(year, month){
   recurringBills.forEach(r=>{
     const dueDates = recurringDueDatesInMonth(r, year, month);
     dueDates.forEach(dd=>{
-      const inst = bills.find(b => b.recurringId === r.id && b.dueDate === dd);
+      const inst = bills.find(b => sameId(b.recurringId, r.id) && b.dueDate === dd);
       if(!inst){
         const isVariable = r.mode === 'variable';
         const autoNote = isVariable ? 'Valor variável — confira e ajuste o valor deste mês.' : null;
         const notes = [r.notes, autoNote].filter(Boolean).join(' ') || null;
         bills.push({
           id: uid(), desc: r.desc, value: r.value, dueDate: dd,
-          classification: r.classification, billKind: r.billKind || null, notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
+          classification: r.classification, billKind: normalizeBillKind(r.billKind), notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
         });
         changed = true;
-      } else if(r.billKind && inst.billKind !== catUpper(r.billKind)){
-        inst.billKind = catUpper(r.billKind);
-        changed = true;
+      } else {
+        const kind = normalizeBillKind(r.billKind);
+        if(kind && normalizeBillKind(inst.billKind) !== kind){
+          inst.billKind = kind;
+          changed = true;
+        }
       }
     });
   });
@@ -2197,6 +2241,43 @@ function editBill(id){
 
 /* ===== Contas recorrentes ===== */
 let contasSubActive = 'nao-recorrentes';
+let contasKindFilter = 'todas';
+function getContasKindFilterOptions(){
+  const kinds = new Set(getBillKindList().map(normalizeBillKind).filter(Boolean));
+  bills.forEach(b=>{ const k = billDisplayKind(b); if(k) kinds.add(k); });
+  recurringBills.forEach(r=>{ if(r.billKind) kinds.add(normalizeBillKind(r.billKind)); });
+  (state.installments||[]).forEach(i=>{ const k = normalizeBillKind(i.category); if(k) kinds.add(k); });
+  const ordered = [];
+  BILL_KIND_DEFAULTS.forEach(k=>{ if(kinds.has(k)) ordered.push(k); });
+  Array.from(kinds).sort().forEach(k=>{ if(!ordered.includes(k)) ordered.push(k); });
+  return ordered;
+}
+function renderContasKindFilter(){
+  const wrap = document.getElementById('contasKindFilter');
+  const chips = document.getElementById('contasKindChips');
+  if(!wrap || !chips) return;
+  wrap.style.display = 'flex';
+  const kinds = getContasKindFilterOptions();
+  if(contasKindFilter !== 'todas' && !kinds.includes(contasKindFilter)) contasKindFilter = 'todas';
+  const btns = [{ id:'todas', label:'TODAS' }].concat(kinds.map(k=>({ id:k, label:k })));
+  chips.innerHTML = btns.map(b=>{
+    const kfCls = b.id === 'todas' ? '' : billKindFilterCssClass(b.id);
+    const active = contasKindFilter === b.id ? ' active' : '';
+    return `<button type="button" class="kind-filter-btn ${kfCls}${active}" data-kind="${escapeHtml(b.id)}">${escapeHtml(b.label)}</button>`;
+  }).join('');
+  chips.querySelectorAll('[data-kind]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      contasKindFilter = btn.dataset.kind;
+      renderContasKindFilter();
+      if(contasSubActive === 'recorrentes') renderRecurringList();
+      else renderContasTab();
+    });
+  });
+}
+function billMatchesKindFilter(b){
+  if(contasKindFilter === 'todas') return true;
+  return billDisplayKind(b) === contasKindFilter;
+}
 function updateContasSubUI(){
   const sub = contasSubActive;
   const showRecurring = sub === 'recorrentes';
@@ -2207,10 +2288,17 @@ function updateContasSubUI(){
   if(formPanel) formPanel.style.display = sub === 'nao-recorrentes' ? 'block' : 'none';
   const monthFilter = document.getElementById('contasMonthFilter');
   if(monthFilter) monthFilter.style.display = showLista ? 'flex' : 'none';
+  renderContasKindFilter();
   const titleEl = document.getElementById('billsListTitle');
-  if(titleEl) titleEl.textContent = sub === 'todas' ? 'Todas as contas do mês' : 'Contas NÃO RECORRENTES do mês';
+  if(titleEl){
+    const filterTxt = contasKindFilter !== 'todas' ? ` · ${contasKindFilter}` : '';
+    titleEl.textContent = sub === 'todas' ? `Todas as contas do mês${filterTxt}` : `Contas NÃO RECORRENTES do mês${filterTxt}`;
+  }
   const emptyEl = document.getElementById('billsEmpty');
-  if(emptyEl) emptyEl.textContent = sub === 'todas' ? 'Nenhuma conta neste mês.' : 'Nenhuma conta NÃO RECORRENTE neste mês.';
+  if(emptyEl){
+    const filterNote = contasKindFilter !== 'todas' ? ` na categoria ${contasKindFilter}` : '';
+    emptyEl.textContent = sub === 'todas' ? `Nenhuma conta${filterNote} neste mês.` : `Nenhuma conta NÃO RECORRENTE${filterNote} neste mês.`;
+  }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -2275,15 +2363,22 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
     if(!baseDate){ document.getElementById('rDataBase').focus(); return; }
   }
 
+  const kind = normalizeBillKind(billKind);
+  let targetRecurringId = null;
   if(editingRecurringId){
-    const r = recurringBills.find(x=>x.id===editingRecurringId);
-    if(r){ r.desc=desc; r.value=valor; r.freq=freq; r.dueDay=dueDay; r.baseDate=baseDate; r.classification=classificacao; r.billKind=billKind; r.notes = obs || null; r.mode = recurringMode; r.bank = banco; }
+    targetRecurringId = editingRecurringId;
+    const r = recurringBills.find(x=>sameId(x.id, editingRecurringId));
+    if(r){ r.desc=desc; r.value=valor; r.freq=freq; r.dueDay=dueDay; r.baseDate=baseDate; r.classification=classificacao; r.billKind=kind; r.notes = obs || null; r.mode = recurringMode; r.bank = banco; }
     editingRecurringId = null;
     document.getElementById('recurringSubmitLabel').textContent = '+ Adicionar';
   } else {
-    recurringBills.push({ id: uid(), desc, value: valor, freq, dueDay, baseDate, classification: classificacao, billKind, notes: obs || null, mode: recurringMode, bank: banco });
+    const novo = { id: uid(), desc, value: valor, freq, dueDay, baseDate, classification: classificacao, billKind: kind, notes: obs || null, mode: recurringMode, bank: banco };
+    recurringBills.push(novo);
+    targetRecurringId = novo.id;
   }
+  bills.forEach(b=>{ if(sameId(b.recurringId, targetRecurringId)) b.billKind = kind; });
   await saveRecurring();
+  await saveBills();
   e.target.reset();
   setRecurringMode('fixed');
   updateRecurringFreqFields();
@@ -2336,9 +2431,20 @@ function freqLabel(r){
 function renderRecurringList(){
   const list = document.getElementById('recurringList');
   const empty = document.getElementById('recurringEmpty');
-  if(recurringBills.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+  let items = recurringBills.slice();
+  if(contasKindFilter !== 'todas'){
+    items = items.filter(r=> normalizeBillKind(r.billKind) === contasKindFilter);
+  }
+  if(items.length===0){
+    list.innerHTML='';
+    empty.style.display='block';
+    empty.textContent = contasKindFilter !== 'todas'
+      ? `Nenhuma conta recorrente na categoria ${contasKindFilter}.`
+      : 'Nenhuma conta recorrente cadastrada ainda.';
+    return;
+  }
   empty.style.display='none';
-  list.innerHTML = recurringBills.map(r=>{
+  list.innerHTML = items.map(r=>{
     const isVariable = r.mode === 'variable';
     const per = freqLabel(r);
     const valueLine = isVariable
@@ -2793,7 +2899,7 @@ function getInstallmentBills(){
       const m = mIndex % 12;
       const dueDate = clampDueDate(y, m, inst.dueDay);
       const numLabel = total ? `${parcelaIndex+1}/${total}` : `nº ${parcelaIndex+1}`;
-      const tipo = catUpper(inst.category)==='EMPRÉSTIMO' ? 'Parcela empréstimo' : 'Fatura cartão';
+      const billKind = normalizeBillKind(inst.category);
       out.push({
         id: `inst:${inst.id}:${parcelaIndex}`,
         installmentId: inst.id,
@@ -2804,6 +2910,7 @@ function getInstallmentBills(){
         value: parcelaValor,
         dueDate,
         classification: null,
+        billKind,
         bank: inst.bank || null,
         notes: inst.notes || null,
         paid: false,
@@ -3018,7 +3125,7 @@ function renderBillCard(b){
         <span class="goal-name">${escapeHtml(b.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${foraSaldo ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
-          ${billKindTagHTML(billDisplayKind(b)) || '<span class="class-tag class-inst">PARCELAS</span>'}
+          ${billKindTagHTML(billDisplayKind(b)) || '<span class="class-tag class-inst">PARCELAS / EMPRÉSTIMO</span>'}
           ${bankTagHTML(b.bank)}
         </span>
       </div>
@@ -3120,6 +3227,7 @@ function renderBillsList(){
   const selectedMonth = getContasMonthKey();
   items = items.filter(b=> monthKey(b.dueDate) === selectedMonth);
   if(contasSubActive === 'nao-recorrentes') items = items.filter(isNonRecurringBill);
+  if(contasKindFilter !== 'todas') items = items.filter(billMatchesKindFilter);
 
   if(items.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
