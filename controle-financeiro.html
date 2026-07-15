@@ -492,7 +492,7 @@
     <button data-tab="lancamentos">Lançamentos</button>
     <button data-tab="parcelas">Parcelas e empréstimos</button>
     <button data-tab="contas">Contas a pagar</button>
-    <button data-tab="folha">Folha de pagamento</button>
+    <button data-tab="folha" id="tabFolha" style="display:none;">Folha de pagamento</button>
     <button data-tab="metas">Metas</button>
     <button data-tab="analises">Análises</button>
   </nav>
@@ -1379,6 +1379,17 @@ function renderProfileSwitcher(){
   });
 }
 
+function profileHasFolha(){ return FOLHA_PROFILES.includes(currentProfile.id); }
+function updateTabsForProfile(){
+  const folhaTab = document.getElementById('tabFolha');
+  const folhaSection = document.getElementById('folha');
+  const show = profileHasFolha();
+  if(folhaTab) folhaTab.style.display = show ? '' : 'none';
+  if(!show && folhaSection && folhaSection.classList.contains('active')){
+    document.querySelector('nav.tabs button[data-tab="painel"]').click();
+  }
+}
+
 async function switchProfile(id){
   const p = PROFILES.find(x=>x.id===id);
   if(!p || p.id===currentProfile.id) return;
@@ -1396,6 +1407,7 @@ async function switchProfile(id){
   document.getElementById('brandMark').style.background = p.mark;
 
   renderProfileSwitcher();
+  updateTabsForProfile();
   await loadState();
   populateCategorySelect();
   document.getElementById('fCategoriaCustomWrap').style.display = 'none';
@@ -2941,6 +2953,7 @@ async function runInit(){
   updateFolhaTipoFields();
   document.getElementById('foVencimento').value = todayISO();
   renderProfileSwitcher();
+  updateTabsForProfile();
   renderHeaderDate();
   await loadState();
   populateCategorySelect();
