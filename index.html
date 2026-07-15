@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260715 -->
+<!-- deploy-v20260715b -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1229,26 +1229,43 @@ function initSupabase(){
   supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }
 
-function parseStoredList(raw){
-  if(raw == null || raw === '') return [];
-  if(Array.isArray(raw)) return raw;
-  if(typeof raw === 'string'){
+function parseStoredJson(raw, fallback){
+  if(raw == null || raw === '') return fallback;
+  if(typeof raw === 'object') return raw;
+  if(typeof raw !== 'string') return fallback;
+  let cur = raw;
+  for(let i = 0; i < 4; i++){
     try{
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    }catch(e){ return []; }
+      const parsed = JSON.parse(cur);
+      if(typeof parsed === 'string'){ cur = parsed; continue; }
+      return parsed;
+    }catch(e){ return fallback; }
+  }
+  return fallback;
+}
+function parseStoredList(raw){
+  const parsed = parseStoredJson(raw, null);
+  if(Array.isArray(parsed)) return parsed;
+  if(parsed && typeof parsed === 'object'){
+    if(Array.isArray(parsed.items)) return parsed.items;
+    if(Array.isArray(parsed.bills)) return parsed.bills;
   }
   return [];
 }
+let billsStorageReady = false;
+let billsStorageError = false;
+let recurringStorageReady = false;
+let recurringStorageError = false;
 window.storage = {
   async get(key){
-    if(!supabaseClient) return null;
+    if(!supabaseClient) return { error: true };
     const { data, error } = await supabaseClient
       .from('app_storage')
       .select('value')
       .eq('key', key)
       .maybeSingle();
-    if(error || !data) return null;
+    if(error) return { error: true };
+    if(!data) return { value: null, missing: true };
     return { value: data.value };
   },
   async set(key, valueStr){
@@ -1318,9 +1335,9 @@ function tagClass(cat){
 async function loadState(){
   state = { transactions: [], goals: [], installments: [], customCategoriesIn: [], customCategoriesOut: [] };
   try{
-    const res = await window.storage.get(storageKey(currentProfile.id), false);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
+    const res = await window.storage.get(storageKey(currentProfile.id));
+    if(res && !res.error){
+      const parsed = parseStoredJson(res.value, {});
       state.transactions = parsed.transactions || [];
       state.goals = parsed.goals || [];
       state.installments = parsed.installments || [];
@@ -1339,9 +1356,7 @@ async function loadBillKinds(){
   billKindCustom = [];
   try{
     const res = await window.storage.get(BILL_KINDS_KEY);
-    const parsed = res && res.value;
-    if(Array.isArray(parsed)) billKindCustom = parsed;
-    else if(typeof parsed === 'string') billKindCustom = JSON.parse(parsed) || [];
+    if(res && !res.error) billKindCustom = parseStoredList(res.value);
   }catch(e){}
   billKindCustom = billKindCustom.map(catUpper).filter(Boolean);
 }
@@ -1451,22 +1466,31 @@ function normalizeBillKindsFromData(){
 }
 async function loadBills(){
   bills = [];
+  billsStorageReady = false;
+  billsStorageError = false;
   try{
     const res = await window.storage.get(BILLS_KEY);
-    bills = parseStoredList(res && res.value);
-  }catch(e){ bills = []; }
+    if(!res || res.error){ billsStorageError = true; return; }
+    bills = parseStoredList(res.value);
+    billsStorageReady = true;
+  }catch(e){ billsStorageError = true; }
   bills.forEach(b=>{ if(b.billKind) b.billKind = normalizeBillKind(b.billKind); });
 }
 async function saveBills(){
+  if(billsStorageError) return;
   try{ await window.storage.set(BILLS_KEY, JSON.stringify(bills), false); }
   catch(e){ console.error('Falha ao salvar contas', e); }
 }
 async function loadRecurring(){
   recurringBills = [];
+  recurringStorageReady = false;
+  recurringStorageError = false;
   try{
     const res = await window.storage.get(RECURRING_KEY);
-    recurringBills = parseStoredList(res && res.value);
-  }catch(e){ recurringBills = []; }
+    if(!res || res.error){ recurringStorageError = true; return; }
+    recurringBills = parseStoredList(res.value);
+    recurringStorageReady = true;
+  }catch(e){ recurringStorageError = true; }
   recurringBills.forEach(r=>{ if(r.billKind) r.billKind = normalizeBillKind(r.billKind); });
 }
 function recoverRecurringTemplatesFromBills(){
@@ -1509,6 +1533,7 @@ async function syncContasData(){
   return changed;
 }
 async function saveRecurring(){
+  if(recurringStorageError) return;
   try{ await window.storage.set(RECURRING_KEY, JSON.stringify(recurringBills), false); }
   catch(e){ console.error('Falha ao salvar contas recorrentes', e); }
 }
@@ -1633,9 +1658,9 @@ async function loadProfileData(profileId){
   const key = storageKey(profileId);
   let data = { transactions: [], goals: [], installments: [], customCategoriesIn: [], customCategoriesOut: [] };
   try{
-    const res = await window.storage.get(key, false);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
+    const res = await window.storage.get(key);
+    if(res && !res.error){
+      const parsed = parseStoredJson(res.value, {});
       data = Object.assign(data, parsed);
     }
   }catch(e){}
@@ -1799,8 +1824,8 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'contas'){
-      resetBillsMonthFilter();
       syncContasData().then(async ()=>{
+        resetBillsMonthFilter();
         await renderContasTab();
         renderRecurringList();
       });
@@ -2300,7 +2325,6 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
     else {
-      await syncContasData();
       renderRecurringList();
       renderContasTotals();
     }
@@ -3251,7 +3275,6 @@ function renderBillsList(){
 }
 
 async function renderContasTab(){
-  await syncContasData();
   await ensureRecurringForVisibleMonths();
   renderBillsList();
   renderContasTotals();
