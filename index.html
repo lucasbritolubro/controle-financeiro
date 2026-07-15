@@ -179,6 +179,22 @@
   .type-toggle button.sel-mode.active{ background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm); }
   .type-toggle button.sel-rmode.active{ background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm); }
   .type-toggle button.sel-sub.active{ background:var(--black); color:#fff; }
+  .type-toggle button.sel-bal.active{ background:var(--mint-soft); color:var(--mint); }
+  .type-toggle button.sel-bal-no.active{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
+  .balance-toggle-wrap{ margin-top:14px; }
+  .balance-toggle-wrap .bt-label{ display:block; margin-bottom:6px; font-size:11.5px; font-weight:700; color:var(--ink-soft); }
+  .balance-toggle-wrap .bt-hint{ margin:6px 0 0; font-size:11px; font-weight:600; color:var(--ink-faint); }
+  .tag-noconta{ display:inline-block; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; background:rgba(17,17,20,0.08); color:var(--ink-soft); }
+  .pay-history{ margin-top:12px; padding:12px 14px; background:var(--card); border:1px solid var(--card-border); border-radius:12px; }
+  .pay-history-title{ font-family:Arial, Helvetica, sans-serif; font-weight:800; font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:8px; }
+  .pay-history-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--card-border); }
+  .pay-history-row:last-child{ border-bottom:none; padding-bottom:0; }
+  .pay-history-row .phr-left{ display:flex; flex-direction:column; gap:2px; }
+  .pay-history-row .phr-num{ font-weight:700; font-size:12.5px; color:var(--ink); }
+  .pay-history-row .phr-date{ font-size:11px; font-weight:600; color:var(--ink-faint); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .pay-history-row .phr-right{ display:flex; align-items:center; gap:8px; }
+  .pay-history-row .phr-val{ font-family:Arial, Helvetica, sans-serif; font-weight:800; font-size:13px; color:var(--ink); }
+  .pay-pre{ display:inline-block; padding:1px 7px; border-radius:999px; font-size:9.5px; font-weight:700; background:rgba(17,17,20,0.06); color:var(--ink-faint); }
   .entry-form-footer{ grid-column:1/-1; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end; }
   button.btn-add{
     padding:11px 20px; background:linear-gradient(135deg, var(--black-soft), var(--black)); color:#fff; border:none;
@@ -225,6 +241,22 @@
   .alert-row .alert-meta{ font-size:12px; font-weight:600; color:var(--rose); }
   .alert-row .alert-val{ font-family:Arial, Helvetica, sans-serif; font-weight:800; color:var(--rose); }
   .alerts-empty{ color:var(--ink-faint); font-size:13.5px; font-weight:600; }
+  /* Detalhes do dia clicado no calendário */
+  .day-detail-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .day-detail-title{ font-family:Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; color:var(--ink); margin:0; }
+  .day-detail-title span{ text-transform:capitalize; }
+  .day-total{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius:12px; background:var(--ink); color:#fff; margin-top:12px; font-weight:700; }
+  .day-total .dt-label{ font-size:12.5px; opacity:.85; }
+  .day-total .dt-value{ font-family:Arial, Helvetica, sans-serif; font-weight:800; font-size:16px; }
+  .day-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 14px; border-radius:14px; border:1px solid var(--card-border); background:var(--card-raised); margin-bottom:10px; }
+  .day-row:last-child{ margin-bottom:0; }
+  .day-row.st-urgent{ background:var(--rose-soft); border-color:var(--rose); }
+  .day-row.st-paid{ background:var(--mint-soft); border-color:var(--mint); }
+  .day-row.st-pending{ background:var(--amber-soft); border-color:var(--amber); }
+  .day-row .dr-main{ font-weight:700; font-size:13.5px; color:var(--ink); }
+  .day-row .dr-meta{ font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-top:3px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .day-row .dr-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .day-row .dr-val{ font-family:Arial, Helvetica, sans-serif; font-weight:800; color:var(--ink); }
   .folha-bank-details{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; padding:10px 12px; background:var(--card); border:1px dashed var(--card-border); border-radius:10px; font-size:11.5px; font-weight:600; color:var(--ink-soft); }
   .folha-bank-details b{ color:var(--ink); font-weight:800; }
   .goal-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
@@ -307,6 +339,7 @@
   .class-lubro{ background:rgba(56,189,248,0.14); color:#0369A1; }
   .class-nexo{ background:var(--mint-soft); color:var(--mint); }
   .class-bank{ background:rgba(17,17,20,0.06); color:var(--ink-soft); }
+  .class-inst{ background:rgba(251,146,60,0.15); color:#C2410C; }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
   ::placeholder{ color:var(--ink-faint); }
@@ -476,9 +509,14 @@
       </h2>
       <div class="cal-header"><span class="cal-title" id="calTitle">Mês</span></div>
       <div class="cal-grid" id="calGrid"></div>
-      <p class="empty-note" id="calFilterNote" style="display:none; margin-top:12px;">
-        Mostrando contas de <span id="calFilterDate"></span> — <a href="#" id="calFilterClear" style="color:var(--ink); font-weight:700;">ver todas</a>
-      </p>
+      <div id="dayDetailPanel" style="display:none; margin-top:16px;">
+        <div class="day-detail-head">
+          <h3 class="day-detail-title">Pagamentos de <span id="dayDetailDate"></span></h3>
+          <button type="button" class="btn-mini ghost" id="dayDetailClose">Fechar</button>
+        </div>
+        <div id="dayDetailList"></div>
+      </div>
+      <p class="empty-note" id="calHint" style="margin-top:12px;">Toque em um dia com vencimentos para ver tudo que há para pagar nele.</p>
     </div>
 
     <div class="panel alerts-panel" id="alertsPanel" style="margin-top:16px;">
@@ -633,6 +671,17 @@
         <button type="submit" class="btn-add">+ Registrar</button>
       </form>
 
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;" id="instVencGrid">
+        <div class="field">
+          <label>Dia do vencimento (todo mês)</label>
+          <input type="number" id="iVencimentoDia" min="1" max="31" step="1" placeholder="Ex: 10" required>
+        </div>
+        <div class="field">
+          <label>Primeiro vencimento</label>
+          <input type="month" id="iPrimeiroVenc" required>
+        </div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;" id="instExtraGrid">
         <div class="field">
           <label id="iTotalValorLabel">Valor total da dívida (opcional)</label>
@@ -675,6 +724,15 @@
       <div class="field" style="margin-top:12px;">
         <label>Observações (opcional)</label>
         <input type="text" id="iObs" placeholder="Ex: financiamento do carro, empréstimo com juros variáveis...">
+      </div>
+
+      <div class="balance-toggle-wrap">
+        <span class="bt-label">Os pagamentos entram na contabilidade do saldo?</span>
+        <div class="type-toggle" style="max-width:300px;">
+          <button type="button" class="sel-bal active" data-ibal="sim">Sim, contabilizar</button>
+          <button type="button" class="sel-bal-no" data-ibal="nao">Não contabilizar</button>
+        </div>
+        <p class="bt-hint">Escolha "Não" para dívidas já pagas antes do sistema: elas aparecem para acompanhamento, mas não geram lançamentos nem mexem no saldo.</p>
       </div>
     </div>
 
@@ -727,6 +785,14 @@
           <div class="field" id="bBancoCustomWrap" style="display:none; max-width:280px; margin-top:12px;">
             <label>Qual banco?</label>
             <input type="text" id="bBancoCustom" placeholder="Nome do banco">
+          </div>
+          <div class="balance-toggle-wrap">
+            <span class="bt-label">Ao marcar como paga, entra na contabilidade do saldo?</span>
+            <div class="type-toggle" style="max-width:300px;">
+              <button type="button" class="sel-bal active" data-bbal="sim">Sim, contabilizar</button>
+              <button type="button" class="sel-bal-no" data-bbal="nao">Não contabilizar</button>
+            </div>
+            <p class="bt-hint">Escolha "Não" para contas já quitadas antes do sistema: elas ficam registradas, mas não geram lançamento de saída nem abatem no saldo.</p>
           </div>
         </form>
       </div>
@@ -881,6 +947,15 @@
             <label>Chave PIX</label>
             <input type="text" id="foFavPix" placeholder="CPF, e-mail, telefone ou chave aleatória">
           </div>
+        </div>
+
+        <div class="balance-toggle-wrap">
+          <span class="bt-label">Ao marcar como pago, entra na contabilidade do saldo?</span>
+          <div class="type-toggle" style="max-width:300px;">
+            <button type="button" class="sel-bal active" data-fobal="sim">Sim, contabilizar</button>
+            <button type="button" class="sel-bal-no" data-fobal="nao">Não contabilizar</button>
+          </div>
+          <p class="bt-hint">Escolha "Não" para pagamentos já feitos antes do sistema: ficam registrados na folha, mas não geram lançamento nem abatem no saldo.</p>
         </div>
 
         <div style="margin-top:16px;">
@@ -1508,6 +1583,14 @@ document.querySelectorAll('.sel-paid').forEach(b=>{
     document.getElementById('iPagasWrap').style.display = instAlreadyPaid==='sim' ? 'block' : 'none';
   });
 });
+let instCountBalance = 'sim';
+document.querySelectorAll('[data-ibal]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    instCountBalance = b.dataset.ibal;
+    document.querySelectorAll('[data-ibal]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
 
 document.getElementById('instForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -1518,7 +1601,11 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
   const banco = readBankValue('iBanco', 'iBancoCustom');
   const obs = document.getElementById('iObs').value.trim();
   const totalDebtInput = parseCurrencyValue(document.getElementById('iTotalValor'));
+  const dueDay = parseInt(document.getElementById('iVencimentoDia').value, 10);
+  const firstDueMonth = document.getElementById('iPrimeiroVenc').value; // 'YYYY-MM'
   if(!desc) return;
+  if(isNaN(dueDay) || dueDay<1 || dueDay>31){ document.getElementById('iVencimentoDia').focus(); return; }
+  if(!firstDueMonth){ document.getElementById('iPrimeiroVenc').focus(); return; }
 
   let pagas = 0, ultimoData = null, ultimoValor = null;
   if(instAlreadyPaid === 'sim'){
@@ -1529,6 +1616,24 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
     ultimoValor = (!isNaN(uv) && uv>0) ? uv : null;
   }
 
+  // monta o histórico inicial dos pagamentos já feitos antes do cadastro
+  function buildInitialPayments(qtd, total, valorRef){
+    const arr = [];
+    for(let i=1; i<=qtd; i++){
+      const label = total ? `${i}/${total}` : `nº ${i}`;
+      // o valor/data do último pagamento informado é aplicado à última parcela; as demais usam o valor de referência
+      const isLast = i===qtd;
+      arr.push({
+        id: uid(), num: i, label,
+        value: (isLast && ultimoValor) ? ultimoValor : (valorRef || 0),
+        date: (isLast && ultimoData) ? ultimoData : null,
+        txId: null, // pagamentos anteriores ao sistema não geram lançamento
+        preexisting: true
+      });
+    }
+    return arr;
+  }
+
   if(instMode === 'fixed'){
     const valor = parseCurrencyValue(iValorEl);
     const total = parseInt(totalRaw, 10);
@@ -1537,7 +1642,8 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
     const totalDebt = (!isNaN(totalDebtInput) && totalDebtInput>0) ? totalDebtInput : valor*total;
     // estimate already-paid amount: use informed last value if provided, else parcela × pagas
     const paidTotal = pagas>0 ? (ultimoValor ? ultimoValor*pagas : valor*pagas) : 0;
-    state.installments.push({ id: uid(), desc, category: categoria, mode:'fixed', installmentValue: valor, totalInstallments: total, paidInstallments: pagas, bank: banco, notes: obs||null, totalDebt, paidTotal, lastPaymentDate: ultimoData, lastPaymentValue: ultimoValor });
+    const payments = pagas>0 ? buildInitialPayments(pagas, total, valor) : [];
+    state.installments.push({ id: uid(), desc, category: categoria, mode:'fixed', installmentValue: valor, totalInstallments: total, paidInstallments: pagas, bank: banco, notes: obs||null, totalDebt, paidTotal, lastPaymentDate: ultimoData, lastPaymentValue: ultimoValor, dueDay, firstDueMonth, countInBalance: instCountBalance!=='nao', payments });
   } else {
     const valor = parseCurrencyValue(iValorEl);
     const total = totalRaw ? parseInt(totalRaw, 10) : null;
@@ -1545,7 +1651,8 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
     const refVal = (!isNaN(valor) && valor>0)? valor : null;
     const totalDebt = (!isNaN(totalDebtInput) && totalDebtInput>0) ? totalDebtInput : (total && refVal ? refVal*total : null);
     const paidTotal = pagas>0 && ultimoValor ? ultimoValor*pagas : (pagas>0 && refVal ? refVal*pagas : 0);
-    state.installments.push({ id: uid(), desc, category: categoria, mode:'variable', referenceValue: refVal, totalInstallments: total, paidInstallments: pagas, bank: banco, notes: obs||null, totalDebt, paidTotal, lastPaymentDate: ultimoData, lastPaymentValue: ultimoValor });
+    const payments = pagas>0 ? buildInitialPayments(pagas, total, refVal) : [];
+    state.installments.push({ id: uid(), desc, category: categoria, mode:'variable', referenceValue: refVal, totalInstallments: total, paidInstallments: pagas, bank: banco, notes: obs||null, totalDebt, paidTotal, lastPaymentDate: ultimoData, lastPaymentValue: ultimoValor, dueDay, firstDueMonth, countInBalance: instCountBalance!=='nao', payments });
   }
   await saveState();
   e.target.reset();
@@ -1554,6 +1661,8 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
   document.getElementById('iBancoCustomWrap').style.display = 'none';
   instAlreadyPaid = 'nao';
   document.querySelectorAll('.sel-paid').forEach(x=>x.classList.toggle('active', x.dataset.paid==='nao'));
+  instCountBalance = 'sim';
+  document.querySelectorAll('[data-ibal]').forEach(x=>x.classList.toggle('active', x.dataset.ibal==='sim'));
   renderInstallments();
 });
 
@@ -1590,13 +1699,53 @@ document.getElementById('payModalForm').addEventListener('submit', async (e)=>{
   inst.lastPaymentValue = val;
   inst.lastPaymentDate = payData;
   if(inst.mode==='variable') inst.referenceValue = val;
-  const label = inst.totalInstallments ? `${inst.paidInstallments}/${inst.totalInstallments}` : `nº ${inst.paidInstallments}`;
+  const parcelaNum = inst.paidInstallments;
+  const label = inst.totalInstallments ? `${parcelaNum}/${inst.totalInstallments}` : `nº ${parcelaNum}`;
   const tipo = inst.category==='Empréstimo' ? 'parcela' : 'fatura';
-  state.transactions.push({ id: uid(), desc: `${inst.desc} — ${tipo} ${label}`, value: val, category: inst.category, date: payData, type: 'saida' });
+  let txId = null;
+  if(inst.countInBalance !== false){
+    txId = uid();
+    state.transactions.push({ id: txId, desc: `${inst.desc} — ${tipo} ${label}`, value: val, category: inst.category, date: payData, type: 'saida' });
+  }
+  if(!Array.isArray(inst.payments)) inst.payments = [];
+  inst.payments.push({ id: uid(), num: parcelaNum, label, value: val, date: payData, txId });
   await saveState();
   closePayModal();
   renderAll();
 });
+
+/* estorna o último pagamento (ou um pagamento específico) de uma parcela/empréstimo */
+async function undoInstallmentPayment(instId, paymentId){
+  const inst = state.installments.find(x=>x.id===instId);
+  if(!inst || !Array.isArray(inst.payments)) return;
+  const idx = inst.payments.findIndex(p=>p.id===paymentId);
+  if(idx === -1) return;
+  const pay = inst.payments[idx];
+  // remove o lançamento vinculado, se houver
+  if(pay.txId){
+    state.transactions = state.transactions.filter(t=>t.id!==pay.txId);
+  }
+  inst.payments.splice(idx, 1);
+  inst.paidInstallments = Math.max(0, (inst.paidInstallments||0) - 1);
+  inst.paidTotal = Math.max(0, (inst.paidTotal||0) - pay.value);
+  // recalcula último pagamento
+  if(inst.payments.length){
+    const last = inst.payments[inst.payments.length-1];
+    inst.lastPaymentValue = last.value;
+    inst.lastPaymentDate = last.date;
+    if(inst.mode==='variable') inst.referenceValue = last.value;
+  } else {
+    inst.lastPaymentValue = null;
+    inst.lastPaymentDate = null;
+  }
+  await saveState();
+  renderAll();
+}
+function togglePaymentHistory(instId){
+  const el = document.getElementById(`payhist-${instId}`);
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 
 async function deleteInstallment(id){
   state.installments = state.installments.filter(x=>x.id!==id);
@@ -1619,29 +1768,70 @@ function renderInstallments(){
     const parcelasTxt = inst.totalInstallments ? `${inst.paidInstallments} de ${inst.totalInstallments} parcelas` : `${inst.paidInstallments} pagamentos · recorrente`;
     const valorTxt = totalDebt>0 ? `pago ${fmtBRL(paidTotal)} de ${fmtBRL(totalDebt)} &middot; falta ${fmtBRL(restanteValor)}` : (inst.referenceValue? 'última: '+fmtBRL(inst.referenceValue) : 'sem valor total informado');
     const ultimo = inst.lastPaymentDate ? ` &middot; último pgto: ${new Date(inst.lastPaymentDate+'T00:00:00').toLocaleDateString('pt-BR')}` : '';
+    // próximo vencimento em aberto (a partir dos vencimentos virtuais)
+    let proxVenc = '';
+    if(!quitado && inst.dueDay && inst.firstDueMonth){
+      const next = getInstallmentBills().filter(x=>x.installmentId===inst.id && x.isNextInstallment)[0];
+      if(next) proxVenc = ` &middot; próx. vencimento: ${new Date(next.dueDate+'T00:00:00').toLocaleDateString('pt-BR')}`;
+    }
+    // histórico de pagamentos já feitos
+    const pagamentos = Array.isArray(inst.payments) ? inst.payments : [];
+    const histBtn = pagamentos.length
+      ? `<button class="btn-mini ghost" onclick="togglePaymentHistory('${inst.id}')">Ver pagamentos (${pagamentos.length})</button>`
+      : '';
+    const histHtml = pagamentos.length ? `
+      <div class="pay-history" id="payhist-${inst.id}" style="display:none;">
+        <div class="pay-history-title">Pagamentos realizados</div>
+        ${pagamentos.map(p=>{
+          const dataTxt = p.date ? new Date(p.date+'T00:00:00').toLocaleDateString('pt-BR') : 'data não informada';
+          const preTag = p.preexisting ? '<span class="pay-pre">anterior ao sistema</span>' : '';
+          return `
+          <div class="pay-history-row">
+            <div class="phr-left">
+              <span class="phr-num">Parcela ${p.label}</span>
+              <span class="phr-date">${dataTxt} ${preTag}</span>
+            </div>
+            <div class="phr-right">
+              <span class="phr-val">${fmtBRL(p.value)}</span>
+              <button class="icon-btn" title="Estornar este pagamento" onclick="undoInstallmentPayment('${inst.id}','${p.id}')">↺</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
     return `
       <div class="goal-card">
         <div class="goal-top">
           <span class="goal-name">${escapeHtml(inst.desc)}</span>
           <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            ${inst.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
             ${bankTagHTML(inst.bank)}
             <span class="${tagClass(inst.category)}"><span class="mode-label">${modeLabel}</span>${inst.category}</span>
           </span>
         </div>
         <div class="goal-bar-track"><div class="goal-bar-fill debt" style="width:${pctValor}%"></div></div>
         <div class="goal-meta">
-          <span>${parcelasTxt} &middot; ${valorTxt}${ultimo}</span>
+          <span>${parcelasTxt} &middot; ${valorTxt}${ultimo}${proxVenc}</span>
           <div class="goal-actions">
             ${quitado ? `<button class="btn-mini done" disabled>Quitado</button>` : `<button class="btn-mini" onclick="openPayModal('${inst.id}')">Marcar parcela paga</button>`}
+            ${histBtn}
             <button class="icon-btn" title="Excluir" onclick="deleteInstallment('${inst.id}')">✕</button>
           </div>
         </div>
+        ${histHtml}
         ${inst.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(inst.notes)}</p>` : ''}
       </div>`;
   }).join('');
 }
 
 /* ===== Contas a pagar + Calendário ===== */
+let billCountBalance = 'sim';
+document.querySelectorAll('[data-bbal]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    billCountBalance = b.dataset.bbal;
+    document.querySelectorAll('[data-bbal]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
 document.getElementById('billForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const desc = document.getElementById('bDesc').value.trim();
@@ -1655,7 +1845,7 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
   if(editingBillId){
     const b = bills.find(x=>x.id===editingBillId);
     if(b){
-      b.desc=desc; b.value=valor; b.dueDate=vencimento; b.classification=classificacao; b.notes = obs || null; b.bank = banco;
+      b.desc=desc; b.value=valor; b.dueDate=vencimento; b.classification=classificacao; b.notes = obs || null; b.bank = banco; b.countInBalance = billCountBalance!=='nao';
       if(b.recurringId){
         const r = recurringBills.find(x=>x.id===b.recurringId);
         if(r && r.mode === 'variable'){ r.value = valor; await saveRecurring(); renderRecurringList(); }
@@ -1664,12 +1854,14 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
     editingBillId = null;
     document.getElementById('billSubmitLabel').textContent = '+ Adicionar';
   } else {
-    bills.push({ id: uid(), desc, value: valor, dueDate: vencimento, classification: classificacao, notes: obs || null, bank: banco, paid:false, paidTxId:null });
+    bills.push({ id: uid(), desc, value: valor, dueDate: vencimento, classification: classificacao, notes: obs || null, bank: banco, paid:false, paidTxId:null, countInBalance: billCountBalance!=='nao' });
   }
   await saveBills();
   e.target.reset();
   document.getElementById('bVencimento').value = todayISO();
   document.getElementById('bBancoCustomWrap').style.display = 'none';
+  billCountBalance = 'sim';
+  document.querySelectorAll('[data-bbal]').forEach(x=>x.classList.toggle('active', x.dataset.bbal==='sim'));
   populateBillsMonthSelect(true);
   renderContasTab();
 });
@@ -1683,6 +1875,8 @@ function editBill(id){
   document.getElementById('bClassificacao').value = b.classification;
   document.getElementById('bObs').value = b.notes || '';
   setBankValue('bBanco', 'bBancoCustom', 'bBancoCustomWrap', b.bank || null);
+  billCountBalance = (b.countInBalance===false) ? 'nao' : 'sim';
+  document.querySelectorAll('[data-bbal]').forEach(x=>x.classList.toggle('active', x.dataset.bbal===billCountBalance));
   editingBillId = id;
   document.getElementById('billSubmitLabel').textContent = 'Salvar edição';
   document.querySelector('[data-tab="contas"]').click();
@@ -1846,11 +2040,13 @@ async function toggleBillPaid(id){
   bill.paid = !wasPaid;
   try{
     if(!wasPaid){
-      const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
-      const cat = p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1];
-      const tx = { id: uid(), desc: `Conta: ${bill.desc}`, value: bill.value, category: cat, date: todayISO(), type: 'saida' };
-      await addTransactionToProfile(p.id, tx);
-      bill.paidTxId = tx.id;
+      if(bill.countInBalance !== false){
+        const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
+        const cat = p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1];
+        const tx = { id: uid(), desc: `Conta: ${bill.desc}`, value: bill.value, category: cat, date: todayISO(), type: 'saida' };
+        await addTransactionToProfile(p.id, tx);
+        bill.paidTxId = tx.id;
+      }
     } else {
       const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
       if(bill.paidTxId) await removeTransactionFromProfile(p.id, bill.paidTxId);
@@ -1890,6 +2086,14 @@ function updateFolhaTipoFields(){
   document.getElementById('foSalarioWrap').style.display = tipo==='Salário' ? 'block' : 'none';
 }
 document.getElementById('foTipo').addEventListener('change', updateFolhaTipoFields);
+let folhaCountBalance = 'sim';
+document.querySelectorAll('[data-fobal]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    folhaCountBalance = b.dataset.fobal;
+    document.querySelectorAll('[data-fobal]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
 
 function folhaCurrentMonthKey(){ return document.getElementById('folhaMonthSelect').value || monthKey(todayISO()); }
 function populateFolhaMonthSelect(preserve){
@@ -1935,18 +2139,20 @@ document.getElementById('folhaForm').addEventListener('submit', async (e)=>{
 
   if(editingFolhaId){
     const f = folha.find(x=>x.id===editingFolhaId);
-    if(f){ f.tipo=tipo; f.desc=desc; f.value=valor; f.dueDate=vencimento; f.classification=classificacao; f.bank=banco; f.notes=obs||null; f.bankDetails=bankDetails; }
+    if(f){ f.tipo=tipo; f.desc=desc; f.value=valor; f.dueDate=vencimento; f.classification=classificacao; f.bank=banco; f.notes=obs||null; f.bankDetails=bankDetails; f.countInBalance = folhaCountBalance!=='nao'; }
     editingFolhaId = null;
     document.getElementById('folhaSubmitLabel').textContent = '+ Adicionar à folha';
     document.getElementById('folhaFormTitle').textContent = 'Novo lançamento na folha';
   } else {
-    folha.push({ id: uid(), tipo, desc, value: valor, dueDate: vencimento, classification: classificacao, bank: banco, notes: obs||null, bankDetails, paid:false, paidTxId:null });
+    folha.push({ id: uid(), tipo, desc, value: valor, dueDate: vencimento, classification: classificacao, bank: banco, notes: obs||null, bankDetails, paid:false, paidTxId:null, countInBalance: folhaCountBalance!=='nao' });
   }
   await saveFolha();
   e.target.reset();
   document.getElementById('foTipoOutroWrap').style.display = 'none';
   document.getElementById('foSalarioWrap').style.display = 'none';
   document.getElementById('foBancoCustomWrap').style.display = 'none';
+  folhaCountBalance = 'sim';
+  document.querySelectorAll('[data-fobal]').forEach(x=>x.classList.toggle('active', x.dataset.fobal==='sim'));
   populateFolhaMonthSelect(true);
   renderFolha();
 });
@@ -1975,6 +2181,8 @@ function editFolha(id){
   document.getElementById('foFavAgencia').value = bd.agencia || '';
   document.getElementById('foFavConta').value = bd.conta || '';
   document.getElementById('foFavPix').value = bd.pix || '';
+  folhaCountBalance = (f.countInBalance===false) ? 'nao' : 'sim';
+  document.querySelectorAll('[data-fobal]').forEach(x=>x.classList.toggle('active', x.dataset.fobal===folhaCountBalance));
   editingFolhaId = id;
   document.getElementById('folhaSubmitLabel').textContent = 'Salvar edição';
   document.getElementById('folhaFormTitle').textContent = 'Editar lançamento da folha';
@@ -2001,10 +2209,12 @@ async function toggleFolhaPaid(id){
   const p = PROFILES.find(x=>x.id===f.classification) || currentProfile;
   try{
     if(!wasPaid){
-      const cat = p.categoriesOut.includes('Equipe') ? 'Equipe' : (p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1]);
-      const tx = { id: uid(), desc: `Folha: ${f.desc} (${f.tipo})`, value: f.value, category: cat, date: todayISO(), type: 'saida' };
-      await addTransactionToProfile(p.id, tx);
-      f.paidTxId = tx.id;
+      if(f.countInBalance !== false){
+        const cat = p.categoriesOut.includes('Equipe') ? 'Equipe' : (p.categoriesOut.includes('Contas a Pagar') ? 'Contas a Pagar' : p.categoriesOut[p.categoriesOut.length-1]);
+        const tx = { id: uid(), desc: `Folha: ${f.desc} (${f.tipo})`, value: f.value, category: cat, date: todayISO(), type: 'saida' };
+        await addTransactionToProfile(p.id, tx);
+        f.paidTxId = tx.id;
+      }
     } else {
       if(f.paidTxId) await removeTransactionFromProfile(p.id, f.paidTxId);
       f.paidTxId = null;
@@ -2045,6 +2255,7 @@ function renderFolha(){
       <div class="goal-top">
         <span class="goal-name">${escapeHtml(f.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${f.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           <span class="class-tag class-bank">${escapeHtml(f.tipo)}</span>
           ${bankTagHTML(f.bank)}
           ${classTagHTML(f.classification)}
@@ -2064,6 +2275,52 @@ function renderFolha(){
   }).join('');
 }
 
+/* Gera "contas virtuais" para as parcelas/empréstimos restantes, mês a mês, até quitar.
+   Cada item representa a próxima ou futuras parcelas em aberto. Não são gravados como bills;
+   são calculados na hora e mesclados às contas nas telas de calendário, lista e alertas. */
+function getInstallmentBills(){
+  const out = [];
+  (state.installments || []).forEach(inst=>{
+    if(!inst.dueDay || !inst.firstDueMonth) return; // parcelas antigas sem data não geram vencimentos
+    const total = inst.totalInstallments;
+    const paid = inst.paidInstallments || 0;
+    // sem total definido (recorrente/variável em aberto): projeta só a próxima parcela
+    const restantes = total ? (total - paid) : 1;
+    if(restantes <= 0) return;
+    const [fy, fm] = inst.firstDueMonth.split('-').map(Number);
+    const parcelaValor = inst.mode==='fixed' ? inst.installmentValue : (inst.referenceValue || inst.lastPaymentValue || 0);
+    for(let k=0; k<restantes; k++){
+      const parcelaIndex = paid + k; // 0-based da próxima em diante
+      const mIndex = (fm - 1) + parcelaIndex;
+      const y = fy + Math.floor(mIndex/12);
+      const m = mIndex % 12;
+      const dueDate = clampDueDate(y, m, inst.dueDay);
+      const numLabel = total ? `${parcelaIndex+1}/${total}` : `nº ${parcelaIndex+1}`;
+      const tipo = inst.category==='Empréstimo' ? 'Parcela empréstimo' : 'Fatura cartão';
+      out.push({
+        id: `inst:${inst.id}:${parcelaIndex}`,
+        installmentId: inst.id,
+        installmentIndex: parcelaIndex,
+        isInstallment: true,
+        isNextInstallment: k===0, // só a próxima em aberto pode ser paga
+        desc: `${inst.desc} — parcela ${numLabel}`,
+        value: parcelaValor,
+        dueDate,
+        classification: null,
+        bank: inst.bank || null,
+        notes: inst.notes || null,
+        paid: false,
+        paidTxId: null
+      });
+    }
+  });
+  return out;
+}
+/* Combina contas reais + parcelas virtuais para exibição */
+function getAllBillsForDisplay(){
+  return bills.concat(getInstallmentBills());
+}
+
 function renderCalendar(){
   const year = calViewDate.getFullYear();
   const month = calViewDate.getMonth();
@@ -2076,7 +2333,7 @@ function renderCalendar(){
   const todayStr = todayISO();
 
   const billsByDate = {};
-  bills.forEach(b=>{ (billsByDate[b.dueDate] = billsByDate[b.dueDate] || []).push(b); });
+  getAllBillsForDisplay().forEach(b=>{ (billsByDate[b.dueDate] = billsByDate[b.dueDate] || []).push(b); });
 
   const dow = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   let html = dow.map(d=>`<div class="cal-dow">${d}</div>`).join('');
@@ -2112,34 +2369,113 @@ function renderCalendar(){
     cell.addEventListener('click', ()=>{
       const date = cell.dataset.date;
       calSelectedDate = (calSelectedDate === date) ? null : date;
-      if(calSelectedDate){
-        const mk = monthKey(calSelectedDate);
-        const sel = document.getElementById('billsMonthSelect');
-        if([...sel.options].some(o=>o.value===mk)) sel.value = mk;
-      }
       renderCalendar();
-      renderBillsList();
+      renderDayDetail();
     });
   });
 }
 
+/* Abre, abaixo do calendário, a lista completa de tudo que vence no dia selecionado */
+function renderDayDetail(){
+  const panel = document.getElementById('dayDetailPanel');
+  const hint = document.getElementById('calHint');
+  if(!panel) return;
+  if(!calSelectedDate){
+    panel.style.display = 'none';
+    if(hint) hint.style.display = 'block';
+    return;
+  }
+  const dateObj = new Date(calSelectedDate+'T00:00:00');
+  const dateFull = dateObj.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+  document.getElementById('dayDetailDate').textContent = dateFull;
+
+  // reúne contas, parcelas e folha do dia
+  const contas = getAllBillsForDisplay().filter(b=>b.dueDate === calSelectedDate).map(b=>({
+    kind: b.isInstallment ? 'parcela' : 'conta',
+    ref: b,
+    desc: b.desc,
+    value: b.value,
+    paid: b.paid,
+    urg: billUrgency(b),
+    classification: b.classification,
+    bank: b.bank,
+    installmentId: b.installmentId,
+    isNextInstallment: b.isNextInstallment
+  }));
+  const folhaDia = folha.filter(f=>f.dueDate === calSelectedDate).map(f=>({
+    kind:'folha', ref:f, desc:`${f.desc} (${f.tipo})`, value:f.value, paid:f.paid, urg:billUrgency(f), classification:f.classification, bank:f.bank
+  }));
+  const itens = contas.concat(folhaDia).sort((a,b)=> (a.paid?1:0)-(b.paid?1:0));
+
+  const list = document.getElementById('dayDetailList');
+  if(itens.length === 0){
+    list.innerHTML = `<p class="alerts-empty">Nada a pagar neste dia.</p>`;
+  } else {
+    const totalDia = itens.reduce((a,i)=> a + i.value, 0);
+    const pendenteDia = itens.filter(i=>!i.paid).reduce((a,i)=> a + i.value, 0);
+    list.innerHTML = itens.map(i=>{
+      let stCls, stTxt, stColor;
+      if(i.urg==='paid'){ stCls='st-paid'; stTxt='Pago'; stColor='var(--mint)'; }
+      else if(i.urg==='urgent'){ stCls='st-urgent'; stTxt='Vence hoje/atrasado'; stColor='var(--rose)'; }
+      else { stCls='st-pending'; stTxt='Pendente'; stColor='var(--amber)'; }
+      const tipoTag = i.kind==='parcela' ? '<span class="class-tag class-inst">Parcela</span>'
+        : (i.kind==='folha' ? '<span class="class-tag class-bank">Folha</span>' : '');
+      const classTag = i.classification ? classTagHTML(i.classification) : '';
+      const bankTag = i.bank ? bankTagHTML(i.bank) : '';
+      // ação de pagar
+      let acao = '';
+      if(i.kind==='conta'){
+        acao = `<button class="btn-mini ${i.paid?'ghost':''}" onclick="toggleBillPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">${i.paid?'Desmarcar':'Marcar paga'}</button>`;
+      } else if(i.kind==='folha'){
+        acao = `<button class="btn-mini ${i.paid?'ghost':''}" onclick="toggleFolhaPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">${i.paid?'Desmarcar':'Marcar pago'}</button>`;
+      } else if(i.kind==='parcela'){
+        acao = i.isNextInstallment
+          ? `<button class="btn-mini" onclick="openPayModal('${i.installmentId}')">Marcar paga</button>`
+          : `<button class="btn-mini ghost" disabled title="Pague a parcela anterior primeiro">Aguardando</button>`;
+      }
+      return `
+      <div class="day-row ${stCls}">
+        <div>
+          <div class="dr-main">${escapeHtml(i.desc)}</div>
+          <div class="dr-meta">
+            <span style="color:${stColor}; font-weight:700;">${stTxt}</span>
+            ${tipoTag} ${bankTag} ${classTag}
+          </div>
+        </div>
+        <div class="dr-right">
+          <span class="dr-val">${fmtBRL(i.value)}</span>
+          ${acao}
+        </div>
+      </div>`;
+    }).join('') + `
+      <div class="day-total">
+        <span class="dt-label">Total do dia &middot; ${itens.length} ${itens.length===1?'item':'itens'}</span>
+        <span class="dt-value">${fmtBRL(totalDia)}${pendenteDia!==totalDia ? ` <span style="font-weight:600; opacity:.8; font-size:12px;">(pendente ${fmtBRL(pendenteDia)})</span>` : ''}</span>
+      </div>`;
+  }
+
+  panel.style.display = 'block';
+  if(hint) hint.style.display = 'none';
+}
+document.getElementById('dayDetailClose').addEventListener('click', ()=>{
+  calSelectedDate = null;
+  renderCalendar();
+  renderDayDetail();
+});
+
 document.getElementById('calPrev').addEventListener('click', async ()=>{
   calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth()-1, 1);
   await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
+  calSelectedDate = null;
   renderCalendar();
-  renderBillsList();
+  renderDayDetail();
 });
 document.getElementById('calNext').addEventListener('click', async ()=>{
   calViewDate = new Date(calViewDate.getFullYear(), calViewDate.getMonth()+1, 1);
   await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
-  renderCalendar();
-  renderBillsList();
-});
-document.getElementById('calFilterClear').addEventListener('click', (e)=>{
-  e.preventDefault();
   calSelectedDate = null;
   renderCalendar();
-  renderBillsList();
+  renderDayDetail();
 });
 
 function renderBillCard(b){
@@ -2150,11 +2486,41 @@ function renderBillCard(b){
   else if(urg==='urgent'){ statusLabel = dLeft<0 ? 'Vencida' : 'Vence em breve'; statusColor='var(--rose)'; cardCls='bill-urgent'; }
   else { statusLabel='Pendente'; statusColor='var(--amber)'; cardCls='bill-pending'; }
   const dateFmt = new Date(b.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
+
+  // Item de parcela/empréstimo (virtual)
+  if(b.isInstallment){
+    const srcInst = state.installments.find(x=>x.id===b.installmentId);
+    const foraSaldo = srcInst && srcInst.countInBalance === false;
+    const acao = b.isNextInstallment
+      ? `<button class="btn-mini" onclick="openPayModal('${b.installmentId}')">Marcar parcela paga</button>`
+      : `<button class="btn-mini ghost" disabled title="Pague a parcela anterior primeiro">Aguardando</button>`;
+    return `
+    <div class="goal-card ${cardCls}">
+      <div class="goal-top">
+        <span class="goal-name">${escapeHtml(b.desc)}</span>
+        <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${foraSaldo ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
+          ${bankTagHTML(b.bank)}
+          <span class="class-tag class-inst">Parcelas</span>
+        </span>
+      </div>
+      <div class="goal-meta" style="margin-top:8px;">
+        <span>Vence em ${dateFmt} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
+        <div class="goal-actions">
+          ${acao}
+          <button class="icon-btn" title="Ver em Parcelas e empréstimos" onclick="document.querySelector('[data-tab=&quot;parcelas&quot;]').click()">↗</button>
+        </div>
+      </div>
+      ${b.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(b.notes)}</p>` : ''}
+    </div>`;
+  }
+
   return `
     <div class="goal-card ${cardCls}">
       <div class="goal-top">
         <span class="goal-name">${b.desc}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${bankTagHTML(b.bank)}
           ${classTagHTML(b.classification)}
         </span>
@@ -2187,30 +2553,19 @@ function populateBillsMonthSelect(preserveSelection){
   else el.value = currentMonthKeyNow();
 }
 function resetBillsMonthFilter(){
-  calSelectedDate = null;
   populateBillsMonthSelect(false);
 }
 document.getElementById('billsMonthSelect').addEventListener('change', ()=>{
-  calSelectedDate = null;
-  document.getElementById('calFilterNote').style.display = 'none';
-  renderCalendar();
   renderBillsList();
 });
 function renderBillsList(){
   const list = document.getElementById('billsList');
   const empty = document.getElementById('billsEmpty');
-  const note = document.getElementById('calFilterNote');
+  if(!list) return;
 
-  let items = bills.slice().sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
-  if(calSelectedDate){
-    items = items.filter(b=>b.dueDate === calSelectedDate);
-    note.style.display = 'block';
-    document.getElementById('calFilterDate').textContent = new Date(calSelectedDate+'T00:00:00').toLocaleDateString('pt-BR');
-  } else {
-    const selectedMonth = document.getElementById('billsMonthSelect').value || currentMonthKeyNow();
-    items = items.filter(b=> monthKey(b.dueDate) === selectedMonth);
-    note.style.display = 'none';
-  }
+  let items = getAllBillsForDisplay().sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
+  const selectedMonth = document.getElementById('billsMonthSelect').value || currentMonthKeyNow();
+  items = items.filter(b=> monthKey(b.dueDate) === selectedMonth);
 
   if(items.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
@@ -2219,16 +2574,17 @@ function renderBillsList(){
 
 
 function renderContasTab(){
-  renderCalendar();
   renderBillsList();
   renderAlerts();
+  if(document.getElementById('calGrid')){ renderCalendar(); renderDayDetail(); }
 }
 
 function renderAlerts(){
   const box = document.getElementById('alertsBox');
   if(!box) return;
   const folhaAsAlerts = folha.map(f=>({ desc:`${f.desc} (folha · ${f.tipo})`, dueDate:f.dueDate, value:f.value, classification:f.classification, paid:f.paid }));
-  const upcoming = bills.concat(folhaAsAlerts)
+  const instAlerts = getInstallmentBills().filter(x=>x.isNextInstallment);
+  const upcoming = bills.concat(folhaAsAlerts).concat(instAlerts)
     .filter(b=>!b.paid)
     .filter(b=>{ const d = daysUntilDue(b.dueDate); return d <= 2; })
     .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
@@ -2442,6 +2798,9 @@ function renderAll(){
   renderInstallments();
   renderGoals();
   renderAnalises();
+  // mantém calendário e lista de contas sincronizados com as parcelas
+  if(document.getElementById('calGrid')){ renderCalendar(); renderDayDetail(); }
+  if(document.getElementById('billsList')) renderBillsList();
 }
 
 ['painelMonthSelect','extratoMonthSelect','analiseMonthSelect'].forEach(id=>{

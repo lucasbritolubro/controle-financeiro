@@ -462,13 +462,12 @@
   <div class="lock-card" id="lockCard">
     <div class="lock-mark">₿</div>
     <h1 class="lock-title">PAINEL FINANCEIRO</h1>
-    <p class="lock-sub">Entre com seu e-mail e senha</p>
+    <p class="lock-sub">Digite a senha para acessar</p>
     <form id="lockForm">
-      <input type="email" id="lockEmail" class="lock-input" placeholder="E-mail" autocomplete="username" required style="margin-bottom:10px;">
-      <input type="password" id="lockPassword" class="lock-input" placeholder="Senha" autocomplete="current-password" required>
+      <input type="password" id="lockPassword" class="lock-input" placeholder="••••••" inputmode="numeric" autocomplete="off" autofocus>
       <button type="submit" class="btn-add" style="width:100%; justify-content:center; margin-top:12px;">Entrar</button>
     </form>
-    <p class="lock-error" id="lockError">E-mail ou senha incorretos. Tente novamente.</p>
+    <p class="lock-error" id="lockError">Senha incorreta. Tente novamente.</p>
   </div>
 </div>
 
@@ -1008,7 +1007,7 @@
     </div>
   </section>
 
-  <footer class="foot-note">Dados salvos na nuvem · contas a pagar compartilhadas entre os três perfis · <button type="button" id="logoutBtn" style="background:none;border:none;color:var(--ink-soft);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Sair</button></footer>
+  <footer class="foot-note">Dados salvos automaticamente · contas a pagar compartilhadas entre os três perfis · visíveis apenas para você</footer>
 </div>
 
 <div class="modal-overlay" id="payModal" style="display:none;">
@@ -1032,8 +1031,6 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/api/config"></script>
 <script>
 const ENTRADA_CATEGORIES = ['Recebimento','Salário','Lucro','Vendas','Outros'];
 const PROFILES = [
@@ -1080,42 +1077,6 @@ let calViewDate = new Date();
 let calSelectedDate = null;
 
 function storageKey(profileId){ return `painel-financeiro:${profileId}`; }
-
-let supabaseClient = null;
-
-function initSupabase(){
-  const env = window.__ENV__ || {};
-  if(!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY){
-    throw new Error('Configuração do Supabase ausente. Defina SUPABASE_URL e SUPABASE_ANON_KEY na Vercel.');
-  }
-  supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-}
-
-window.storage = {
-  async get(key){
-    if(!supabaseClient) return null;
-    const { data, error } = await supabaseClient
-      .from('app_storage')
-      .select('value')
-      .eq('key', key)
-      .maybeSingle();
-    if(error || !data) return null;
-    const value = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
-    return { value };
-  },
-  async set(key, valueStr){
-    if(!supabaseClient) throw new Error('Não autenticado');
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if(!user) throw new Error('Não autenticado');
-    let parsed;
-    try{ parsed = JSON.parse(valueStr); }catch(e){ parsed = valueStr; }
-    const { error } = await supabaseClient.from('app_storage').upsert(
-      { user_id: user.id, key, value: parsed, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,key' }
-    );
-    if(error) throw error;
-  }
-};
 function fmtBRL(n){ return (n<0?'-':'') + 'R$ ' + Math.abs(n).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function toCurrencyDisplay(n){ return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
 function parseCurrencyValue(el){
@@ -2844,63 +2805,33 @@ async function runInit(){
   renderFolha();
 }
 
-/* ===== Login Supabase ===== */
-let appInitialized = false;
+/* ===== Bloqueio por senha ===== */
+const APP_PASSWORD = '196340';
 
 function unlockApp(){
   document.getElementById('lockScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
-  if(!appInitialized){
-    appInitialized = true;
-    runInit();
-  }
+  runInit();
 }
 
-function showLockError(){
-  const err = document.getElementById('lockError');
-  err.style.display = 'block';
-  const card = document.getElementById('lockCard');
-  card.classList.remove('shake');
-  void card.offsetWidth;
-  card.classList.add('shake');
-}
-
-async function bootstrapAuth(){
-  try{ initSupabase(); }
-  catch(e){
-    document.querySelector('.lock-sub').textContent = e.message;
-    return;
-  }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if(session) unlockApp();
-}
-
-document.getElementById('lockForm').addEventListener('submit', async (e)=>{
+document.getElementById('lockForm').addEventListener('submit', (e)=>{
   e.preventDefault();
-  document.getElementById('lockError').style.display = 'none';
-  const email = document.getElementById('lockEmail').value.trim();
-  const password = document.getElementById('lockPassword').value;
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if(error){
-    showLockError();
-    document.getElementById('lockPassword').value = '';
-    document.getElementById('lockPassword').focus();
-    return;
+  const input = document.getElementById('lockPassword');
+  if(input.value === APP_PASSWORD){
+    unlockApp();
+  } else {
+    const err = document.getElementById('lockError');
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+    const card = document.getElementById('lockCard');
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
   }
-  unlockApp();
 });
 
-document.getElementById('logoutBtn').addEventListener('click', async ()=>{
-  await supabaseClient.auth.signOut();
-  appInitialized = false;
-  document.getElementById('appRoot').style.display = 'none';
-  document.getElementById('lockScreen').style.display = 'flex';
-  document.getElementById('lockPassword').value = '';
-  document.getElementById('lockEmail').focus();
-});
-
-document.getElementById('lockEmail').focus();
-bootstrapAuth();
+document.getElementById('lockPassword').focus();
 </script>
 </body>
 </html>
