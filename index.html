@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260715h -->
+<!-- deploy-v20260715i -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1182,6 +1182,52 @@ function normalizeBillKind(kind){
   return k;
 }
 function sameId(a, b){ return String(a) === String(b); }
+function normBillDesc(s){ return String(s||'').trim().toLowerCase(); }
+function collectRecurringDeleteIds(id){
+  const ids = new Set([String(id)]);
+  const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
+  const descKey = normBillDesc(seed?.desc);
+  if(!descKey) return ids;
+  recurringBills.forEach(r=>{ if(normBillDesc(r.desc) === descKey) ids.add(String(r.id)); });
+  bills.forEach(b=>{
+    if(!b.recurringId) return;
+    if(normBillDesc(b.desc) === descKey) ids.add(String(b.recurringId));
+  });
+  return ids;
+}
+function getRecurringCadastros(){
+  const out = recurringBills.map(r=>({...r}));
+  const known = new Set(out.map(r=>String(r.id)));
+  const groups = new Map();
+  bills.forEach(b=>{
+    if(!b.recurringId || isRecurringDeleted(b.recurringId)) return;
+    const rid = String(b.recurringId);
+    if(known.has(rid)) return;
+    if(!groups.has(rid)) groups.set(rid, []);
+    groups.get(rid).push(b);
+  });
+  groups.forEach((instances, rid)=>{
+    const b = instances.slice().sort((a,b)=>a.dueDate.localeCompare(b.dueDate))[0];
+    if(!b) return;
+    const dueDay = parseInt((b.dueDate||'').split('-')[2], 10) || 1;
+    out.push({
+      id: b.recurringId,
+      desc: b.desc,
+      value: b.value,
+      freq: 'mensal',
+      dueDay,
+      baseDate: null,
+      classification: b.classification,
+      billKind: normalizeBillKind(b.billKind),
+      notes: b.notes || null,
+      mode: 'fixed',
+      bank: b.bank || null,
+      _orphan: true
+    });
+    known.add(rid);
+  });
+  return out;
+}
 function defaultOutCategory(p){
   if(p.categoriesOut.includes('EQUIPE/FREELANCERS')) return 'EQUIPE/FREELANCERS';
   if(p.categoriesOut.includes('EQUIPE')) return 'EQUIPE';
@@ -1540,7 +1586,7 @@ async function loadBills(){
   bills.forEach(b=>{ if(b.billKind) b.billKind = normalizeBillKind(b.billKind); });
 }
 async function saveBills(){
-  if(billsStorageError) return;
+  if(billsStorageError) return false;
   return withContasLock(async ()=> saveBillsUnlocked());
 }
 async function loadRecurring(){
@@ -1626,10 +1672,15 @@ async function syncContasData(){
   });
 }
 async function saveBillsUnlocked(){
-  if(billsStorageError) return;
+  if(billsStorageError) return false;
   const snapshot = bills.slice();
-  try{ await window.storage.set(BILLS_KEY, JSON.stringify(snapshot), false); }
-  catch(e){ console.error('Falha ao salvar contas', e); }
+  try{
+    await window.storage.set(BILLS_KEY, JSON.stringify(snapshot), false);
+    return true;
+  }catch(e){
+    console.error('Falha ao salvar contas', e);
+    return false;
+  }
 }
 async function saveRecurring(){
   if(recurringStorageError) return;
@@ -1637,10 +1688,15 @@ async function saveRecurring(){
   return withContasLock(async ()=> saveRecurringUnlocked(snapshot));
 }
 async function saveRecurringUnlocked(snapshot){
-  if(recurringStorageError) return;
+  if(recurringStorageError) return false;
   const data = snapshot || recurringBills.slice();
-  try{ await window.storage.set(RECURRING_KEY, JSON.stringify(data), false); }
-  catch(e){ console.error('Falha ao salvar contas recorrentes', e); }
+  try{
+    await window.storage.set(RECURRING_KEY, JSON.stringify(data), false);
+    return true;
+  }catch(e){
+    console.error('Falha ao salvar contas recorrentes', e);
+    return false;
+  }
 }
 async function loadFolha(){
   folha = [];
@@ -2564,15 +2620,21 @@ function editRecurring(id){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 async function deleteRecurring(id){
-  const r = recurringBills.find(x=>sameId(x.id, id));
-  if(!r) return;
-  if(!confirm(`Excluir o cadastro recorrente "${r.desc}" e todas as ocorrências?`)) return;
+  const idsToPurge = collectRecurringDeleteIds(id);
+  const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
+  const label = seed?.desc || 'esta conta recorrente';
+  const dupNote = idsToPurge.size > 1 ? ` (${idsToPurge.size} cadastros com o mesmo nome)` : '';
+  if(!confirm(`Excluir "${label}"${dupNote} e todas as ocorrências em todos os meses?`)) return;
   return withContasLock(async ()=>{
-    await markRecurringDeleted(id);
-    recurringBills = recurringBills.filter(x=>!sameId(x.id, id));
-    bills = bills.filter(b=>!sameId(b.recurringId, id));
-    await saveRecurringUnlocked();
-    await saveBillsUnlocked();
+    for(const rid of idsToPurge) await markRecurringDeleted(rid);
+    recurringBills = recurringBills.filter(x=>![...idsToPurge].some(rid=>sameId(x.id, rid)));
+    bills = bills.filter(b=>!b.recurringId || ![...idsToPurge].some(rid=>sameId(b.recurringId, rid)));
+    const okRecurring = await saveRecurringUnlocked();
+    const okBills = await saveBillsUnlocked();
+    if(!okRecurring || !okBills){
+      alert('Não foi possível salvar a exclusão. Atualize a página, confira se está logado e tente novamente.');
+      return;
+    }
     renderRecurringTemplatesList();
     if(contasSubActive === 'recorrentes') await renderRecurringTab();
     else await renderContasTab();
@@ -2608,23 +2670,27 @@ function renderRecurringTemplatesList(){
   const list = document.getElementById('recurringTemplatesList');
   const empty = document.getElementById('recurringTemplatesEmpty');
   if(!list) return;
-  if(recurringBills.length===0){
+  const cadastros = getRecurringCadastros();
+  if(cadastros.length===0){
     list.innerHTML='';
     if(empty){ empty.style.display='block'; empty.textContent = 'Nenhum cadastro recorrente ainda.'; }
     return;
   }
   if(empty) empty.style.display='none';
-  list.innerHTML = recurringBills.map(r=>{
+  list.innerHTML = cadastros.map(r=>{
     const isVariable = r.mode === 'variable';
     const per = freqLabel(r);
     const valueLine = isVariable
       ? `${per} &middot; ~ ${fmtBRL(r.value)} (valor de referência, ajuste a cada vez)`
       : `${per} &middot; ${fmtBRL(r.value)}`;
+    const orphanTag = r._orphan ? '<span class="mode-label">RECUPERADO</span>' : '';
+    const editBtn = r._orphan ? '' : `<button class="icon-btn" title="Editar" onclick="editRecurring('${r.id}')">✎</button>`;
     return `
     <div class="goal-card">
       <div class="goal-top">
         <span class="goal-name">${escapeHtml(r.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${orphanTag}
           <span class="mode-label">${isVariable ? 'VARIÁVEL' : 'FIXO'}</span>
           ${billKindTagHTML(r.billKind)}
           ${bankTagHTML(r.bank)}
@@ -2634,7 +2700,7 @@ function renderRecurringTemplatesList(){
       <div class="goal-meta" style="margin-top:8px;">
         <span>${valueLine}</span>
         <div class="goal-actions">
-          <button class="icon-btn" title="Editar" onclick="editRecurring('${r.id}')">✎</button>
+          ${editBtn}
           <button class="icon-btn" title="Excluir" onclick="deleteRecurring('${r.id}')">✕</button>
         </div>
       </div>
@@ -2768,13 +2834,19 @@ async function deleteBill(id){
   const bill = bills.find(b=>sameId(b.id, id));
   if(!bill) return;
   if(bill.recurringId){
-    const r = recurringBills.find(x=>sameId(x.id, bill.recurringId));
-    const nome = r ? r.desc : bill.desc;
+    const nome = bill.desc;
     const dataFmt = new Date(bill.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
-    if(!confirm(`"${nome}" é recorrente.\n\nOK = excluir só esta ocorrência (${dataFmt})\nCancelar = voltar\n\nPara remover o cadastro inteiro, use Excluir em "Cadastros recorrentes".`)) return;
+    if(confirm(`"${nome}" é recorrente.\n\nOK = excluir de vez (cadastro + todos os meses)\nCancelar = ver opção de só este mês`)){
+      return deleteRecurring(bill.recurringId);
+    }
+    if(!confirm(`Excluir só esta ocorrência (${dataFmt})?`)) return;
   }
   bills = bills.filter(b=>!sameId(b.id, id));
-  await saveBills();
+  const ok = await saveBills();
+  if(ok === false){
+    alert('Não foi possível salvar a exclusão. Confira se está logado e tente novamente.');
+    return;
+  }
   populateBillsMonthSelect(true);
   if(contasSubActive === 'recorrentes') await renderRecurringTab();
   else await renderContasTab();
