@@ -1033,11 +1033,38 @@
         <label>Data do pagamento (opcional)</label>
         <input type="date" id="payModalData">
       </div>
+      <div class="balance-toggle-wrap">
+        <span class="bt-label">Abater do saldo?</span>
+        <div class="type-toggle" style="max-width:300px;">
+          <button type="button" class="sel-bal active" data-pmbal="sim">Sim, abater</button>
+          <button type="button" class="sel-bal-no" data-pmbal="nao">Não abater</button>
+        </div>
+        <p class="bt-hint">Se escolher "Não", a parcela fica registrada como paga, mas não gera lançamento de saída.</p>
+      </div>
       <div style="display:flex; gap:10px; margin-top:16px;">
         <button type="button" class="btn-mini ghost" id="payModalCancel" style="flex:1; padding:11px;">Cancelar</button>
         <button type="submit" class="btn-add" style="flex:1; justify-content:center;">Confirmar pagamento</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="markPaidModal" style="display:none;">
+  <div class="modal-card">
+    <h3 class="modal-title" id="markPaidModalTitle">Marcar como paga</h3>
+    <p class="modal-sub" id="markPaidModalSub"></p>
+    <div class="balance-toggle-wrap">
+      <span class="bt-label">Abater do saldo?</span>
+      <div class="type-toggle" style="max-width:300px;">
+        <button type="button" class="sel-bal active" data-mpbal="sim">Sim, abater</button>
+        <button type="button" class="sel-bal-no" data-mpbal="nao">Não abater</button>
+      </div>
+      <p class="bt-hint">Se escolher "Não", fica marcado como pago, mas não gera lançamento de saída.</p>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button type="button" class="btn-mini ghost" id="markPaidModalCancel" style="flex:1; padding:11px;">Cancelar</button>
+      <button type="button" class="btn-add" id="markPaidModalConfirm" style="flex:1; justify-content:center;">Confirmar</button>
+    </div>
   </div>
 </div>
 
@@ -1730,6 +1757,14 @@ document.getElementById('instForm').addEventListener('submit', async (e)=>{
 
 /* Modal de pagamento: sempre pergunta o valor pago (parcelas variam) */
 let payModalTarget = null;
+let payModalCountBalance = 'sim';
+document.querySelectorAll('[data-pmbal]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    payModalCountBalance = b.dataset.pmbal;
+    document.querySelectorAll('[data-pmbal]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
 function openPayModal(id){
   const inst = state.installments.find(x=>x.id===id);
   if(!inst) return;
@@ -1741,6 +1776,8 @@ function openPayModal(id){
   document.getElementById('payModalSub').textContent = `Informe o valor pago da parcela ${proxNum}${totalTxt}.`;
   document.getElementById('payModalValor').value = suggested>0 ? toCurrencyDisplay(suggested) : '';
   document.getElementById('payModalData').value = todayISO();
+  payModalCountBalance = (inst.countInBalance===false) ? 'nao' : 'sim';
+  document.querySelectorAll('[data-pmbal]').forEach(x=>x.classList.toggle('active', x.dataset.pmbal===payModalCountBalance));
   document.getElementById('payModal').style.display = 'flex';
   setTimeout(()=>document.getElementById('payModalValor').focus(), 50);
 }
@@ -1765,7 +1802,7 @@ document.getElementById('payModalForm').addEventListener('submit', async (e)=>{
   const label = inst.totalInstallments ? `${parcelaNum}/${inst.totalInstallments}` : `nº ${parcelaNum}`;
   const tipo = inst.category==='Empréstimo' ? 'parcela' : 'fatura';
   let txId = null;
-  if(inst.countInBalance !== false){
+  if(payModalCountBalance !== 'nao'){
     txId = uid();
     state.transactions.push({ id: txId, desc: `${inst.desc} — ${tipo} ${label}`, value: val, category: inst.category, date: payData, type: 'saida' });
   }
@@ -2095,10 +2132,57 @@ function renderRecurringList(){
   }).join('');
 }
 
-async function toggleBillPaid(id){
+let markPaidModalTarget = null;
+let markPaidModalCallback = null;
+let markPaidCountBalance = 'sim';
+document.querySelectorAll('[data-mpbal]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    markPaidCountBalance = b.dataset.mpbal;
+    document.querySelectorAll('[data-mpbal]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+  });
+});
+function openMarkPaidModal(type, id, afterCallback){
+  let item = null;
+  if(type==='bill'){
+    item = bills.find(x=>x.id===id);
+    if(!item || item.paid) return;
+    document.getElementById('markPaidModalTitle').textContent = 'Marcar conta como paga';
+  } else if(type==='folha'){
+    item = folha.find(x=>x.id===id);
+    if(!item || item.paid) return;
+    document.getElementById('markPaidModalTitle').textContent = 'Marcar folha como paga';
+  } else return;
+  markPaidModalTarget = { type, id };
+  markPaidModalCallback = afterCallback || null;
+  markPaidCountBalance = (item.countInBalance===false) ? 'nao' : 'sim';
+  document.getElementById('markPaidModalSub').textContent = type==='folha' ? `${item.desc} (${item.tipo})` : item.desc;
+  document.querySelectorAll('[data-mpbal]').forEach(x=>x.classList.toggle('active', x.dataset.mpbal===markPaidCountBalance));
+  document.getElementById('markPaidModal').style.display = 'flex';
+}
+function closeMarkPaidModal(){
+  document.getElementById('markPaidModal').style.display = 'none';
+  markPaidModalTarget = null;
+  markPaidModalCallback = null;
+}
+document.getElementById('markPaidModalCancel').addEventListener('click', closeMarkPaidModal);
+document.getElementById('markPaidModal').addEventListener('click', (e)=>{ if(e.target.id==='markPaidModal') closeMarkPaidModal(); });
+document.getElementById('markPaidModalConfirm').addEventListener('click', async ()=>{
+  if(!markPaidModalTarget) return;
+  const { type, id } = markPaidModalTarget;
+  const countInBalance = markPaidCountBalance !== 'nao';
+  const cb = markPaidModalCallback;
+  closeMarkPaidModal();
+  if(type==='bill') await toggleBillPaid(id, { countInBalance });
+  else if(type==='folha') await toggleFolhaPaid(id, { countInBalance });
+  if(cb) cb();
+});
+
+async function toggleBillPaid(id, opts){
   const bill = bills.find(b=>b.id===id);
   if(!bill) return;
   const wasPaid = bill.paid;
+  if(!wasPaid && opts && 'countInBalance' in opts) bill.countInBalance = opts.countInBalance;
   bill.paid = !wasPaid;
   try{
     if(!wasPaid){
@@ -2324,10 +2408,11 @@ async function deleteFolha(id){
   renderFolha();
   renderAll();
 }
-async function toggleFolhaPaid(id){
+async function toggleFolhaPaid(id, opts){
   const f = folha.find(x=>x.id===id);
   if(!f) return;
   const wasPaid = f.paid;
+  if(!wasPaid && opts && 'countInBalance' in opts) f.countInBalance = opts.countInBalance;
   f.paid = !wasPaid;
   const p = PROFILES.find(x=>x.id===f.classification) || currentProfile;
   try{
@@ -2388,7 +2473,7 @@ function renderFolha(){
       <div class="goal-meta" style="margin-top:8px;">
         <span>Vence em ${dateFmt} &middot; ${fmtBRL(f.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
-          <button class="btn-mini ${f.paid?'ghost':''}" onclick="toggleFolhaPaid('${f.id}')">${f.paid ? 'Desmarcar' : 'Marcar como pago'}</button>
+          <button class="btn-mini ${f.paid?'ghost':''}" onclick="${f.paid ? `toggleFolhaPaid('${f.id}')` : `openMarkPaidModal('folha','${f.id}')`}">${f.paid ? 'Desmarcar' : 'Marcar como pago'}</button>
           <button class="icon-btn" title="Editar" onclick="editFolha('${f.id}')">✎</button>
           <button class="icon-btn" title="Excluir" onclick="deleteFolha('${f.id}')">✕</button>
         </div>
@@ -2561,9 +2646,13 @@ function renderDayDetail(){
       // ação de pagar
       let acao = '';
       if(i.kind==='conta'){
-        acao = `<button class="btn-mini ${i.paid?'ghost':''}" onclick="toggleBillPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">${i.paid?'Desmarcar':'Marcar paga'}</button>`;
+        acao = i.paid
+          ? `<button class="btn-mini ghost" onclick="toggleBillPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">Desmarcar</button>`
+          : `<button class="btn-mini" onclick="openMarkPaidModal('bill','${i.ref.id}', renderDayDetail);">Marcar paga</button>`;
       } else if(i.kind==='folha'){
-        acao = `<button class="btn-mini ${i.paid?'ghost':''}" onclick="toggleFolhaPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">${i.paid?'Desmarcar':'Marcar pago'}</button>`;
+        acao = i.paid
+          ? `<button class="btn-mini ghost" onclick="toggleFolhaPaid('${i.ref.id}'); setTimeout(renderDayDetail, 0);">Desmarcar</button>`
+          : `<button class="btn-mini" onclick="openMarkPaidModal('folha','${i.ref.id}', renderDayDetail);">Marcar pago</button>`;
       } else if(i.kind==='parcela'){
         acao = i.isNextInstallment
           ? `<button class="btn-mini" onclick="openPayModal('${i.installmentId}')">Marcar paga</button>`
@@ -2666,7 +2755,7 @@ function renderBillCard(b){
       <div class="goal-meta" style="margin-top:8px;">
         <span>Vence em ${dateFmt} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
-          <button class="btn-mini ${b.paid?'ghost':''}" onclick="toggleBillPaid('${b.id}')">${b.paid ? 'Desmarcar' : 'Marcar como paga'}</button>
+          <button class="btn-mini ${b.paid?'ghost':''}" onclick="${b.paid ? `toggleBillPaid('${b.id}')` : `openMarkPaidModal('bill','${b.id}')`}">${b.paid ? 'Desmarcar' : 'Marcar como paga'}</button>
           <button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>
           <button class="icon-btn" title="Excluir" onclick="deleteBill('${b.id}')">✕</button>
         </div>
