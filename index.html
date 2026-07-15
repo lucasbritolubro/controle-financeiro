@@ -1229,6 +1229,17 @@ function initSupabase(){
   supabaseClient = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
 }
 
+function parseStoredList(raw){
+  if(raw == null || raw === '') return [];
+  if(Array.isArray(raw)) return raw;
+  if(typeof raw === 'string'){
+    try{
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch(e){ return []; }
+  }
+  return [];
+}
 window.storage = {
   async get(key){
     if(!supabaseClient) return null;
@@ -1238,8 +1249,7 @@ window.storage = {
       .eq('key', key)
       .maybeSingle();
     if(error || !data) return null;
-    const value = typeof data.value === 'string' ? data.value : JSON.stringify(data.value);
-    return { value };
+    return { value: data.value };
   },
   async set(key, valueStr){
     if(!supabaseClient) throw new Error('Não autenticado');
@@ -1328,8 +1338,10 @@ async function saveState(){
 async function loadBillKinds(){
   billKindCustom = [];
   try{
-    const res = await window.storage.get(BILL_KINDS_KEY, false);
-    if(res && res.value) billKindCustom = JSON.parse(res.value) || [];
+    const res = await window.storage.get(BILL_KINDS_KEY);
+    const parsed = res && res.value;
+    if(Array.isArray(parsed)) billKindCustom = parsed;
+    else if(typeof parsed === 'string') billKindCustom = JSON.parse(parsed) || [];
   }catch(e){}
   billKindCustom = billKindCustom.map(catUpper).filter(Boolean);
 }
@@ -1440,9 +1452,9 @@ function normalizeBillKindsFromData(){
 async function loadBills(){
   bills = [];
   try{
-    const res = await window.storage.get(BILLS_KEY, false);
-    if(res && res.value) bills = JSON.parse(res.value) || [];
-  }catch(e){}
+    const res = await window.storage.get(BILLS_KEY);
+    bills = parseStoredList(res && res.value);
+  }catch(e){ bills = []; }
   bills.forEach(b=>{ if(b.billKind) b.billKind = normalizeBillKind(b.billKind); });
 }
 async function saveBills(){
@@ -1452,10 +1464,49 @@ async function saveBills(){
 async function loadRecurring(){
   recurringBills = [];
   try{
-    const res = await window.storage.get(RECURRING_KEY, false);
-    if(res && res.value) recurringBills = JSON.parse(res.value) || [];
-  }catch(e){}
+    const res = await window.storage.get(RECURRING_KEY);
+    recurringBills = parseStoredList(res && res.value);
+  }catch(e){ recurringBills = []; }
   recurringBills.forEach(r=>{ if(r.billKind) r.billKind = normalizeBillKind(r.billKind); });
+}
+function recoverRecurringTemplatesFromBills(){
+  let changed = false;
+  const groups = new Map();
+  bills.forEach(b=>{
+    if(!b.recurringId) return;
+    const rid = String(b.recurringId);
+    if(!groups.has(rid)) groups.set(rid, []);
+    groups.get(rid).push(b);
+  });
+  groups.forEach((instances, rid)=>{
+    if(recurringBills.some(r=>sameId(r.id, rid))) return;
+    const b = instances.slice().sort((a,b)=> a.dueDate.localeCompare(b.dueDate))[0];
+    if(!b) return;
+    const dueDay = parseInt((b.dueDate||'').split('-')[2], 10) || 1;
+    recurringBills.push({
+      id: b.recurringId,
+      desc: b.desc,
+      value: b.value,
+      freq: 'mensal',
+      dueDay,
+      baseDate: null,
+      classification: b.classification,
+      billKind: normalizeBillKind(b.billKind),
+      notes: b.notes || null,
+      mode: 'fixed',
+      bank: b.bank || null
+    });
+    changed = true;
+  });
+  return changed;
+}
+async function syncContasData(){
+  await loadBills();
+  await loadRecurring();
+  let changed = false;
+  if(recoverRecurringTemplatesFromBills()){ await saveRecurring(); changed = true; }
+  if(syncBillKindsFromRecurring()){ await saveBills(); changed = true; }
+  return changed;
 }
 async function saveRecurring(){
   try{ await window.storage.set(RECURRING_KEY, JSON.stringify(recurringBills), false); }
@@ -1464,9 +1515,9 @@ async function saveRecurring(){
 async function loadFolha(){
   folha = [];
   try{
-    const res = await window.storage.get(FOLHA_KEY, false);
-    if(res && res.value) folha = JSON.parse(res.value) || [];
-  }catch(e){}
+    const res = await window.storage.get(FOLHA_KEY);
+    folha = parseStoredList(res && res.value);
+  }catch(e){ folha = []; }
 }
 async function saveFolha(){
   try{ await window.storage.set(FOLHA_KEY, JSON.stringify(folha), false); }
@@ -1475,9 +1526,9 @@ async function saveFolha(){
 async function loadFolhaRecurring(){
   folhaRecurring = [];
   try{
-    const res = await window.storage.get(FOLHA_RECURRING_KEY, false);
-    if(res && res.value) folhaRecurring = JSON.parse(res.value) || [];
-  }catch(e){}
+    const res = await window.storage.get(FOLHA_RECURRING_KEY);
+    folhaRecurring = parseStoredList(res && res.value);
+  }catch(e){ folhaRecurring = []; }
 }
 async function saveFolhaRecurring(){
   try{ await window.storage.set(FOLHA_RECURRING_KEY, JSON.stringify(folhaRecurring), false); }
@@ -1549,10 +1600,7 @@ function recurringDueDatesInMonth(r, year, month){
 }
 /* generates bill instances for the given month for each active recurring template, if not already generated. Never touches past months. */
 async function ensureRecurringInstancesForMonth(year, month){
-  const now = new Date();
-  const currentIndex = now.getFullYear()*12 + now.getMonth();
-  const targetIndex = year*12 + month;
-  if(targetIndex < currentIndex || recurringBills.length===0) return false;
+  if(recurringBills.length===0) return false;
   let changed = false;
   recurringBills.forEach(r=>{
     const dueDates = recurringDueDatesInMonth(r, year, month);
@@ -1751,9 +1799,11 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
     if(btn.dataset.tab === 'contas'){
-      const now = new Date();
       resetBillsMonthFilter();
-      renderContasTab();
+      syncContasData().then(async ()=>{
+        await renderContasTab();
+        renderRecurringList();
+      });
     }
     if(btn.dataset.tab === 'folha'){
       const now = new Date();
@@ -2249,7 +2299,11 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     if(contasSubActive !== 'recorrentes') populateBillsMonthSelect(false);
     updateContasSubUI();
     if(contasSubActive !== 'recorrentes') await renderContasTab();
-    else { renderRecurringList(); renderContasTotals(); }
+    else {
+      await syncContasData();
+      renderRecurringList();
+      renderContasTotals();
+    }
   });
 });
 function showContasSub(sub){
@@ -3075,7 +3129,7 @@ function renderBillCard(b){
   return `
     <div class="goal-card ${cardCls}">
       <div class="goal-top">
-        <span class="goal-name">${b.desc}</span>
+        <span class="goal-name">${escapeHtml(b.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${billKindTagHTML(billDisplayKind(b))}
@@ -3197,6 +3251,7 @@ function renderBillsList(){
 }
 
 async function renderContasTab(){
+  await syncContasData();
   await ensureRecurringForVisibleMonths();
   renderBillsList();
   renderContasTotals();
@@ -3417,16 +3472,21 @@ function renderAnalises(){
   }).join('');
 }
 
-function renderAll(){
+async function renderAll(){
   populateMonthSelects();
   renderPainel();
   renderExtrato();
   renderInstallments();
   renderGoals();
   renderAnalises();
-  // mantém calendário e lista de contas sincronizados com as parcelas
-  if(document.getElementById('calGrid')){ renderCalendar(); renderDayDetail(); }
-  if(document.getElementById('billsList')) renderBillsList();
+  const contasSection = document.getElementById('contas');
+  if(contasSection && contasSection.classList.contains('active')){
+    await renderContasTab();
+  } else if(document.getElementById('calGrid')){
+    await ensureRecurringForVisibleMonths();
+    renderCalendar();
+    renderDayDetail();
+  }
 }
 
 ['painelMonthSelect','extratoMonthSelect','analiseMonthSelect'].forEach(id=>{
@@ -3463,9 +3523,7 @@ async function runInit(){
   await loadState();
   populateCategorySelect();
   await loadBillKinds();
-  await loadBills();
-  await loadRecurring();
-  if(syncBillKindsFromRecurring()) await saveBills();
+  await syncContasData();
   normalizeBillKindsFromData();
   await saveBillKinds();
   populateBillKindSelect('bKind');
@@ -3473,14 +3531,14 @@ async function runInit(){
   await loadFolha();
   await loadFolhaRecurring();
   const now = new Date();
-  await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   await ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth());
+  await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   populateBillsMonthSelect(false);
   populateFolhaMonthSelect(false);
-  renderAll();
-  renderRecurringList();
   updateContasSubUI();
+  await renderAll();
   await renderContasTab();
+  renderRecurringList();
   renderFolha();
 }
 
