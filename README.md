@@ -25,7 +25,7 @@ No Supabase: **Project Settings** → **API**
 ### 4. Deploy na Vercel
 
 1. Abra [vercel.com](https://vercel.com) → **Add New Project**
-2. Importe o repositório `lubrosolutions/controle-financeiro`
+2. Importe o repositório `lucasbritolubro/controle-financeiro`
 3. Em **Environment Variables**, adicione:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
@@ -72,4 +72,4 @@ Cada perfil (Lucas, Lubro, Nexo) e as contas a pagar são salvos como JSON na ta
 
 ## Repositório
 
-https://github.com/lubrosolutions/controle-financeiro
+https://github.com/lucasbritolubro/controle-financeiro
