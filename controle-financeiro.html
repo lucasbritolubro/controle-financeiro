@@ -331,6 +331,10 @@
   }
   .cal-chip .cdesc{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
   .cal-chip .cval{ flex:0 0 auto; }
+  .cal-chip.chip-bkind-casa{ background:rgba(14,142,139,0.18); color:var(--teal); }
+  .cal-chip.chip-bkind-pessoal{ background:rgba(99,102,241,0.16); color:#4338CA; }
+  .cal-chip.chip-bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
+  .cal-chip.chip-bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
   .cal-chip.chip-urgent{ background:rgba(220,53,69,0.18); color:var(--rose); }
   .cal-chip.chip-paid{ background:rgba(15,157,99,0.18); color:var(--mint); }
   .cal-day.selected .cal-chip{ background:rgba(255,255,255,0.16); color:#fff; }
@@ -344,7 +348,10 @@
   .class-bank{ background:rgba(17,17,20,0.06); color:var(--ink-soft); }
   .class-inst{ background:rgba(251,146,60,0.15); color:#C2410C; }
   .class-nrec{ background:rgba(99,102,241,0.12); color:#4338CA; }
-  .class-bkind{ background:rgba(14,142,139,0.12); color:var(--teal); }
+  .bkind-casa{ background:rgba(14,142,139,0.14); color:var(--teal); }
+  .bkind-pessoal{ background:rgba(99,102,241,0.14); color:#4338CA; }
+  .bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
+  .bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
   ::placeholder{ color:var(--ink-faint); }
@@ -1164,7 +1171,7 @@ function normalizeStoredCategories(){
   state.customCategoriesOut = (state.customCategoriesOut||[]).map(catUpper);
 }
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
-const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL'];
+const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL', 'CARTÃO DE CRÉDITO'];
 const BILL_KINDS_KEY = 'painel-financeiro:tipos-conta';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
 const RECURRING_KEY = 'painel-financeiro:contas-recorrentes';
@@ -1355,8 +1362,34 @@ function setBillKindValue(selectId, wrapId, customId, kind){
   if(getBillKindList().includes(k)){ el.value = k; wrap.style.display = 'none'; document.getElementById(customId).value = ''; }
   else { el.value = '__new__'; wrap.style.display = 'block'; document.getElementById(customId).value = k; }
 }
+function billKindCssClass(kind){
+  const k = catUpper(kind);
+  if(k === 'CASA') return 'bkind-casa';
+  if(k === 'PESSOAL') return 'bkind-pessoal';
+  if(k === 'CARTÃO DE CRÉDITO') return 'bkind-cartao';
+  return 'bkind-other';
+}
+function billDisplayKind(b){
+  if(b.isInstallment){
+    const inst = state.installments.find(x=>x.id===b.installmentId);
+    if(inst && catUpper(inst.category) === 'CARTÃO DE CRÉDITO') return 'CARTÃO DE CRÉDITO';
+    return null;
+  }
+  return b.billKind || null;
+}
+function billKindChipClass(b){
+  const kind = billDisplayKind(b);
+  if(!kind) return '';
+  return ` chip-${billKindCssClass(kind)}`;
+}
 function billKindTagHTML(kind){
-  return kind ? `<span class="class-tag class-bkind">${escapeHtml(catUpper(kind))}</span>` : '';
+  if(!kind) return '';
+  const cls = billKindCssClass(kind);
+  if(cls === 'bkind-other'){
+    const color = categoryColor(catUpper(kind));
+    return `<span class="class-tag bkind-other" style="background:${color}22;color:${color}">${escapeHtml(catUpper(kind))}</span>`;
+  }
+  return `<span class="class-tag ${cls}">${escapeHtml(catUpper(kind))}</span>`;
 }
 function normalizeBillKindsFromData(){
   const add = k=>{
@@ -2807,7 +2840,7 @@ function renderCalendar(){
     else if(allPaid) classes += ' all-paid';
     const chips = dayBills.map(b=>{
       const urg = billUrgency(b);
-      const chipCls = urg==='urgent' ? ' chip-urgent' : (urg==='paid' ? ' chip-paid' : '');
+      const chipCls = urg==='urgent' ? ' chip-urgent' : (urg==='paid' ? ' chip-paid' : billKindChipClass(b));
       return `<span class="cal-chip${chipCls}"><span class="cdesc">${escapeHtml(b.desc)}</span><span class="cval">${fmtBRL(b.value)}</span></span>`;
     }).join('');
     html += `<div class="${classes}" data-date="${dateStr}">
@@ -2870,9 +2903,11 @@ function renderDayDetail(){
       if(i.urg==='paid'){ stCls='st-paid'; stTxt='Pago'; stColor='var(--mint)'; }
       else if(i.urg==='urgent'){ stCls='st-urgent'; stTxt='Vence hoje/atrasado'; stColor='var(--rose)'; }
       else { stCls='st-pending'; stTxt='Pendente'; stColor='var(--amber)'; }
-      const tipoTag = i.kind==='parcela' ? '<span class="class-tag class-inst">PARCELA</span>'
+      const kindTag = billKindTagHTML(billDisplayKind(i.ref));
+      const tipoTag = i.kind==='parcela'
+        ? (kindTag || '<span class="class-tag class-inst">PARCELA</span>')
         : (i.kind==='folha' ? '<span class="class-tag class-bank">FOLHA</span>'
-        : (i.ref.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'));
+        : (kindTag + (i.ref.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>')));
       const classTag = i.classification ? classTagHTML(i.classification) : '';
       const bankTag = i.bank ? bankTagHTML(i.bank) : '';
       // ação de pagar
@@ -2959,8 +2994,8 @@ function renderBillCard(b){
         <span class="goal-name">${escapeHtml(b.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${foraSaldo ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
+          ${billKindTagHTML(billDisplayKind(b)) || '<span class="class-tag class-inst">PARCELAS</span>'}
           ${bankTagHTML(b.bank)}
-          <span class="class-tag class-inst">PARCELAS</span>
         </span>
       </div>
       <div class="goal-meta" style="margin-top:8px;">
@@ -3094,10 +3129,11 @@ function renderAlerts(){
     const dateFmt = new Date(b.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
     const p = PROFILES.find(x=>x.id===b.classification);
     const origem = p ? catUpper(p.billLabel) : '';
+    const kindTag = billKindTagHTML(billDisplayKind(b));
     return `
     <div class="alert-row">
       <div>
-        <div class="alert-main">${escapeHtml(b.desc)}</div>
+        <div class="alert-main">${escapeHtml(b.desc)} ${kindTag}</div>
         <div class="alert-meta">${dateFmt} · ${quando}${origem? ' · '+escapeHtml(origem):''}</div>
       </div>
       <div class="alert-val">${fmtBRL(b.value)}</div>
