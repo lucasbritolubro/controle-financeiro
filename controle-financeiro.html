@@ -178,7 +178,8 @@
   .type-toggle button.sel-entrada.active{ background:var(--mint-soft); color:var(--mint); }
   .type-toggle button.sel-saida.active{ background:var(--rose-soft); color:var(--rose); }
   .type-toggle button.sel-mode.active{ background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm); }
-  .type-toggle button.sel-rmode.active{ background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm); }
+  .type-toggle button.sel-rmode{ text-transform:uppercase; }
+  .type-toggle button.sel-rmode.active{ background:var(--black); color:#fff; }
   .type-toggle button.sel-sub.active{ background:var(--black); color:#fff; }
   .type-toggle button.sel-bal.active{ background:var(--mint-soft); color:var(--mint); }
   .type-toggle button.sel-bal-no.active{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
@@ -825,8 +826,8 @@
         <h2 class="panel-title">Nova conta recorrente</h2>
         <p class="empty-note" style="margin:-6px 0 16px;">Contas recorrentes existem todo mês. Assim que cadastrar, ela entra automaticamente no mês atual e nos meses seguintes, sem precisar lançar de novo toda vez. Use "valor fixo" para contas como aluguel, e "valor varia por mês" para contas como energia elétrica, água ou consumo de cartão.</p>
         <div class="type-toggle" style="max-width:360px; margin-bottom:16px;">
-          <button type="button" class="sel-rmode active" data-rmode="fixed">Valor fixo</button>
-          <button type="button" class="sel-rmode" data-rmode="variable">Valor varia por mês</button>
+          <button type="button" class="sel-rmode active" data-rmode="fixed">VALOR FIXO</button>
+          <button type="button" class="sel-rmode" data-rmode="variable">VALOR VARIA POR MÊS</button>
         </div>
         <form id="recurringForm">
           <div class="bill-form-row1">
@@ -1106,6 +1107,17 @@
       <label>Data do pagamento efetivado (opcional)</label>
       <input type="date" id="markPaidFolhaDate">
       <p class="bt-hint" style="margin-top:6px;">Se vazio, usa a data de hoje. Essa data entra no lançamento de saída.</p>
+    </div>
+    <div id="markPaidVariableWrap" style="display:none; margin-top:12px;">
+      <div class="field">
+        <label>Valor pago neste mês (R$)</label>
+        <input type="text" inputmode="decimal" class="currency-input" id="markPaidVariableValor" placeholder="0,00">
+      </div>
+      <div class="field" style="margin-top:10px; max-width:280px;">
+        <label>Data do pagamento</label>
+        <input type="date" id="markPaidVariableDate">
+      </div>
+      <p class="bt-hint" style="margin-top:6px;">Informe quanto foi pago e em qual dia, já que o valor varia a cada mês.</p>
     </div>
     <div style="display:flex; gap:10px; margin-top:16px;">
       <button type="button" class="btn-mini ghost" id="markPaidModalCancel" style="flex:1; padding:11px;">Cancelar</button>
@@ -2298,6 +2310,12 @@ function renderRecurringList(){
   }).join('');
 }
 
+function isVariableRecurringBill(bill){
+  if(!bill || !bill.recurringId) return false;
+  const r = recurringBills.find(x=>x.id===bill.recurringId);
+  return !!(r && r.mode === 'variable');
+}
+
 let markPaidModalTarget = null;
 let markPaidModalCallback = null;
 let markPaidCountBalance = 'sim';
@@ -2326,9 +2344,17 @@ function openMarkPaidModal(type, id, afterCallback){
   document.querySelectorAll('[data-mpbal]').forEach(x=>x.classList.toggle('active', x.dataset.mpbal===markPaidCountBalance));
   const folhaDateWrap = document.getElementById('markPaidFolhaDateWrap');
   const folhaDateInput = document.getElementById('markPaidFolhaDate');
+  const variableWrap = document.getElementById('markPaidVariableWrap');
+  const variableValor = document.getElementById('markPaidVariableValor');
+  const variableDate = document.getElementById('markPaidVariableDate');
+  const isVariableBill = type==='bill' && isVariableRecurringBill(item);
   if(folhaDateWrap) folhaDateWrap.style.display = type==='folha' ? 'block' : 'none';
   if(folhaDateInput) folhaDateInput.value = todayISO();
+  if(variableWrap) variableWrap.style.display = isVariableBill ? 'block' : 'none';
+  if(variableValor) variableValor.value = isVariableBill && item.value > 0 ? toCurrencyDisplay(item.value) : '';
+  if(variableDate) variableDate.value = todayISO();
   document.getElementById('markPaidModal').style.display = 'flex';
+  if(isVariableBill && variableValor) setTimeout(()=>variableValor.focus(), 50);
 }
 function closeMarkPaidModal(){
   document.getElementById('markPaidModal').style.display = 'none';
@@ -2342,10 +2368,23 @@ document.getElementById('markPaidModalConfirm').addEventListener('click', async 
   const { type, id } = markPaidModalTarget;
   const countInBalance = markPaidCountBalance !== 'nao';
   const folhaDateInput = document.getElementById('markPaidFolhaDate');
-  const paidDate = (type==='folha' && folhaDateInput && folhaDateInput.value) ? folhaDateInput.value : null;
+  const variableValor = document.getElementById('markPaidVariableValor');
+  const variableDate = document.getElementById('markPaidVariableDate');
+  let paidDate = null;
+  let paidValue = null;
+  if(type==='folha' && folhaDateInput && folhaDateInput.value) paidDate = folhaDateInput.value;
+  if(type==='bill'){
+    const bill = bills.find(x=>x.id===id);
+    if(bill && isVariableRecurringBill(bill)){
+      paidValue = parseCurrencyValue(variableValor);
+      if(isNaN(paidValue) || paidValue<=0){ variableValor.focus(); return; }
+      paidDate = (variableDate && variableDate.value) ? variableDate.value : todayISO();
+      if(!paidDate){ variableDate.focus(); return; }
+    }
+  }
   const cb = markPaidModalCallback;
   closeMarkPaidModal();
-  if(type==='bill') await toggleBillPaid(id, { countInBalance });
+  if(type==='bill') await toggleBillPaid(id, { countInBalance, paidDate, paidValue });
   else if(type==='folha') await toggleFolhaPaid(id, { countInBalance, paidDate });
   if(cb) cb();
 });
@@ -2358,10 +2397,18 @@ async function toggleBillPaid(id, opts){
   bill.paid = !wasPaid;
   try{
     if(!wasPaid){
+      const isVariable = isVariableRecurringBill(bill);
+      if(isVariable && opts && opts.paidValue != null && !isNaN(opts.paidValue) && opts.paidValue > 0){
+        bill.value = opts.paidValue;
+        const r = recurringBills.find(x=>x.id===bill.recurringId);
+        if(r){ r.value = opts.paidValue; await saveRecurring(); renderRecurringList(); }
+      }
+      const payDate = isVariable ? ((opts && opts.paidDate) ? opts.paidDate : todayISO()) : todayISO();
+      if(isVariable) bill.paidDate = payDate;
       if(bill.countInBalance !== false){
         const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
         const cat = defaultOutCategory(p);
-        const tx = { id: uid(), desc: `Conta: ${bill.desc}`, value: bill.value, category: cat, date: todayISO(), type: 'saida' };
+        const tx = { id: uid(), desc: `Conta: ${bill.desc}`, value: bill.value, category: cat, date: payDate, type: 'saida' };
         await addTransactionToProfile(p.id, tx);
         bill.paidTxId = tx.id;
       }
@@ -2369,6 +2416,11 @@ async function toggleBillPaid(id, opts){
       const p = PROFILES.find(x=>x.id===bill.classification) || currentProfile;
       if(bill.paidTxId) await removeTransactionFromProfile(p.id, bill.paidTxId);
       bill.paidTxId = null;
+      bill.paidDate = null;
+      if(bill.recurringId){
+        const r = recurringBills.find(x=>x.id===bill.recurringId);
+        if(r && r.mode === 'variable') bill.value = r.value;
+      }
     }
   }catch(err){
     console.error('Erro ao sincronizar lançamento da conta a pagar', err);
@@ -2935,7 +2987,7 @@ function renderBillCard(b){
         </span>
       </div>
       <div class="goal-meta" style="margin-top:8px;">
-        <span>Vence em ${dateFmt} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
+        <span>Vence em ${dateFmt}${b.paid && b.paidDate ? ` &middot; Pago em ${new Date(b.paidDate+'T00:00:00').toLocaleDateString('pt-BR')}` : ''} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
           <button class="btn-mini ${b.paid?'ghost':''}" onclick="${b.paid ? `toggleBillPaid('${b.id}')` : `openMarkPaidModal('bill','${b.id}')`}">${b.paid ? 'Desmarcar' : 'Marcar como paga'}</button>
           <button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>
