@@ -343,6 +343,7 @@
   .class-bank{ background:rgba(17,17,20,0.06); color:var(--ink-soft); }
   .class-inst{ background:rgba(251,146,60,0.15); color:#C2410C; }
   .class-nrec{ background:rgba(99,102,241,0.12); color:#4338CA; }
+  .class-bkind{ background:rgba(14,142,139,0.12); color:var(--teal); }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
   ::placeholder{ color:var(--ink-faint); }
@@ -779,6 +780,14 @@
               <label>Classificação</label>
               <select id="bClassificacao"></select>
             </div>
+            <div class="field">
+              <label>Tipo de conta</label>
+              <select id="bKind"></select>
+            </div>
+          </div>
+          <div class="field" id="bKindCustomWrap" style="display:none; max-width:320px; margin-top:12px;">
+            <label>Qual o tipo?</label>
+            <input type="text" id="bKindCustom" placeholder="Ex: TRABALHO, VEÍCULO, INVESTIMENTO...">
           </div>
           <div class="bill-form-row2">
             <div class="field field-bank">
@@ -843,6 +852,14 @@
               <label>Classificação</label>
               <select id="rClassificacao"></select>
             </div>
+            <div class="field">
+              <label>Tipo de conta</label>
+              <select id="rKind"></select>
+            </div>
+          </div>
+          <div class="field" id="rKindCustomWrap" style="display:none; max-width:320px; margin-top:12px;">
+            <label>Qual o tipo?</label>
+            <input type="text" id="rKindCustom" placeholder="Ex: TRABALHO, VEÍCULO, INVESTIMENTO...">
           </div>
           <div class="bill-form-row1" style="margin-top:12px;">
             <div class="field" id="rDiaWrap">
@@ -1135,6 +1152,8 @@ function normalizeStoredCategories(){
   state.customCategoriesOut = (state.customCategoriesOut||[]).map(catUpper);
 }
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
+const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL'];
+const BILL_KINDS_KEY = 'painel-financeiro:tipos-conta';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
 const RECURRING_KEY = 'painel-financeiro:contas-recorrentes';
 const FOLHA_KEY = 'painel-financeiro:folha-pagamento';
@@ -1146,6 +1165,7 @@ let currentProfile = PROFILES[0];
 let state = { transactions: [], goals: [], installments: [], customCategoriesIn: [], customCategoriesOut: [] };
 let bills = [];
 let recurringBills = [];
+let billKindCustom = [];
 let folha = [];
 let folhaRecurring = [];
 let editingFolhaId = null;
@@ -1267,12 +1287,81 @@ async function saveState(){
   catch(e){ console.error('Falha ao salvar', e); }
 }
 
+async function loadBillKinds(){
+  billKindCustom = [];
+  try{
+    const res = await window.storage.get(BILL_KINDS_KEY, false);
+    if(res && res.value) billKindCustom = JSON.parse(res.value) || [];
+  }catch(e){}
+  billKindCustom = billKindCustom.map(catUpper).filter(Boolean);
+}
+async function saveBillKinds(){
+  try{ await window.storage.set(BILL_KINDS_KEY, JSON.stringify(billKindCustom), false); }
+  catch(e){ console.error('Falha ao salvar tipos de conta', e); }
+}
+function getBillKindList(){
+  const list = BILL_KIND_DEFAULTS.slice();
+  billKindCustom.forEach(k=>{ if(!list.includes(k)) list.push(k); });
+  return list;
+}
+function populateBillKindSelect(selectId){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  el.innerHTML = getBillKindList().map(k=>`<option value="${k}">${k}</option>`).join('') +
+    `<option value="__new__">OUTRO...</option>`;
+}
+function setupBillKindToggle(selectId, wrapId, customId){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  el.addEventListener('change', ()=>{
+    const wrap = document.getElementById(wrapId);
+    if(el.value === '__new__'){ wrap.style.display = 'block'; document.getElementById(customId).focus(); }
+    else { wrap.style.display = 'none'; document.getElementById(customId).value = ''; }
+  });
+}
+async function resolveBillKind(selectId, customId){
+  let kind = document.getElementById(selectId).value;
+  if(kind === '__new__'){
+    const nova = catUpper(document.getElementById(customId).value.trim());
+    if(!nova) return null;
+    kind = nova;
+    if(!getBillKindList().includes(kind)){
+      billKindCustom.push(kind);
+      await saveBillKinds();
+      populateBillKindSelect('bKind');
+      populateBillKindSelect('rKind');
+    }
+  }
+  return catUpper(kind);
+}
+function setBillKindValue(selectId, wrapId, customId, kind){
+  populateBillKindSelect(selectId);
+  const el = document.getElementById(selectId);
+  const wrap = document.getElementById(wrapId);
+  const k = kind ? catUpper(kind) : '';
+  if(!k){ el.value = BILL_KIND_DEFAULTS[0]; wrap.style.display = 'none'; document.getElementById(customId).value = ''; return; }
+  if(getBillKindList().includes(k)){ el.value = k; wrap.style.display = 'none'; document.getElementById(customId).value = ''; }
+  else { el.value = '__new__'; wrap.style.display = 'block'; document.getElementById(customId).value = k; }
+}
+function billKindTagHTML(kind){
+  return kind ? `<span class="class-tag class-bkind">${escapeHtml(catUpper(kind))}</span>` : '';
+}
+function normalizeBillKindsFromData(){
+  const add = k=>{
+    const u = catUpper(k);
+    if(!u) return;
+    if(!BILL_KIND_DEFAULTS.includes(u) && !billKindCustom.includes(u)) billKindCustom.push(u);
+  };
+  bills.forEach(b=>{ if(b.billKind) b.billKind = catUpper(b.billKind); add(b.billKind); });
+  recurringBills.forEach(r=>{ if(r.billKind) r.billKind = catUpper(r.billKind); add(r.billKind); });
+}
 async function loadBills(){
   bills = [];
   try{
     const res = await window.storage.get(BILLS_KEY, false);
     if(res && res.value) bills = JSON.parse(res.value) || [];
   }catch(e){}
+  bills.forEach(b=>{ if(b.billKind) b.billKind = catUpper(b.billKind); });
 }
 async function saveBills(){
   try{ await window.storage.set(BILLS_KEY, JSON.stringify(bills), false); }
@@ -1284,6 +1373,7 @@ async function loadRecurring(){
     const res = await window.storage.get(RECURRING_KEY, false);
     if(res && res.value) recurringBills = JSON.parse(res.value) || [];
   }catch(e){}
+  recurringBills.forEach(r=>{ if(r.billKind) r.billKind = catUpper(r.billKind); });
 }
 async function saveRecurring(){
   try{ await window.storage.set(RECURRING_KEY, JSON.stringify(recurringBills), false); }
@@ -1392,7 +1482,7 @@ async function ensureRecurringInstancesForMonth(year, month){
         const notes = [r.notes, autoNote].filter(Boolean).join(' ') || null;
         bills.push({
           id: uid(), desc: r.desc, value: r.value, dueDate: dd,
-          classification: r.classification, notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
+          classification: r.classification, billKind: r.billKind || null, notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
         });
         changed = true;
       }
@@ -1988,12 +2078,13 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
   const classificacao = document.getElementById('bClassificacao').value;
   const obs = document.getElementById('bObs').value.trim();
   const banco = readBankValue('bBanco', 'bBancoCustom');
-  if(!desc || isNaN(valor) || valor<=0 || !vencimento) return;
+  const billKind = await resolveBillKind('bKind', 'bKindCustom');
+  if(!desc || isNaN(valor) || valor<=0 || !vencimento || !billKind) return;
 
   if(editingBillId){
     const b = bills.find(x=>x.id===editingBillId);
     if(b){
-      b.desc=desc; b.value=valor; b.dueDate=vencimento; b.classification=classificacao; b.notes = obs || null; b.bank = banco; b.countInBalance = billCountBalance!=='nao';
+      b.desc=desc; b.value=valor; b.dueDate=vencimento; b.classification=classificacao; b.billKind=billKind; b.notes = obs || null; b.bank = banco; b.countInBalance = billCountBalance!=='nao';
       if(b.recurringId){
         const r = recurringBills.find(x=>x.id===b.recurringId);
         if(r && r.mode === 'variable'){ r.value = valor; await saveRecurring(); renderRecurringList(); }
@@ -2002,12 +2093,14 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
     editingBillId = null;
     document.getElementById('billSubmitLabel').textContent = '+ Adicionar';
   } else {
-    bills.push({ id: uid(), desc, value: valor, dueDate: vencimento, classification: classificacao, notes: obs || null, bank: banco, paid:false, paidTxId:null, countInBalance: billCountBalance!=='nao', billType:'nao-recorrente' });
+    bills.push({ id: uid(), desc, value: valor, dueDate: vencimento, classification: classificacao, billKind, notes: obs || null, bank: banco, paid:false, paidTxId:null, countInBalance: billCountBalance!=='nao' });
   }
   await saveBills();
   e.target.reset();
   document.getElementById('bVencimento').value = todayISO();
   document.getElementById('bBancoCustomWrap').style.display = 'none';
+  document.getElementById('bKindCustomWrap').style.display = 'none';
+  populateBillKindSelect('bKind');
   billCountBalance = 'sim';
   document.querySelectorAll('[data-bbal]').forEach(x=>x.classList.toggle('active', x.dataset.bbal==='sim'));
   populateBillsMonthSelect(true);
@@ -2021,6 +2114,7 @@ function editBill(id){
   document.getElementById('bValor').value = toCurrencyDisplay(b.value);
   document.getElementById('bVencimento').value = b.dueDate;
   document.getElementById('bClassificacao').value = b.classification;
+  setBillKindValue('bKind', 'bKindCustomWrap', 'bKindCustom', b.billKind || null);
   document.getElementById('bObs').value = b.notes || '';
   setBankValue('bBanco', 'bBancoCustom', 'bBancoCustomWrap', b.bank || null);
   billCountBalance = (b.countInBalance===false) ? 'nao' : 'sim';
@@ -2100,7 +2194,8 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
   const classificacao = document.getElementById('rClassificacao').value;
   const obs = document.getElementById('rObs').value.trim();
   const banco = readBankValue('rBanco', 'rBancoCustom');
-  if(!desc || isNaN(valor) || valor<=0) return;
+  const billKind = await resolveBillKind('rKind', 'rKindCustom');
+  if(!desc || isNaN(valor) || valor<=0 || !billKind) return;
 
   let dueDay = null, baseDate = null;
   if(freq === 'mensal'){
@@ -2113,17 +2208,19 @@ document.getElementById('recurringForm').addEventListener('submit', async (e)=>{
 
   if(editingRecurringId){
     const r = recurringBills.find(x=>x.id===editingRecurringId);
-    if(r){ r.desc=desc; r.value=valor; r.freq=freq; r.dueDay=dueDay; r.baseDate=baseDate; r.classification=classificacao; r.notes = obs || null; r.mode = recurringMode; r.bank = banco; }
+    if(r){ r.desc=desc; r.value=valor; r.freq=freq; r.dueDay=dueDay; r.baseDate=baseDate; r.classification=classificacao; r.billKind=billKind; r.notes = obs || null; r.mode = recurringMode; r.bank = banco; }
     editingRecurringId = null;
     document.getElementById('recurringSubmitLabel').textContent = '+ Adicionar';
   } else {
-    recurringBills.push({ id: uid(), desc, value: valor, freq, dueDay, baseDate, classification: classificacao, notes: obs || null, mode: recurringMode, bank: banco });
+    recurringBills.push({ id: uid(), desc, value: valor, freq, dueDay, baseDate, classification: classificacao, billKind, notes: obs || null, mode: recurringMode, bank: banco });
   }
   await saveRecurring();
   e.target.reset();
   setRecurringMode('fixed');
   updateRecurringFreqFields();
   document.getElementById('rBancoCustomWrap').style.display = 'none';
+  document.getElementById('rKindCustomWrap').style.display = 'none';
+  populateBillKindSelect('rKind');
 
   const now = new Date();
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
@@ -2145,6 +2242,7 @@ function editRecurring(id){
   if((r.freq||'mensal') === 'mensal'){ document.getElementById('rDia').value = r.dueDay || ''; }
   else { document.getElementById('rDataBase').value = r.baseDate || ''; }
   document.getElementById('rClassificacao').value = r.classification;
+  setBillKindValue('rKind', 'rKindCustomWrap', 'rKindCustom', r.billKind || null);
   document.getElementById('rObs').value = r.notes || '';
   setBankValue('rBanco', 'rBancoCustom', 'rBancoCustomWrap', r.bank || null);
   setRecurringMode(r.mode || 'fixed');
@@ -2183,6 +2281,7 @@ function renderRecurringList(){
         <span class="goal-name">${escapeHtml(r.desc)}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <span class="mode-label">${isVariable ? 'VARIÁVEL' : 'FIXO'}</span>
+          ${billKindTagHTML(r.billKind)}
           ${bankTagHTML(r.bank)}
           ${classTagHTML(r.classification)}
         </span>
@@ -2829,6 +2928,7 @@ function renderBillCard(b){
         <span class="goal-name">${b.desc}</span>
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
+          ${billKindTagHTML(b.billKind)}
           ${bankTagHTML(b.bank)}
           ${b.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'}
           ${classTagHTML(b.classification)}
@@ -3166,6 +3266,10 @@ async function runInit(){
   populateBillClassificationSelect();
   populateRecurringClassificationSelect();
   populateFolhaClassificationSelect();
+  populateBillKindSelect('bKind');
+  populateBillKindSelect('rKind');
+  setupBillKindToggle('bKind', 'bKindCustomWrap', 'bKindCustom');
+  setupBillKindToggle('rKind', 'rKindCustomWrap', 'rKindCustom');
   ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco'].forEach(populateBankSelect);
   ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco'].forEach(setupBankSelectToggle);
   updateRecurringFreqFields();
@@ -3176,8 +3280,13 @@ async function runInit(){
   renderHeaderDate();
   await loadState();
   populateCategorySelect();
+  await loadBillKinds();
   await loadBills();
   await loadRecurring();
+  normalizeBillKindsFromData();
+  await saveBillKinds();
+  populateBillKindSelect('bKind');
+  populateBillKindSelect('rKind');
   await loadFolha();
   await loadFolhaRecurring();
   const now = new Date();
