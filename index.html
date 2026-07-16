@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260716b-folha-delete -->
+<!-- deploy-v20260716c-assinaturas -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -934,17 +934,9 @@
               <input type="number" id="sDia" min="1" max="31" step="1" placeholder="Ex: 15" required>
             </div>
             <div class="field">
-              <label>Bandeira do cartão</label>
-              <select id="sBandeira" class="cardbrand-select" data-custom="sBandeiraCustomWrap"></select>
-            </div>
-            <div class="field">
               <label>Classificação</label>
               <select id="sClassificacao"></select>
             </div>
-          </div>
-          <div class="field" id="sBandeiraCustomWrap" style="display:none; max-width:280px; margin-top:12px;">
-            <label>Qual bandeira?</label>
-            <input type="text" id="sBandeiraCustom" placeholder="Ex: Visa Infinite, Mastercard Black...">
           </div>
           <div class="bill-form-row2" style="margin-top:12px;">
             <div class="field field-bank">
@@ -1317,7 +1309,6 @@ function normalizeStoredCategories(){
 }
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
 const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL', 'CARTÃO DE CRÉDITO', 'ASSINATURAS'];
-const CARD_BRANDS = ['VISA','MASTERCARD','ELO','AMERICAN EXPRESS','HIPERCARD','DINERS CLUB'];
 const BILLS_MONTH_ALL = '__all__';
 const BILL_KINDS_KEY = 'painel-financeiro:tipos-conta';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
@@ -1347,7 +1338,7 @@ let currentType = 'entrada';
 let editingId = null;
 let editingBillId = null;
 let editingRecurringId = null;
-let editingSubscriptionId = null;
+
 let recurringMode = 'fixed';
 let instMode = 'fixed';
 let calViewDate = new Date();
@@ -1766,7 +1757,7 @@ async function saveBillsUnlocked(){
   }
 }
 async function saveRecurring(){
-  if(recurringStorageError) return;
+  if(recurringStorageError) return false;
   const snapshot = recurringBills.slice();
   return withContasLock(async ()=> saveRecurringUnlocked(snapshot));
 }
@@ -2099,44 +2090,6 @@ function populateSubscriptionClassificationSelect(){
   if(!el) return;
   el.innerHTML = PROFILES.map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
 }
-function populateCardBrandSelect(id){
-  const el = document.getElementById(id);
-  if(!el) return;
-  el.innerHTML = `<option value="">Selecione a bandeira</option>` +
-    CARD_BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('') +
-    `<option value="__custom__">Outra bandeira...</option>`;
-}
-function setupCardBrandSelectToggle(selectId){
-  const el = document.getElementById(selectId);
-  if(!el) return;
-  el.addEventListener('change', ()=>{
-    const wrap = document.getElementById(el.dataset.custom);
-    if(!wrap) return;
-    if(el.value === '__custom__'){ wrap.style.display = 'block'; }
-    else { wrap.style.display = 'none'; document.getElementById(wrap.querySelector('input').id).value = ''; }
-  });
-}
-function readCardBrandValue(selectId, customId){
-  const sel = document.getElementById(selectId);
-  if(!sel || !sel.value) return null;
-  if(sel.value === '__custom__'){
-    const val = catUpper(document.getElementById(customId).value.trim());
-    return val || null;
-  }
-  return catUpper(sel.value);
-}
-function setCardBrandValue(selectId, customId, wrapId, brand){
-  const sel = document.getElementById(selectId);
-  const wrap = document.getElementById(wrapId);
-  if(!brand){ sel.value = ''; wrap.style.display = 'none'; document.getElementById(customId).value=''; return; }
-  const b = catUpper(brand);
-  if(CARD_BRANDS.includes(b)){ sel.value = b; wrap.style.display = 'none'; document.getElementById(customId).value=''; }
-  else { sel.value = '__custom__'; wrap.style.display = 'block'; document.getElementById(customId).value = b; }
-}
-function cardBrandTagHTML(brand){
-  return brand ? `<span class="class-tag class-cardbrand">${escapeHtml(catUpper(brand))}</span>` : '';
-}
-
 function populateBankSelect(id){
   const el = document.getElementById(id);
   if(!el) return;
@@ -2656,10 +2609,7 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
 function editBill(id){
   const b = bills.find(x=>x.id===id);
   if(!b) return;
-  if(isSubscriptionBill(b) && b.recurringId){
-    editSubscription(b.recurringId);
-    return;
-  }
+  if(isSubscriptionBill(b)) return;
   document.getElementById('bDesc').value = b.desc;
   document.getElementById('bValor').value = toCurrencyDisplay(b.value);
   document.getElementById('bVencimento').value = b.dueDate;
@@ -2836,40 +2786,36 @@ document.getElementById('subscriptionForm').addEventListener('submit', async (e)
   const classificacao = document.getElementById('sClassificacao').value;
   const obs = document.getElementById('sObs').value.trim();
   const banco = readBankValue('sBanco', 'sBancoCustom');
-  const cardBrand = readCardBrandValue('sBandeira', 'sBandeiraCustom');
-  if(!desc || isNaN(valor) || valor<=0 || !cardBrand) return;
+  if(!desc || isNaN(valor) || valor<=0) return;
   if(isNaN(dueDay) || dueDay<1 || dueDay>31){ document.getElementById('sDia').focus(); return; }
 
   const kind = 'ASSINATURAS';
-  let targetRecurringId = null;
-  if(editingSubscriptionId){
-    targetRecurringId = editingSubscriptionId;
-    const r = recurringBills.find(x=>sameId(x.id, editingSubscriptionId));
-    if(r){
-      r.desc=desc; r.value=valor; r.freq='mensal'; r.dueDay=dueDay; r.baseDate=null;
-      r.classification=classificacao; r.billKind=kind; r.notes=obs||null; r.mode='fixed';
-      r.bank=banco; r.cardBrand=cardBrand;
-    }
-    editingSubscriptionId = null;
-    document.getElementById('subscriptionSubmitLabel').textContent = '+ Adicionar';
-  } else {
-    const novo = { id: uid(), desc, value: valor, freq:'mensal', dueDay, baseDate:null, classification: classificacao, billKind: kind, notes: obs||null, mode:'fixed', bank: banco, cardBrand };
-    recurringBills.push(novo);
-    targetRecurringId = novo.id;
-  }
-  bills.forEach(b=>{
-    if(!sameId(b.recurringId, targetRecurringId)) return;
-    b.billKind = kind;
-    b.cardBrand = cardBrand;
-    if(b.bank !== banco) b.bank = banco;
-  });
-  await saveRecurring();
-  await saveBills();
-  e.target.reset();
-  document.getElementById('sBandeiraCustomWrap').style.display = 'none';
-  document.getElementById('sBancoCustomWrap').style.display = 'none';
+  const novo = { id: uid(), desc, value: valor, freq:'mensal', dueDay, baseDate:null, classification: classificacao, billKind: kind, notes: obs||null, mode:'fixed', bank: banco };
+  recurringBills.push(novo);
+  const targetRecurringId = novo.id;
 
   const now = new Date();
+  const dueDate = clampDueDate(now.getFullYear(), now.getMonth(), dueDay);
+  if(!bills.some(b=> sameId(b.recurringId, targetRecurringId) && b.dueDate === dueDate)){
+    bills.push({
+      id: uid(), desc, value: valor, dueDate,
+      classification: classificacao, billKind: kind, notes: obs||null, bank: banco,
+      paid:false, paidTxId:null, recurringId: targetRecurringId, countInBalance: true
+    });
+  }
+
+  const okRecurring = await saveRecurring();
+  const okBills = await saveBills();
+  if(!okRecurring || !okBills){
+    recurringBills = recurringBills.filter(r=>!sameId(r.id, targetRecurringId));
+    bills = bills.filter(b=>!sameId(b.recurringId, targetRecurringId));
+    alert('Não foi possível salvar a assinatura. Confira se está logado e tente novamente.');
+    return;
+  }
+
+  e.target.reset();
+  document.getElementById('sBancoCustomWrap').style.display = 'none';
+
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   if(calViewDate.getFullYear()!==now.getFullYear() || calViewDate.getMonth()!==now.getMonth()){
     await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
@@ -2878,23 +2824,6 @@ document.getElementById('subscriptionForm').addEventListener('submit', async (e)
   populateBillsMonthSelect(true);
   await renderSubscriptionsTab();
 });
-
-function editSubscription(id){
-  const r = recurringBills.find(x=>sameId(x.id, id));
-  if(!r) return;
-  document.getElementById('sNome').value = r.desc;
-  document.getElementById('sValor').value = toCurrencyDisplay(r.value);
-  document.getElementById('sDia').value = r.dueDay || '';
-  document.getElementById('sClassificacao').value = r.classification;
-  setCardBrandValue('sBandeira', 'sBandeiraCustom', 'sBandeiraCustomWrap', r.cardBrand || null);
-  document.getElementById('sObs').value = r.notes || '';
-  setBankValue('sBanco', 'sBancoCustom', 'sBancoCustomWrap', r.bank || null);
-  editingSubscriptionId = id;
-  document.getElementById('subscriptionSubmitLabel').textContent = 'Salvar edição';
-  document.querySelector('[data-tab="contas"]').click();
-  showContasSub('assinaturas');
-  window.scrollTo({top:0, behavior:'smooth'});
-}
 
 function renderSubscriptionsList(){
   const list = document.getElementById('subscriptionsList');
@@ -2932,7 +2861,6 @@ function renderSubscriptionsTemplatesList(){
   list.innerHTML = cadastros.map(r=>{
     const per = freqLabel(r);
     const orphanTag = r._orphan ? '<span class="mode-label">RECUPERADO</span>' : '';
-    const editBtn = r._orphan ? '' : `<button class="icon-btn" title="Editar" onclick="editSubscription('${r.id}')">✎</button>`;
     return `
     <div class="goal-card">
       <div class="goal-top">
@@ -2940,7 +2868,6 @@ function renderSubscriptionsTemplatesList(){
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${orphanTag}
           ${billKindTagHTML(r.billKind)}
-          ${cardBrandTagHTML(r.cardBrand)}
           ${bankTagHTML(r.bank)}
           ${classTagHTML(r.classification)}
         </span>
@@ -2948,7 +2875,6 @@ function renderSubscriptionsTemplatesList(){
       <div class="goal-meta" style="margin-top:8px;">
         <span>${per} &middot; ${fmtBRL(r.value)}</span>
         <div class="goal-actions">
-          ${editBtn}
           <button class="icon-btn" title="Excluir" onclick="deleteRecurring('${r.id}')">✕</button>
         </div>
       </div>
@@ -2985,14 +2911,6 @@ async function deleteRecurring(id){
     else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
     else await renderContasTab();
   });
-}
-function subscriptionDisplayCardBrand(b){
-  if(b.cardBrand) return b.cardBrand;
-  if(b.recurringId){
-    const r = recurringBills.find(x=>sameId(x.id, b.recurringId));
-    if(r && r.cardBrand) return r.cardBrand;
-  }
-  return null;
 }
 function freqLabel(r){
   const freq = r.freq || 'mensal';
@@ -3651,7 +3569,6 @@ function renderDayDetail(){
     urg: billUrgency(b),
     classification: b.classification,
     bank: b.bank,
-    cardBrand: subscriptionDisplayCardBrand(b),
     installmentId: b.installmentId,
     isNextInstallment: b.isNextInstallment
   }));
@@ -3677,7 +3594,6 @@ function renderDayDetail(){
         : (i.kind==='folha' ? '<span class="class-tag class-bank">FOLHA</span>'
         : (kindTag + (i.ref.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>')));
       const classTag = i.classification ? classTagHTML(i.classification) : '';
-      const brandTag = i.cardBrand ? cardBrandTagHTML(i.cardBrand) : '';
       const bankTag = i.bank ? bankTagHTML(i.bank) : '';
       // ação de pagar
       let acao = '';
@@ -3700,7 +3616,7 @@ function renderDayDetail(){
           <div class="dr-main">${escapeHtml(i.desc)}</div>
           <div class="dr-meta">
             <span style="color:${stColor}; font-weight:700;">${stTxt}</span>
-            ${tipoTag} ${brandTag} ${bankTag} ${classTag}
+            ${tipoTag} ${bankTag} ${classTag}
           </div>
         </div>
         <div class="dr-right">
@@ -3785,7 +3701,6 @@ function renderBillCard(b){
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${billKindTagHTML(billDisplayKind(b))}
-          ${cardBrandTagHTML(subscriptionDisplayCardBrand(b))}
           ${bankTagHTML(b.bank)}
           ${b.recurringId ? (isSubscriptionBill(b) ? '' : '<span class="class-tag class-inst">RECORRENTE</span>') : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'}
           ${classTagHTML(b.classification)}
@@ -3795,8 +3710,8 @@ function renderBillCard(b){
         <span>Vence em ${dateFmt}${b.paid && b.paidDate ? ` &middot; Pago em ${new Date(b.paidDate+'T00:00:00').toLocaleDateString('pt-BR')}` : ''} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
           <button class="btn-mini ${b.paid?'ghost':''}" onclick="${b.paid ? `toggleBillPaid('${b.id}')` : `openMarkPaidModal('bill','${b.id}')`}">${b.paid ? 'Desmarcar' : 'Marcar como paga'}</button>
-          <button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>
-          <button class="icon-btn" title="Excluir" onclick="deleteBill('${b.id}')">✕</button>
+          ${isSubscriptionBill(b) ? '' : `<button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>`}
+          <button class="icon-btn" title="Excluir" onclick="${isSubscriptionBill(b) && b.recurringId ? `deleteRecurring('${b.recurringId}')` : `deleteBill('${b.id}')`}">✕</button>
         </div>
       </div>
       ${b.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(b.notes)}</p>` : ''}
@@ -4198,8 +4113,7 @@ async function runInit(){
   setupBillKindToggle('rKind', 'rKindCustomWrap', 'rKindCustom');
   ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco','sBanco'].forEach(populateBankSelect);
   ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco','sBanco'].forEach(setupBankSelectToggle);
-  populateCardBrandSelect('sBandeira');
-  setupCardBrandSelectToggle('sBandeira');
+
   updateRecurringFreqFields();
   updateFolhaTipoFields();
   document.getElementById('foVencimento').value = todayISO();
