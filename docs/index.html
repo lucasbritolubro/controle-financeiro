@@ -181,6 +181,8 @@
   .type-toggle button.sel-rmode{ text-transform:uppercase; }
   .type-toggle button.sel-rmode.active{ background:var(--black); color:#fff; }
   .type-toggle button.sel-sub.active{ background:var(--black); color:#fff; }
+  #contasSubtabs{ flex-wrap:wrap; overflow:visible; max-width:100% !important; }
+  #contasSubtabs button{ flex:1 1 140px; min-width:120px; font-size:11px; padding:10px 6px; }
   .type-toggle button.sel-bal.active{ background:var(--mint-soft); color:var(--mint); }
   .type-toggle button.sel-bal-no.active{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
   .balance-toggle-wrap{ margin-top:14px; }
@@ -334,6 +336,7 @@
   .cal-chip.chip-bkind-casa{ background:rgba(14,142,139,0.18); color:var(--teal); }
   .cal-chip.chip-bkind-pessoal{ background:rgba(99,102,241,0.16); color:#4338CA; }
   .cal-chip.chip-bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
+  .cal-chip.chip-bkind-assinaturas{ background:rgba(168,85,247,0.18); color:#7C3AED; }
   .cal-chip.chip-bkind-emprestimo{ background:rgba(220,53,69,0.14); color:var(--rose); }
   .cal-chip.chip-bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
   .cal-chip.chip-urgent{ background:rgba(220,53,69,0.18); color:var(--rose); }
@@ -352,9 +355,11 @@
   .bkind-casa{ background:rgba(14,142,139,0.14); color:var(--teal); }
   .bkind-pessoal{ background:rgba(99,102,241,0.14); color:#4338CA; }
   .bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
+  .bkind-assinaturas{ background:rgba(168,85,247,0.14); color:#7C3AED; }
   .bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
 
   .bkind-emprestimo{ background:var(--rose-soft); color:var(--rose); }
+  .class-cardbrand{ background:rgba(168,85,247,0.1); color:#6D28D9; }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
   ::placeholder{ color:var(--ink-faint); }
@@ -759,10 +764,11 @@
   <section id="contas">
     <p class="empty-note" style="margin:0 0 16px;">O calendário de vencimentos agora fica no Painel. Aqui você cadastra e gerencia todas as contas.</p>
 
-    <div class="type-toggle" id="contasSubtabs" style="max-width:560px; margin-bottom:16px;">
+    <div class="type-toggle" id="contasSubtabs" style="margin-bottom:16px;">
       <button type="button" class="sel-sub active" data-sub="todas">TODAS AS CONTAS</button>
       <button type="button" class="sel-sub" data-sub="nao-recorrentes">NÃO RECORRENTES</button>
       <button type="button" class="sel-sub" data-sub="recorrentes">RECORRENTES</button>
+      <button type="button" class="sel-sub" data-sub="assinaturas">ASSINATURAS</button>
     </div>
 
     <div id="contasMonthFilter" style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
@@ -907,6 +913,64 @@
       <h2 class="panel-title" id="recurringTemplatesTitle" style="margin-top:28px;">Cadastros recorrentes</h2>
       <div class="inst-list" id="recurringTemplatesList" style="margin-top:16px;"></div>
       <p class="empty-note" id="recurringTemplatesEmpty" style="display:none;">Nenhum cadastro recorrente ainda.</p>
+    </div>
+
+    <div id="contasSubAssinaturas" style="display:none;">
+      <div class="panel">
+        <h2 class="panel-title">Nova assinatura</h2>
+        <p class="empty-note" style="margin:-6px 0 16px;">Cadastre serviços recorrentes cobrados no cartão (Netflix, Spotify, iCloud, etc.). A assinatura entra automaticamente todo mês no dia de vencimento escolhido.</p>
+        <form id="subscriptionForm">
+          <div class="bill-form-row1">
+            <div class="field">
+              <label>Nome</label>
+              <input type="text" id="sNome" placeholder="Ex: Netflix, Spotify, iCloud..." required>
+            </div>
+            <div class="field">
+              <label>Valor (R$)</label>
+              <input type="text" inputmode="decimal" class="currency-input" id="sValor" placeholder="0,00" required>
+            </div>
+            <div class="field">
+              <label>Dia do vencimento</label>
+              <input type="number" id="sDia" min="1" max="31" step="1" placeholder="Ex: 15" required>
+            </div>
+            <div class="field">
+              <label>Bandeira do cartão</label>
+              <select id="sBandeira" class="cardbrand-select" data-custom="sBandeiraCustomWrap"></select>
+            </div>
+            <div class="field">
+              <label>Classificação</label>
+              <select id="sClassificacao"></select>
+            </div>
+          </div>
+          <div class="field" id="sBandeiraCustomWrap" style="display:none; max-width:280px; margin-top:12px;">
+            <label>Qual bandeira?</label>
+            <input type="text" id="sBandeiraCustom" placeholder="Ex: Visa Infinite, Mastercard Black...">
+          </div>
+          <div class="bill-form-row2" style="margin-top:12px;">
+            <div class="field field-bank">
+              <label>Cartão / banco (opcional)</label>
+              <select id="sBanco" class="bank-select" data-custom="sBancoCustomWrap"></select>
+            </div>
+            <div class="field" style="flex:1;">
+              <label>Observações (opcional)</label>
+              <input type="text" id="sObs" placeholder="Ex: plano família, conta compartilhada...">
+            </div>
+            <button type="submit" class="btn-add" id="subscriptionSubmitLabel">+ Adicionar</button>
+          </div>
+          <div class="field" id="sBancoCustomWrap" style="display:none; max-width:280px; margin-top:12px;">
+            <label>Qual banco?</label>
+            <input type="text" id="sBancoCustom" placeholder="Nome do banco">
+          </div>
+        </form>
+      </div>
+
+      <h2 class="panel-title" id="subscriptionsListTitle" style="margin-top:22px;">Assinaturas do mês</h2>
+      <div class="bills-list" id="subscriptionsList" style="margin-top:16px;"></div>
+      <p class="empty-note" id="subscriptionsEmpty" style="display:none;">Nenhuma assinatura neste mês.</p>
+
+      <h2 class="panel-title" id="subscriptionsTemplatesTitle" style="margin-top:28px;">Cadastros de assinaturas</h2>
+      <div class="inst-list" id="subscriptionsTemplatesList" style="margin-top:16px;"></div>
+      <p class="empty-note" id="subscriptionsTemplatesEmpty" style="display:none;">Nenhuma assinatura cadastrada ainda.</p>
     </div>
 
     <div class="panel" id="contasTotalsPanel" style="margin-top:24px;">
@@ -1178,8 +1242,18 @@ function normalizeBillKind(kind){
   if(plain === 'PESSOAL') return 'PESSOAL';
   if(plain === 'CARTAO DE CREDITO' || k === 'CARTÃO DE CRÉDITO') return 'CARTÃO DE CRÉDITO';
   if(plain.includes('CARTAO') && plain.includes('CREDIT')) return 'CARTÃO DE CRÉDITO';
+  if(plain === 'ASSINATURAS' || plain === 'ASSINATURA') return 'ASSINATURAS';
   if(plain === 'EMPRESTIMO' || k === 'EMPRÉSTIMO') return 'EMPRÉSTIMO';
   return k;
+}
+function isSubscriptionKind(kind){
+  return normalizeBillKind(kind) === 'ASSINATURAS';
+}
+function isSubscriptionBill(b){
+  return !b.isInstallment && isSubscriptionKind(billDisplayKind(b));
+}
+function isSubscriptionRecurring(r){
+  return isSubscriptionKind(r.billKind);
 }
 function sameId(a, b){ return String(a) === String(b); }
 function normBillDesc(s){ return String(s||'').trim().toLowerCase(); }
@@ -1222,6 +1296,7 @@ function getRecurringCadastros(){
       notes: b.notes || null,
       mode: 'fixed',
       bank: b.bank || null,
+      cardBrand: b.cardBrand || null,
       _orphan: true
     });
     known.add(rid);
@@ -1241,7 +1316,8 @@ function normalizeStoredCategories(){
   state.customCategoriesOut = (state.customCategoriesOut||[]).map(catUpper);
 }
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
-const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL', 'CARTÃO DE CRÉDITO'];
+const BILL_KIND_DEFAULTS = ['CASA', 'PESSOAL', 'CARTÃO DE CRÉDITO', 'ASSINATURAS'];
+const CARD_BRANDS = ['VISA','MASTERCARD','ELO','AMERICAN EXPRESS','HIPERCARD','DINERS CLUB'];
 const BILLS_MONTH_ALL = '__all__';
 const BILL_KINDS_KEY = 'painel-financeiro:tipos-conta';
 const BANKS = ['Banco do Brasil','Nubank','Mercado Pago','Itaú','Bradesco','Santander','Caixa Econômica Federal','Banco Inter','C6 Bank','PagBank','Sicoob','Sicredi','Will Bank','Next'];
@@ -1266,6 +1342,7 @@ let currentType = 'entrada';
 let editingId = null;
 let editingBillId = null;
 let editingRecurringId = null;
+let editingSubscriptionId = null;
 let recurringMode = 'fixed';
 let instMode = 'fixed';
 let calViewDate = new Date();
@@ -1445,8 +1522,8 @@ async function saveBillKinds(){
   catch(e){ console.error('Falha ao salvar tipos de conta', e); }
 }
 function getBillKindList(){
-  const list = BILL_KIND_DEFAULTS.slice();
-  billKindCustom.forEach(k=>{ if(!list.includes(k)) list.push(k); });
+  const list = BILL_KIND_DEFAULTS.filter(k=> k !== 'ASSINATURAS');
+  billKindCustom.forEach(k=>{ if(!list.includes(k) && k !== 'ASSINATURAS') list.push(k); });
   return list;
 }
 function populateBillKindSelect(selectId){
@@ -1510,6 +1587,7 @@ function billKindCssClass(kind){
   if(k === 'CASA') return 'bkind-casa';
   if(k === 'PESSOAL') return 'bkind-pessoal';
   if(k === 'CARTÃO DE CRÉDITO') return 'bkind-cartao';
+  if(k === 'ASSINATURAS') return 'bkind-assinaturas';
   if(k === 'EMPRÉSTIMO') return 'bkind-emprestimo';
   return 'bkind-other';
 }
@@ -1799,13 +1877,17 @@ async function ensureRecurringInstancesForMonth(year, month){
         const notes = [r.notes, autoNote].filter(Boolean).join(' ') || null;
         bills.push({
           id: uid(), desc: r.desc, value: r.value, dueDate: dd,
-          classification: r.classification, billKind: normalizeBillKind(r.billKind), notes, bank: r.bank || null, paid:false, paidTxId:null, recurringId: r.id
+          classification: r.classification, billKind: normalizeBillKind(r.billKind), notes, bank: r.bank || null, cardBrand: r.cardBrand || null, paid:false, paidTxId:null, recurringId: r.id
         });
         changed = true;
       } else {
         const kind = normalizeBillKind(r.billKind);
         if(kind && normalizeBillKind(inst.billKind) !== kind){
           inst.billKind = kind;
+          changed = true;
+        }
+        if(r.cardBrand && inst.cardBrand !== r.cardBrand){
+          inst.cardBrand = r.cardBrand;
           changed = true;
         }
       }
@@ -1939,6 +2021,48 @@ function populateBillClassificationSelect(){
 }
 function populateRecurringClassificationSelect(){
   document.getElementById('rClassificacao').innerHTML = PROFILES.map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
+}
+function populateSubscriptionClassificationSelect(){
+  const el = document.getElementById('sClassificacao');
+  if(!el) return;
+  el.innerHTML = PROFILES.map(p=>`<option value="${p.id}">${catUpper(p.billLabel)}</option>`).join('');
+}
+function populateCardBrandSelect(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.innerHTML = `<option value="">Selecione a bandeira</option>` +
+    CARD_BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('') +
+    `<option value="__custom__">Outra bandeira...</option>`;
+}
+function setupCardBrandSelectToggle(selectId){
+  const el = document.getElementById(selectId);
+  if(!el) return;
+  el.addEventListener('change', ()=>{
+    const wrap = document.getElementById(el.dataset.custom);
+    if(!wrap) return;
+    if(el.value === '__custom__'){ wrap.style.display = 'block'; }
+    else { wrap.style.display = 'none'; document.getElementById(wrap.querySelector('input').id).value = ''; }
+  });
+}
+function readCardBrandValue(selectId, customId){
+  const sel = document.getElementById(selectId);
+  if(!sel || !sel.value) return null;
+  if(sel.value === '__custom__'){
+    const val = catUpper(document.getElementById(customId).value.trim());
+    return val || null;
+  }
+  return catUpper(sel.value);
+}
+function setCardBrandValue(selectId, customId, wrapId, brand){
+  const sel = document.getElementById(selectId);
+  const wrap = document.getElementById(wrapId);
+  if(!brand){ sel.value = ''; wrap.style.display = 'none'; document.getElementById(customId).value=''; return; }
+  const b = catUpper(brand);
+  if(CARD_BRANDS.includes(b)){ sel.value = b; wrap.style.display = 'none'; document.getElementById(customId).value=''; }
+  else { sel.value = '__custom__'; wrap.style.display = 'block'; document.getElementById(customId).value = b; }
+}
+function cardBrandTagHTML(brand){
+  return brand ? `<span class="class-tag class-cardbrand">${escapeHtml(catUpper(brand))}</span>` : '';
 }
 
 function populateBankSelect(id){
@@ -2460,6 +2584,10 @@ document.getElementById('billForm').addEventListener('submit', async (e)=>{
 function editBill(id){
   const b = bills.find(x=>x.id===id);
   if(!b) return;
+  if(isSubscriptionBill(b) && b.recurringId){
+    editSubscription(b.recurringId);
+    return;
+  }
   document.getElementById('bDesc').value = b.desc;
   document.getElementById('bValor').value = toCurrencyDisplay(b.value);
   document.getElementById('bVencimento').value = b.dueDate;
@@ -2481,9 +2609,12 @@ let contasSubActive = 'todas';
 function updateContasSubUI(){
   const sub = contasSubActive;
   const showRecurring = sub === 'recorrentes';
+  const showAssinaturas = sub === 'assinaturas';
   const showLista = sub === 'nao-recorrentes' || sub === 'todas';
   document.getElementById('contasSubLista').style.display = showLista ? 'block' : 'none';
   document.getElementById('contasSubRecorrentes').style.display = showRecurring ? 'block' : 'none';
+  const assinaturasPanel = document.getElementById('contasSubAssinaturas');
+  if(assinaturasPanel) assinaturasPanel.style.display = showAssinaturas ? 'block' : 'none';
   const formPanel = document.getElementById('billFormPanel');
   if(formPanel) formPanel.style.display = sub === 'nao-recorrentes' ? 'block' : 'none';
   const monthFilter = document.getElementById('contasMonthFilter');
@@ -2503,6 +2634,11 @@ function updateContasSubUI(){
     const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
     recTitleEl.textContent = `Contas RECORRENTES${monthTxt}`;
   }
+  const subTitleEl = document.getElementById('subscriptionsListTitle');
+  if(subTitleEl){
+    const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
+    subTitleEl.textContent = `Assinaturas${monthTxt}`;
+  }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
@@ -2511,8 +2647,9 @@ document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').fo
     contasSubActive = btn.dataset.sub;
     populateBillsMonthSelect(true);
     updateContasSubUI();
-    if(contasSubActive !== 'recorrentes') await renderContasTab();
-    else await renderRecurringTab();
+    if(contasSubActive === 'recorrentes') await renderRecurringTab();
+    else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
+    else await renderContasTab();
   });
 });
 function showContasSub(sub){
@@ -2619,6 +2756,141 @@ function editRecurring(id){
   showContasSub('recorrentes');
   window.scrollTo({top:0, behavior:'smooth'});
 }
+document.getElementById('subscriptionForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const desc = document.getElementById('sNome').value.trim();
+  const valor = parseCurrencyValue(document.getElementById('sValor'));
+  const dueDay = parseInt(document.getElementById('sDia').value, 10);
+  const classificacao = document.getElementById('sClassificacao').value;
+  const obs = document.getElementById('sObs').value.trim();
+  const banco = readBankValue('sBanco', 'sBancoCustom');
+  const cardBrand = readCardBrandValue('sBandeira', 'sBandeiraCustom');
+  if(!desc || isNaN(valor) || valor<=0 || !cardBrand) return;
+  if(isNaN(dueDay) || dueDay<1 || dueDay>31){ document.getElementById('sDia').focus(); return; }
+
+  const kind = 'ASSINATURAS';
+  let targetRecurringId = null;
+  if(editingSubscriptionId){
+    targetRecurringId = editingSubscriptionId;
+    const r = recurringBills.find(x=>sameId(x.id, editingSubscriptionId));
+    if(r){
+      r.desc=desc; r.value=valor; r.freq='mensal'; r.dueDay=dueDay; r.baseDate=null;
+      r.classification=classificacao; r.billKind=kind; r.notes=obs||null; r.mode='fixed';
+      r.bank=banco; r.cardBrand=cardBrand;
+    }
+    editingSubscriptionId = null;
+    document.getElementById('subscriptionSubmitLabel').textContent = '+ Adicionar';
+  } else {
+    const novo = { id: uid(), desc, value: valor, freq:'mensal', dueDay, baseDate:null, classification: classificacao, billKind: kind, notes: obs||null, mode:'fixed', bank: banco, cardBrand };
+    recurringBills.push(novo);
+    targetRecurringId = novo.id;
+  }
+  bills.forEach(b=>{
+    if(!sameId(b.recurringId, targetRecurringId)) return;
+    b.billKind = kind;
+    b.cardBrand = cardBrand;
+    if(b.bank !== banco) b.bank = banco;
+  });
+  await saveRecurring();
+  await saveBills();
+  e.target.reset();
+  document.getElementById('sBandeiraCustomWrap').style.display = 'none';
+  document.getElementById('sBancoCustomWrap').style.display = 'none';
+
+  const now = new Date();
+  await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
+  if(calViewDate.getFullYear()!==now.getFullYear() || calViewDate.getMonth()!==now.getMonth()){
+    await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
+  }
+  renderSubscriptionsTemplatesList();
+  populateBillsMonthSelect(true);
+  await renderSubscriptionsTab();
+});
+
+function editSubscription(id){
+  const r = recurringBills.find(x=>sameId(x.id, id));
+  if(!r) return;
+  document.getElementById('sNome').value = r.desc;
+  document.getElementById('sValor').value = toCurrencyDisplay(r.value);
+  document.getElementById('sDia').value = r.dueDay || '';
+  document.getElementById('sClassificacao').value = r.classification;
+  setCardBrandValue('sBandeira', 'sBandeiraCustom', 'sBandeiraCustomWrap', r.cardBrand || null);
+  document.getElementById('sObs').value = r.notes || '';
+  setBankValue('sBanco', 'sBancoCustom', 'sBancoCustomWrap', r.bank || null);
+  editingSubscriptionId = id;
+  document.getElementById('subscriptionSubmitLabel').textContent = 'Salvar edição';
+  document.querySelector('[data-tab="contas"]').click();
+  showContasSub('assinaturas');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderSubscriptionsList(){
+  const list = document.getElementById('subscriptionsList');
+  const empty = document.getElementById('subscriptionsEmpty');
+  if(!list) return;
+  const items = getBillsForContasMonth(getContasMonthKey())
+    .filter(b=> isRecurringBillInstance(b) && isSubscriptionBill(b))
+    .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
+  if(items.length===0){
+    list.innerHTML='';
+    empty.style.display='block';
+    const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
+    empty.textContent = getSubscriptionCadastros().length===0
+      ? 'Nenhuma assinatura cadastrada ainda.'
+      : `Nenhuma assinatura${monthNote}.`;
+    return;
+  }
+  empty.style.display='none';
+  list.innerHTML = items.map(renderBillCard).join('');
+}
+function getSubscriptionCadastros(){
+  return getRecurringCadastros().filter(isSubscriptionRecurring);
+}
+function renderSubscriptionsTemplatesList(){
+  const list = document.getElementById('subscriptionsTemplatesList');
+  const empty = document.getElementById('subscriptionsTemplatesEmpty');
+  if(!list) return;
+  const cadastros = getSubscriptionCadastros();
+  if(cadastros.length===0){
+    list.innerHTML='';
+    if(empty){ empty.style.display='block'; empty.textContent = 'Nenhuma assinatura cadastrada ainda.'; }
+    return;
+  }
+  if(empty) empty.style.display='none';
+  list.innerHTML = cadastros.map(r=>{
+    const per = freqLabel(r);
+    const orphanTag = r._orphan ? '<span class="mode-label">RECUPERADO</span>' : '';
+    const editBtn = r._orphan ? '' : `<button class="icon-btn" title="Editar" onclick="editSubscription('${r.id}')">✎</button>`;
+    return `
+    <div class="goal-card">
+      <div class="goal-top">
+        <span class="goal-name">${escapeHtml(r.desc)}</span>
+        <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          ${orphanTag}
+          ${billKindTagHTML(r.billKind)}
+          ${cardBrandTagHTML(r.cardBrand)}
+          ${bankTagHTML(r.bank)}
+          ${classTagHTML(r.classification)}
+        </span>
+      </div>
+      <div class="goal-meta" style="margin-top:8px;">
+        <span>${per} &middot; ${fmtBRL(r.value)}</span>
+        <div class="goal-actions">
+          ${editBtn}
+          <button class="icon-btn" title="Excluir" onclick="deleteRecurring('${r.id}')">✕</button>
+        </div>
+      </div>
+      ${r.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(r.notes)}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+async function renderSubscriptionsTab(){
+  await ensureRecurringForVisibleMonths();
+  renderSubscriptionsList();
+  renderSubscriptionsTemplatesList();
+  renderContasTotals();
+}
+
 async function deleteRecurring(id){
   const idsToPurge = collectRecurringDeleteIds(id);
   const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
@@ -2636,9 +2908,19 @@ async function deleteRecurring(id){
       return;
     }
     renderRecurringTemplatesList();
+    renderSubscriptionsTemplatesList();
     if(contasSubActive === 'recorrentes') await renderRecurringTab();
+    else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
     else await renderContasTab();
   });
+}
+function subscriptionDisplayCardBrand(b){
+  if(b.cardBrand) return b.cardBrand;
+  if(b.recurringId){
+    const r = recurringBills.find(x=>sameId(x.id, b.recurringId));
+    if(r && r.cardBrand) return r.cardBrand;
+  }
+  return null;
 }
 function freqLabel(r){
   const freq = r.freq || 'mensal';
@@ -2652,13 +2934,13 @@ function renderRecurringList(){
   const empty = document.getElementById('recurringEmpty');
   if(!list) return;
   const items = getBillsForContasMonth(getContasMonthKey())
-    .filter(isRecurringBillInstance)
+    .filter(b=> isRecurringBillInstance(b) && !isSubscriptionBill(b))
     .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
   if(items.length===0){
     list.innerHTML='';
     empty.style.display='block';
     const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
-    empty.textContent = recurringBills.length===0
+    empty.textContent = recurringBills.filter(r=>!isSubscriptionRecurring(r)).length===0
       ? 'Nenhuma conta recorrente cadastrada ainda.'
       : `Nenhuma conta recorrente${monthNote}.`;
     return;
@@ -2670,7 +2952,7 @@ function renderRecurringTemplatesList(){
   const list = document.getElementById('recurringTemplatesList');
   const empty = document.getElementById('recurringTemplatesEmpty');
   if(!list) return;
-  const cadastros = getRecurringCadastros();
+  const cadastros = getRecurringCadastros().filter(r=>!isSubscriptionRecurring(r));
   if(cadastros.length===0){
     list.innerHTML='';
     if(empty){ empty.style.display='block'; empty.textContent = 'Nenhum cadastro recorrente ainda.'; }
@@ -3267,6 +3549,7 @@ function renderDayDetail(){
     urg: billUrgency(b),
     classification: b.classification,
     bank: b.bank,
+    cardBrand: subscriptionDisplayCardBrand(b),
     installmentId: b.installmentId,
     isNextInstallment: b.isNextInstallment
   }));
@@ -3292,6 +3575,7 @@ function renderDayDetail(){
         : (i.kind==='folha' ? '<span class="class-tag class-bank">FOLHA</span>'
         : (kindTag + (i.ref.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>')));
       const classTag = i.classification ? classTagHTML(i.classification) : '';
+      const brandTag = i.cardBrand ? cardBrandTagHTML(i.cardBrand) : '';
       const bankTag = i.bank ? bankTagHTML(i.bank) : '';
       // ação de pagar
       let acao = '';
@@ -3314,7 +3598,7 @@ function renderDayDetail(){
           <div class="dr-main">${escapeHtml(i.desc)}</div>
           <div class="dr-meta">
             <span style="color:${stColor}; font-weight:700;">${stTxt}</span>
-            ${tipoTag} ${bankTag} ${classTag}
+            ${tipoTag} ${brandTag} ${bankTag} ${classTag}
           </div>
         </div>
         <div class="dr-right">
@@ -3399,8 +3683,9 @@ function renderBillCard(b){
         <span style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           ${b.countInBalance===false ? '<span class="tag-noconta">Fora do saldo</span>' : ''}
           ${billKindTagHTML(billDisplayKind(b))}
+          ${cardBrandTagHTML(subscriptionDisplayCardBrand(b))}
           ${bankTagHTML(b.bank)}
-          ${b.recurringId ? '<span class="class-tag class-inst">RECORRENTE</span>' : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'}
+          ${b.recurringId ? (isSubscriptionBill(b) ? '' : '<span class="class-tag class-inst">RECORRENTE</span>') : '<span class="class-tag class-nrec">NÃO RECORRENTE</span>'}
           ${classTagHTML(b.classification)}
         </span>
       </div>
@@ -3434,7 +3719,7 @@ function populateBillsMonthSelect(preserveSelection, forceValue){
   if(prev && prev !== BILLS_MONTH_ALL && /^\d{4}-\d{2}$/.test(prev)) keys.add(prev);
   const sortedKeys = Array.from(keys).sort();
   let html = '';
-  if(contasSubActive === 'todas' || contasSubActive === 'recorrentes'){
+  if(contasSubActive === 'todas' || contasSubActive === 'recorrentes' || contasSubActive === 'assinaturas'){
     html += `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
   }
   html += sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
@@ -3449,6 +3734,7 @@ function resetBillsMonthFilter(){
 document.getElementById('billsMonthSelect').addEventListener('change', async ()=>{
   updateContasSubUI();
   if(contasSubActive === 'recorrentes') await renderRecurringTab();
+  else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
   else await renderContasTab();
 });
 async function renderRecurringTab(){
@@ -3494,10 +3780,13 @@ function getBillsForContasMonth(selMonth){
 }
 function getBillsByCategoryForMonth(selMonth){
   const all = getBillsForContasMonth(selMonth);
+  const assinaturas = all.filter(b=> isRecurringBillInstance(b) && isSubscriptionBill(b));
+  const recorrentes = all.filter(b=> isRecurringBillInstance(b) && !isSubscriptionBill(b));
   return {
-    todas: all,
+    todas: all.filter(b=> !isSubscriptionBill(b)),
     naoRecorrentes: all.filter(isNonRecurringBill),
-    recorrentes: all.filter(isRecurringBillInstance)
+    recorrentes,
+    assinaturas
   };
 }
 function renderContasTotals(){
@@ -3508,9 +3797,26 @@ function renderContasTotals(){
   const naoRecEl = document.getElementById('contasTotalNaoRec');
   const recEl = document.getElementById('contasTotalRec');
   const todasEl = document.getElementById('contasTotalTodas');
-  if(naoRecEl) naoRecEl.textContent = fmtBRL(sumBillsValue(cats.naoRecorrentes));
-  if(recEl) recEl.textContent = fmtBRL(sumBillsValue(cats.recorrentes));
-  if(todasEl) todasEl.textContent = fmtBRL(sumBillsValue(cats.todas));
+  const naoRecLabel = document.querySelector('#contasTotalsPanel .rcard.entradas .rlabel');
+  const recLabel = document.querySelector('#contasTotalsPanel .rcard.saidas .rlabel');
+  const todasLabel = document.querySelector('#contasTotalsPanel .rcard.economia .rlabel');
+  if(contasSubActive === 'assinaturas'){
+    if(naoRecLabel) naoRecLabel.textContent = 'CADASTROS';
+    if(recLabel) recLabel.textContent = 'PENDENTES';
+    if(todasLabel) todasLabel.textContent = 'TOTAL ASSINATURAS';
+    const cadastros = getSubscriptionCadastros();
+    const pendentes = cats.assinaturas.filter(b=>!b.paid);
+    if(naoRecEl) naoRecEl.textContent = String(cadastros.length);
+    if(recEl) recEl.textContent = fmtBRL(sumBillsValue(pendentes));
+    if(todasEl) todasEl.textContent = fmtBRL(sumBillsValue(cats.assinaturas));
+  } else {
+    if(naoRecLabel) naoRecLabel.textContent = 'NÃO RECORRENTES';
+    if(recLabel) recLabel.textContent = 'RECORRENTES';
+    if(todasLabel) todasLabel.textContent = 'TODAS AS CONTAS';
+    if(naoRecEl) naoRecEl.textContent = fmtBRL(sumBillsValue(cats.naoRecorrentes));
+    if(recEl) recEl.textContent = fmtBRL(sumBillsValue(cats.recorrentes));
+    if(todasEl) todasEl.textContent = fmtBRL(sumBillsValue(cats.todas));
+  }
 }
 function renderBillsList(){
   const list = document.getElementById('billsList');
@@ -3518,6 +3824,7 @@ function renderBillsList(){
   if(!list) return;
 
   let items = getBillsForContasMonth(getContasMonthKey()).sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
+  items = items.filter(b=> !isSubscriptionBill(b));
   if(contasSubActive === 'nao-recorrentes') items = items.filter(isNonRecurringBill);
 
   if(items.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
@@ -3781,13 +4088,16 @@ async function runInit(){
   document.getElementById('bVencimento').value = todayISO();
   populateBillClassificationSelect();
   populateRecurringClassificationSelect();
+  populateSubscriptionClassificationSelect();
   populateFolhaClassificationSelect();
   populateBillKindSelect('bKind');
   populateBillKindSelect('rKind');
   setupBillKindToggle('bKind', 'bKindCustomWrap', 'bKindCustom');
   setupBillKindToggle('rKind', 'rKindCustomWrap', 'rKindCustom');
-  ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco'].forEach(populateBankSelect);
-  ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco'].forEach(setupBankSelectToggle);
+  ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco','sBanco'].forEach(populateBankSelect);
+  ['bBanco','iBanco','rBanco','fCartaoBanco','foBanco','sBanco'].forEach(setupBankSelectToggle);
+  populateCardBrandSelect('sBandeira');
+  setupCardBrandSelectToggle('sBandeira');
   updateRecurringFreqFields();
   updateFolhaTipoFields();
   document.getElementById('foVencimento').value = todayISO();
@@ -3814,6 +4124,7 @@ async function runInit(){
   await renderContasTab();
   renderRecurringList();
   renderRecurringTemplatesList();
+  renderSubscriptionsTemplatesList();
   renderFolha();
 }
 
