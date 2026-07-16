@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260716a-assinaturas -->
+<!-- deploy-v20260716b-folha-delete -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1325,6 +1325,8 @@ const RECURRING_KEY = 'painel-financeiro:contas-recorrentes';
 const DELETED_RECURRING_KEY = 'painel-financeiro:recorrentes-excluidos';
 const FOLHA_KEY = 'painel-financeiro:folha-pagamento';
 const FOLHA_RECURRING_KEY = 'painel-financeiro:folha-recorrente';
+const DELETED_FOLHA_RECURRING_KEY = 'painel-financeiro:folha-recorrente-excluidos';
+const DELETED_FOLHA_INSTANCES_KEY = 'painel-financeiro:folha-instancias-excluidas';
 /* empresas elegíveis para a folha de pagamento */
 const FOLHA_PROFILES = ['lubro','nexo'];
 
@@ -1336,6 +1338,9 @@ let deletedRecurringIds = [];
 let billKindCustom = [];
 let folha = [];
 let folhaRecurring = [];
+let deletedFolhaRecurringIds = [];
+let deletedFolhaInstances = [];
+let folhaDataLock = Promise.resolve();
 let editingFolhaId = null;
 let folhaSalarioType = 'Conta';
 let currentType = 'entrada';
@@ -1776,27 +1781,86 @@ async function saveRecurringUnlocked(snapshot){
     return false;
   }
 }
+function withFolhaLock(fn){
+  const next = folhaDataLock.then(fn);
+  folhaDataLock = next.catch(()=>{});
+  return next;
+}
+function folhaInstanceKey(recurringId, dueDate){
+  return `${String(recurringId)}|${dueDate}`;
+}
+function isFolhaRecurringDeleted(id){
+  return deletedFolhaRecurringIds.some(x=>sameId(x, id));
+}
+function isFolhaInstanceDeleted(recurringId, dueDate){
+  return deletedFolhaInstances.includes(folhaInstanceKey(recurringId, dueDate));
+}
+async function loadDeletedFolhaRecurringIds(){
+  try{
+    const res = await window.storage.get(DELETED_FOLHA_RECURRING_KEY);
+    deletedFolhaRecurringIds = parseStoredList(res && res.value).map(String);
+  }catch(e){ deletedFolhaRecurringIds = []; }
+}
+async function saveDeletedFolhaRecurringIds(){
+  try{ await window.storage.set(DELETED_FOLHA_RECURRING_KEY, JSON.stringify(deletedFolhaRecurringIds), false); }
+  catch(e){ console.error('Falha ao salvar exclusões da folha recorrente', e); }
+}
+async function markFolhaRecurringDeleted(id){
+  const sid = String(id);
+  if(!isFolhaRecurringDeleted(sid)) deletedFolhaRecurringIds.push(sid);
+  await saveDeletedFolhaRecurringIds();
+}
+async function loadDeletedFolhaInstances(){
+  try{
+    const res = await window.storage.get(DELETED_FOLHA_INSTANCES_KEY);
+    deletedFolhaInstances = parseStoredList(res && res.value).map(String);
+  }catch(e){ deletedFolhaInstances = []; }
+}
+async function saveDeletedFolhaInstances(){
+  try{ await window.storage.set(DELETED_FOLHA_INSTANCES_KEY, JSON.stringify(deletedFolhaInstances), false); }
+  catch(e){ console.error('Falha ao salvar exclusões de instâncias da folha', e); }
+}
+async function markFolhaInstanceDeleted(recurringId, dueDate){
+  const key = folhaInstanceKey(recurringId, dueDate);
+  if(!deletedFolhaInstances.includes(key)) deletedFolhaInstances.push(key);
+  await saveDeletedFolhaInstances();
+}
 async function loadFolha(){
+  await loadDeletedFolhaRecurringIds();
+  await loadDeletedFolhaInstances();
   folha = [];
   try{
     const res = await window.storage.get(FOLHA_KEY);
     folha = parseStoredList(res && res.value);
   }catch(e){ folha = []; }
+  folha = folha.filter(f=>!f.folhaRecurringId || !isFolhaRecurringDeleted(f.folhaRecurringId));
 }
 async function saveFolha(){
-  try{ await window.storage.set(FOLHA_KEY, JSON.stringify(folha), false); }
-  catch(e){ console.error('Falha ao salvar folha', e); }
+  try{
+    await window.storage.set(FOLHA_KEY, JSON.stringify(folha), false);
+    return true;
+  }catch(e){
+    console.error('Falha ao salvar folha', e);
+    return false;
+  }
 }
 async function loadFolhaRecurring(){
+  await loadDeletedFolhaRecurringIds();
   folhaRecurring = [];
   try{
     const res = await window.storage.get(FOLHA_RECURRING_KEY);
     folhaRecurring = parseStoredList(res && res.value);
   }catch(e){ folhaRecurring = []; }
+  folhaRecurring = folhaRecurring.filter(t=>!isFolhaRecurringDeleted(t.id));
 }
 async function saveFolhaRecurring(){
-  try{ await window.storage.set(FOLHA_RECURRING_KEY, JSON.stringify(folhaRecurring), false); }
-  catch(e){ console.error('Falha ao salvar folha recorrente', e); }
+  try{
+    await window.storage.set(FOLHA_RECURRING_KEY, JSON.stringify(folhaRecurring), false);
+    return true;
+  }catch(e){
+    console.error('Falha ao salvar folha recorrente', e);
+    return false;
+  }
 }
 function folhaEntryFromTemplate(t, dueDate){
   return {
@@ -1807,21 +1871,27 @@ function folhaEntryFromTemplate(t, dueDate){
   };
 }
 async function ensureFolhaInstancesForMonth(year, month){
-  const now = new Date();
-  const currentIndex = now.getFullYear()*12 + now.getMonth();
-  const targetIndex = year*12 + month;
-  if(targetIndex < currentIndex || folhaRecurring.length===0) return false;
-  let changed = false;
-  folhaRecurring.forEach(t=>{
-    const dueDate = clampDueDate(year, month, t.dueDay || 1);
-    const exists = folha.some(f => f.folhaRecurringId === t.id && f.dueDate === dueDate);
-    if(!exists){
-      folha.push(folhaEntryFromTemplate(t, dueDate));
-      changed = true;
-    }
+  return withFolhaLock(async ()=>{
+    await loadDeletedFolhaRecurringIds();
+    await loadDeletedFolhaInstances();
+    const now = new Date();
+    const currentIndex = now.getFullYear()*12 + now.getMonth();
+    const targetIndex = year*12 + month;
+    if(targetIndex < currentIndex || folhaRecurring.length===0) return false;
+    let changed = false;
+    folhaRecurring.forEach(t=>{
+      if(isFolhaRecurringDeleted(t.id)) return;
+      const dueDate = clampDueDate(year, month, t.dueDay || 1);
+      if(isFolhaInstanceDeleted(t.id, dueDate)) return;
+      const exists = folha.some(f => sameId(f.folhaRecurringId, t.id) && f.dueDate === dueDate);
+      if(!exists){
+        folha.push(folhaEntryFromTemplate(t, dueDate));
+        changed = true;
+      }
+    });
+    if(changed) await saveFolha();
+    return changed;
   });
-  if(changed) await saveFolha();
-  return changed;
 }
 function clampDueDate(year, month, day){
   const lastDay = new Date(year, month+1, 0).getDate();
@@ -1981,6 +2051,8 @@ async function switchProfile(id){
   await syncContasData();
   normalizeBillKindsFromData();
   refreshBillKindSelects();
+  await loadDeletedFolhaRecurringIds();
+  await loadDeletedFolhaInstances();
   await loadFolha();
   await loadFolhaRecurring();
   const now = new Date();
@@ -2140,7 +2212,7 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
       ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth()).then(()=>{
         populateFolhaMonthSelect(true);
         renderFolha();
-      });
+      }).catch(err=>console.error('Folha: erro ao gerar ocorrências', err));
     }
   });
 });
@@ -3320,17 +3392,47 @@ function editFolha(id){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 async function deleteFolha(id){
-  const f = folha.find(x=>x.id===id);
-  if(f && f.paid && f.paidTxId){
-    const p = PROFILES.find(x=>x.id===f.classification) || currentProfile;
-    await removeTransactionFromProfile(p.id, f.paidTxId);
-  }
-  folha = folha.filter(x=>x.id!==id);
-  await saveFolha();
-  if(editingFolhaId===id){ editingFolhaId=null; document.getElementById('folhaForm').reset(); document.getElementById('folhaSubmitLabel').textContent='+ Adicionar à folha'; document.getElementById('folhaFormTitle').textContent='Novo lançamento na folha'; updateFolhaTipoFields(); resetFolhaFormToggles(); }
-  populateFolhaMonthSelect(true);
-  renderFolha();
-  renderAll();
+  return withFolhaLock(async ()=>{
+    const f = folha.find(x=>x.id===id);
+    if(!f) return;
+    if(f.folhaRecurringId){
+      const dateFmt = new Date(f.dueDate+'T00:00:00').toLocaleDateString('pt-BR');
+      const purgeAll = confirm(`"${f.desc}" repete todo mês.\n\nOK = excluir o cadastro e todas as ocorrências\nCancelar = excluir só ${dateFmt}`);
+      if(purgeAll){
+        await markFolhaRecurringDeleted(f.folhaRecurringId);
+        folhaRecurring = folhaRecurring.filter(x=>!sameId(x.id, f.folhaRecurringId));
+        folha = folha.filter(x=>!sameId(x.folhaRecurringId, f.folhaRecurringId));
+        await saveFolhaRecurring();
+      } else {
+        await markFolhaInstanceDeleted(f.folhaRecurringId, f.dueDate);
+        folha = folha.filter(x=>x.id!==id);
+      }
+    } else {
+      folha = folha.filter(x=>x.id!==id);
+    }
+    if(f.paid && f.paidTxId){
+      const p = PROFILES.find(x=>x.id===f.classification) || currentProfile;
+      await removeTransactionFromProfile(p.id, f.paidTxId);
+    }
+    const ok = await saveFolha();
+    if(!ok){
+      alert('Não foi possível salvar a exclusão. Confira se está logado e tente novamente.');
+      await loadFolha();
+      renderFolha();
+      return;
+    }
+    if(editingFolhaId===id){
+      editingFolhaId=null;
+      document.getElementById('folhaForm').reset();
+      document.getElementById('folhaSubmitLabel').textContent='+ Adicionar à folha';
+      document.getElementById('folhaFormTitle').textContent='Novo lançamento na folha';
+      updateFolhaTipoFields();
+      resetFolhaFormToggles();
+    }
+    populateFolhaMonthSelect(true);
+    renderFolha();
+    renderAll();
+  });
 }
 async function toggleFolhaPaid(id, opts){
   const f = folha.find(x=>x.id===id);
@@ -4112,6 +4214,8 @@ async function runInit(){
   await saveBillKinds();
   populateBillKindSelect('bKind');
   populateBillKindSelect('rKind');
+  await loadDeletedFolhaRecurringIds();
+  await loadDeletedFolhaInstances();
   await loadFolha();
   await loadFolhaRecurring();
   const now = new Date();
