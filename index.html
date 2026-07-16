@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260716d-assinaturas-edit -->
+<!-- deploy-v20260716e-assinaturas-mes -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -956,7 +956,12 @@
         </form>
       </div>
 
-      <h2 class="panel-title" id="subscriptionsListTitle" style="margin-top:22px;">Assinaturas do mês</h2>
+      <div id="subscriptionsMonthFilter" style="display:flex; align-items:center; gap:12px; margin-top:22px; margin-bottom:16px;">
+        <span style="font-weight:700; font-size:12px; letter-spacing:.06em; color:var(--ink-soft);">MÊS</span>
+        <select class="month-select" id="subscriptionsMonthSelect"></select>
+      </div>
+
+      <h2 class="panel-title" id="subscriptionsListTitle" style="margin-top:0;">Assinaturas do mês</h2>
       <div class="bills-list" id="subscriptionsList" style="margin-top:16px;"></div>
       <p class="empty-note" id="subscriptionsEmpty" style="display:none;">Nenhuma assinatura neste mês.</p>
 
@@ -2653,7 +2658,9 @@ function updateContasSubUI(){
   const formPanel = document.getElementById('billFormPanel');
   if(formPanel) formPanel.style.display = sub === 'nao-recorrentes' ? 'block' : 'none';
   const monthFilter = document.getElementById('contasMonthFilter');
-  if(monthFilter) monthFilter.style.display = 'flex';
+  if(monthFilter) monthFilter.style.display = showAssinaturas ? 'none' : 'flex';
+  const subMonthFilter = document.getElementById('subscriptionsMonthFilter');
+  if(subMonthFilter) subMonthFilter.style.display = showAssinaturas ? 'flex' : 'none';
   const titleEl = document.getElementById('billsListTitle');
   if(titleEl){
     const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
@@ -2671,16 +2678,30 @@ function updateContasSubUI(){
   }
   const subTitleEl = document.getElementById('subscriptionsListTitle');
   if(subTitleEl){
-    const monthTxt = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' do mês';
+    const subKey = getSubscriptionsMonthKey();
+    const monthTxt = subKey === BILLS_MONTH_ALL ? '' : ` de ${fullMonthLabelUpper(subKey)}`;
     subTitleEl.textContent = `Assinaturas${monthTxt}`;
+  }
+  const subEmptyEl = document.getElementById('subscriptionsEmpty');
+  if(subEmptyEl && showAssinaturas){
+    const subKey = getSubscriptionsMonthKey();
+    const monthNote = subKey === BILLS_MONTH_ALL ? '' : ` em ${fullMonthLabelUpper(subKey)}`;
+    subEmptyEl.textContent = getSubscriptionCadastros().length===0
+      ? 'Nenhuma assinatura cadastrada ainda.'
+      : `Nenhuma assinatura${monthNote}.`;
   }
 }
 document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     document.getElementById('contasSubtabs').querySelectorAll('button[data-sub]').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
+    const prevSub = contasSubActive;
     contasSubActive = btn.dataset.sub;
-    populateBillsMonthSelect(true);
+    if(contasSubActive === 'assinaturas'){
+      populateSubscriptionsMonthSelect(prevSub === 'assinaturas');
+    } else {
+      populateBillsMonthSelect(true);
+    }
     updateContasSubUI();
     if(contasSubActive === 'recorrentes') await renderRecurringTab();
     else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
@@ -2858,7 +2879,7 @@ document.getElementById('subscriptionForm').addEventListener('submit', async (e)
     await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
   }
   renderSubscriptionsTemplatesList();
-  populateBillsMonthSelect(true);
+  populateSubscriptionsMonthSelect(true);
   await renderSubscriptionsTab();
 });
 
@@ -2913,13 +2934,14 @@ function renderSubscriptionsList(){
   const list = document.getElementById('subscriptionsList');
   const empty = document.getElementById('subscriptionsEmpty');
   if(!list) return;
-  const items = getBillsForContasMonth(getContasMonthKey())
+  const subKey = getSubscriptionsMonthKey();
+  const items = getBillsForContasMonth(subKey)
     .filter(b=> isRecurringBillInstance(b) && isSubscriptionBill(b))
     .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
   if(items.length===0){
     list.innerHTML='';
     empty.style.display='block';
-    const monthNote = getContasMonthKey() === BILLS_MONTH_ALL ? '' : ' neste mês';
+    const monthNote = subKey === BILLS_MONTH_ALL ? '' : ` em ${fullMonthLabelUpper(subKey)}`;
     empty.textContent = getSubscriptionCadastros().length===0
       ? 'Nenhuma assinatura cadastrada ainda.'
       : `Nenhuma assinatura${monthNote}.`;
@@ -3816,10 +3838,36 @@ function fullMonthLabelUpper(mk){
   return `${monthNames[parseInt(m,10)-1]} ${y}`;
 }
 function currentMonthKeyNow(){ return monthKey(todayISO()); }
+function getSubscriptionsMonthKey(){
+  const el = document.getElementById('subscriptionsMonthSelect');
+  if(el && el.value) return el.value;
+  return currentMonthKeyNow();
+}
 function getContasMonthKey(){
+  if(contasSubActive === 'assinaturas') return getSubscriptionsMonthKey();
   const el = document.getElementById('billsMonthSelect');
   if(el && el.value) return el.value;
   return currentMonthKeyNow();
+}
+function getSubscriptionMonthKeys(){
+  const keys = new Set();
+  bills.filter(b=> isRecurringBillInstance(b) && isSubscriptionBill(b)).forEach(b=> keys.add(monthKey(b.dueDate)));
+  keys.add(currentMonthKeyNow());
+  const prev = document.getElementById('subscriptionsMonthSelect')?.value;
+  if(prev && prev !== BILLS_MONTH_ALL && /^\d{4}-\d{2}$/.test(prev)) keys.add(prev);
+  return Array.from(keys).sort();
+}
+function populateSubscriptionsMonthSelect(preserveSelection, forceValue){
+  const el = document.getElementById('subscriptionsMonthSelect');
+  if(!el) return;
+  const prev = el.value;
+  const sortedKeys = getSubscriptionMonthKeys();
+  let html = `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
+  html += sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
+  el.innerHTML = html;
+  if(forceValue) el.value = forceValue;
+  else if(preserveSelection && (prev === BILLS_MONTH_ALL || sortedKeys.includes(prev))) el.value = prev;
+  else el.value = currentMonthKeyNow();
 }
 function populateBillsMonthSelect(preserveSelection, forceValue){
   const el = document.getElementById('billsMonthSelect');
@@ -3829,7 +3877,7 @@ function populateBillsMonthSelect(preserveSelection, forceValue){
   if(prev && prev !== BILLS_MONTH_ALL && /^\d{4}-\d{2}$/.test(prev)) keys.add(prev);
   const sortedKeys = Array.from(keys).sort();
   let html = '';
-  if(contasSubActive === 'todas' || contasSubActive === 'recorrentes' || contasSubActive === 'assinaturas'){
+  if(contasSubActive === 'todas' || contasSubActive === 'recorrentes'){
     html += `<option value="${BILLS_MONTH_ALL}">TODOS OS MESES</option>`;
   }
   html += sortedKeys.map(k=>`<option value="${k}">${fullMonthLabelUpper(k)}</option>`).join('');
@@ -3846,6 +3894,10 @@ document.getElementById('billsMonthSelect').addEventListener('change', async ()=
   if(contasSubActive === 'recorrentes') await renderRecurringTab();
   else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
   else await renderContasTab();
+});
+document.getElementById('subscriptionsMonthSelect').addEventListener('change', async ()=>{
+  updateContasSubUI();
+  await renderSubscriptionsTab();
 });
 async function renderRecurringTab(){
   await ensureRecurringForVisibleMonths();
@@ -4229,6 +4281,7 @@ async function runInit(){
   await ensureFolhaInstancesForMonth(now.getFullYear(), now.getMonth());
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   populateBillsMonthSelect(false);
+  populateSubscriptionsMonthSelect(false);
   populateFolhaMonthSelect(false);
   updateContasSubUI();
   await renderAll();
