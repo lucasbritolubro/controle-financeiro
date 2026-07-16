@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260716c-assinaturas -->
+<!-- deploy-v20260716d-assinaturas-edit -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1162,6 +1162,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="confirmModal" style="display:none;">
+  <div class="modal-card">
+    <h3 class="modal-title" id="confirmModalTitle">Confirmar</h3>
+    <p class="modal-sub" id="confirmModalSub"></p>
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button type="button" class="btn-mini ghost" id="confirmModalCancel" style="flex:1; padding:11px;">Cancelar</button>
+      <button type="button" class="btn-add" id="confirmModalConfirm" style="flex:1; justify-content:center; background:var(--rose);">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="markPaidModal" style="display:none;">
   <div class="modal-card">
     <h3 class="modal-title" id="markPaidModalTitle">Marcar como paga</h3>
@@ -1338,6 +1349,8 @@ let currentType = 'entrada';
 let editingId = null;
 let editingBillId = null;
 let editingRecurringId = null;
+let editingSubscriptionId = null;
+let confirmModalCallback = null;
 
 let recurringMode = 'fixed';
 let instMode = 'fixed';
@@ -2790,32 +2803,56 @@ document.getElementById('subscriptionForm').addEventListener('submit', async (e)
   if(isNaN(dueDay) || dueDay<1 || dueDay>31){ document.getElementById('sDia').focus(); return; }
 
   const kind = 'ASSINATURAS';
-  const novo = { id: uid(), desc, value: valor, freq:'mensal', dueDay, baseDate:null, classification: classificacao, billKind: kind, notes: obs||null, mode:'fixed', bank: banco };
-  recurringBills.push(novo);
-  const targetRecurringId = novo.id;
-
-  const now = new Date();
-  const dueDate = clampDueDate(now.getFullYear(), now.getMonth(), dueDay);
-  if(!bills.some(b=> sameId(b.recurringId, targetRecurringId) && b.dueDate === dueDate)){
-    bills.push({
-      id: uid(), desc, value: valor, dueDate,
-      classification: classificacao, billKind: kind, notes: obs||null, bank: banco,
-      paid:false, paidTxId:null, recurringId: targetRecurringId, countInBalance: true
+  const wasEditing = !!editingSubscriptionId;
+  let targetRecurringId = null;
+  let createdNew = false;
+  if(editingSubscriptionId){
+    targetRecurringId = editingSubscriptionId;
+    const r = recurringBills.find(x=>sameId(x.id, editingSubscriptionId));
+    if(r){
+      r.desc=desc; r.value=valor; r.freq='mensal'; r.dueDay=dueDay; r.baseDate=null;
+      r.classification=classificacao; r.billKind=kind; r.notes=obs||null; r.mode='fixed'; r.bank=banco;
+    }
+    bills.forEach(b=>{
+      if(!sameId(b.recurringId, targetRecurringId)) return;
+      b.desc=desc; b.value=valor; b.classification=classificacao; b.billKind=kind;
+      b.notes=obs||null; b.bank=banco;
     });
+  } else {
+    const novo = { id: uid(), desc, value: valor, freq:'mensal', dueDay, baseDate:null, classification: classificacao, billKind: kind, notes: obs||null, mode:'fixed', bank: banco };
+    recurringBills.push(novo);
+    targetRecurringId = novo.id;
+    createdNew = true;
+    const now = new Date();
+    const dueDate = clampDueDate(now.getFullYear(), now.getMonth(), dueDay);
+    if(!bills.some(b=> sameId(b.recurringId, targetRecurringId) && b.dueDate === dueDate)){
+      bills.push({
+        id: uid(), desc, value: valor, dueDate,
+        classification: classificacao, billKind: kind, notes: obs||null, bank: banco,
+        paid:false, paidTxId:null, recurringId: targetRecurringId, countInBalance: true
+      });
+    }
   }
 
   const okRecurring = await saveRecurring();
   const okBills = await saveBills();
   if(!okRecurring || !okBills){
-    recurringBills = recurringBills.filter(r=>!sameId(r.id, targetRecurringId));
-    bills = bills.filter(b=>!sameId(b.recurringId, targetRecurringId));
+    if(createdNew){
+      recurringBills = recurringBills.filter(r=>!sameId(r.id, targetRecurringId));
+      bills = bills.filter(b=>!sameId(b.recurringId, targetRecurringId));
+    }
     alert('Não foi possível salvar a assinatura. Confira se está logado e tente novamente.');
     return;
   }
 
+  if(wasEditing){
+    editingSubscriptionId = null;
+    document.getElementById('subscriptionSubmitLabel').textContent = '+ Adicionar';
+  }
   e.target.reset();
   document.getElementById('sBancoCustomWrap').style.display = 'none';
 
+  const now = new Date();
   await ensureRecurringInstancesForMonth(now.getFullYear(), now.getMonth());
   if(calViewDate.getFullYear()!==now.getFullYear() || calViewDate.getMonth()!==now.getMonth()){
     await ensureRecurringInstancesForMonth(calViewDate.getFullYear(), calViewDate.getMonth());
@@ -2824,6 +2861,53 @@ document.getElementById('subscriptionForm').addEventListener('submit', async (e)
   populateBillsMonthSelect(true);
   await renderSubscriptionsTab();
 });
+
+function editSubscription(id){
+  const r = recurringBills.find(x=>sameId(x.id, id));
+  if(!r) return;
+  document.getElementById('sNome').value = r.desc;
+  document.getElementById('sValor').value = toCurrencyDisplay(r.value);
+  document.getElementById('sDia').value = r.dueDay || '';
+  document.getElementById('sClassificacao').value = r.classification;
+  document.getElementById('sObs').value = r.notes || '';
+  setBankValue('sBanco', 'sBancoCustom', 'sBancoCustomWrap', r.bank || null);
+  editingSubscriptionId = id;
+  document.getElementById('subscriptionSubmitLabel').textContent = 'Salvar edição';
+  document.querySelector('[data-tab="contas"]').click();
+  showContasSub('assinaturas');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function openConfirmModal(title, sub, onConfirm, confirmLabel){
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalSub').textContent = sub;
+  document.getElementById('confirmModalConfirm').textContent = confirmLabel || 'Confirmar';
+  confirmModalCallback = onConfirm;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+function closeConfirmModal(){
+  document.getElementById('confirmModal').style.display = 'none';
+  confirmModalCallback = null;
+}
+document.getElementById('confirmModalCancel').addEventListener('click', closeConfirmModal);
+document.getElementById('confirmModal').addEventListener('click', (e)=>{ if(e.target.id==='confirmModal') closeConfirmModal(); });
+document.getElementById('confirmModalConfirm').addEventListener('click', async ()=>{
+  if(!confirmModalCallback) return;
+  const cb = confirmModalCallback;
+  closeConfirmModal();
+  await cb();
+});
+
+function openDeleteSubscriptionModal(id){
+  const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
+  const label = seed?.desc || 'esta assinatura';
+  openConfirmModal(
+    'Excluir assinatura',
+    `Excluir "${label}" e todas as ocorrências em todos os meses? Esta ação não pode ser desfeita.`,
+    ()=> purgeRecurring(id),
+    'Excluir'
+  );
+}
 
 function renderSubscriptionsList(){
   const list = document.getElementById('subscriptionsList');
@@ -2875,7 +2959,8 @@ function renderSubscriptionsTemplatesList(){
       <div class="goal-meta" style="margin-top:8px;">
         <span>${per} &middot; ${fmtBRL(r.value)}</span>
         <div class="goal-actions">
-          <button class="icon-btn" title="Excluir" onclick="deleteRecurring('${r.id}')">✕</button>
+          ${r._orphan ? '' : `<button class="icon-btn" title="Editar" onclick="editSubscription('${r.id}')">✎</button>`}
+          <button class="icon-btn" title="Excluir" onclick="openDeleteSubscriptionModal('${r.id}')">✕</button>
         </div>
       </div>
       ${r.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(r.notes)}</p>` : ''}
@@ -2889,12 +2974,8 @@ async function renderSubscriptionsTab(){
   renderContasTotals();
 }
 
-async function deleteRecurring(id){
+async function purgeRecurring(id){
   const idsToPurge = collectRecurringDeleteIds(id);
-  const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
-  const label = seed?.desc || 'esta conta recorrente';
-  const dupNote = idsToPurge.size > 1 ? ` (${idsToPurge.size} cadastros com o mesmo nome)` : '';
-  if(!confirm(`Excluir "${label}"${dupNote} e todas as ocorrências em todos os meses?`)) return;
   return withContasLock(async ()=>{
     for(const rid of idsToPurge) await markRecurringDeleted(rid);
     recurringBills = recurringBills.filter(x=>![...idsToPurge].some(rid=>sameId(x.id, rid)));
@@ -2903,14 +2984,26 @@ async function deleteRecurring(id){
     const okBills = await saveBillsUnlocked();
     if(!okRecurring || !okBills){
       alert('Não foi possível salvar a exclusão. Atualize a página, confira se está logado e tente novamente.');
-      return;
+      return false;
     }
     renderRecurringTemplatesList();
     renderSubscriptionsTemplatesList();
     if(contasSubActive === 'recorrentes') await renderRecurringTab();
     else if(contasSubActive === 'assinaturas') await renderSubscriptionsTab();
     else await renderContasTab();
+    return true;
   });
+}
+async function deleteRecurring(id){
+  const seed = recurringBills.find(x=>sameId(x.id, id)) || bills.find(b=>sameId(b.recurringId, id));
+  if(isSubscriptionRecurring(seed) || isSubscriptionKind(seed?.billKind)){
+    return openDeleteSubscriptionModal(id);
+  }
+  const idsToPurge = collectRecurringDeleteIds(id);
+  const label = seed?.desc || 'esta conta recorrente';
+  const dupNote = idsToPurge.size > 1 ? ` (${idsToPurge.size} cadastros com o mesmo nome)` : '';
+  if(!confirm(`Excluir "${label}"${dupNote} e todas as ocorrências em todos os meses?`)) return;
+  return purgeRecurring(id);
 }
 function freqLabel(r){
   const freq = r.freq || 'mensal';
@@ -3710,8 +3803,8 @@ function renderBillCard(b){
         <span>Vence em ${dateFmt}${b.paid && b.paidDate ? ` &middot; Pago em ${new Date(b.paidDate+'T00:00:00').toLocaleDateString('pt-BR')}` : ''} &middot; ${fmtBRL(b.value)} &middot; <span style="color:${statusColor};">${statusLabel}</span></span>
         <div class="goal-actions">
           <button class="btn-mini ${b.paid?'ghost':''}" onclick="${b.paid ? `toggleBillPaid('${b.id}')` : `openMarkPaidModal('bill','${b.id}')`}">${b.paid ? 'Desmarcar' : 'Marcar como paga'}</button>
-          ${isSubscriptionBill(b) ? '' : `<button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>`}
-          <button class="icon-btn" title="Excluir" onclick="${isSubscriptionBill(b) && b.recurringId ? `deleteRecurring('${b.recurringId}')` : `deleteBill('${b.id}')`}">✕</button>
+          ${isSubscriptionBill(b) && b.recurringId ? `<button class="icon-btn" title="Editar" onclick="editSubscription('${b.recurringId}')">✎</button>` : `<button class="icon-btn" title="Editar" onclick="editBill('${b.id}')">✎</button>`}
+          <button class="icon-btn" title="Excluir" onclick="${isSubscriptionBill(b) && b.recurringId ? `openDeleteSubscriptionModal('${b.recurringId}')` : `deleteBill('${b.id}')`}">✕</button>
         </div>
       </div>
       ${b.notes ? `<p class="empty-note" style="margin:8px 0 0;">${escapeHtml(b.notes)}</p>` : ''}
