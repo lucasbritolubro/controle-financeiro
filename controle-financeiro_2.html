@@ -657,6 +657,7 @@
           <select id="iCategoria">
             <option value="Cartão de Crédito">Cartão de Crédito</option>
             <option value="Empréstimo">Empréstimo</option>
+            <option value="Parcelamento">Parcelamento</option>
           </select>
         </div>
         <div class="field">
@@ -1038,19 +1039,19 @@ const PROFILES = [
     id:'lucas', name:'Lucas Brito', subtitle:'Finanças pessoais', initials:'LB', billLabel:'Pessoal',
     mark:'linear-gradient(135deg, #3A3A46, #0B0B0D)', calDot:'#3A3A46',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Alimentação','Transporte','Moradia','Lazer','Saúde','Educação','Assinaturas','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['Alimentação','Transporte','Moradia','Lazer','Saúde','Educação','Assinaturas','Cartão de Crédito','Empréstimo','Parcelamento','Contas a Pagar','Outros']
   },
   {
     id:'lubro', name:'Lubro Comunicação e Marketing', subtitle:'Painel financeiro da agência', initials:'LUBRO', billLabel:'Lubro Comunicação e Marketing',
     mark:'linear-gradient(135deg, #45454F, #0B0B0D)', calDot:'#0369A1',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Impostos','Fornecedores','Equipe/Freelancers','Ferramentas/Software','Marketing próprio','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['Impostos','Fornecedores','Equipe/Freelancers','Ferramentas/Software','Marketing próprio','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Parcelamento','Contas a Pagar','Outros']
   },
   {
     id:'nexo', name:'Nexo Hub', subtitle:'Painel financeiro', initials:'NEXO', billLabel:'Nexo Hub',
     mark:'linear-gradient(135deg, #2E2E36, #0B0B0D)', calDot:'#0F9D63',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['Impostos','Fornecedores','Equipe','Infraestrutura/Ferramentas','Marketing','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Contas a Pagar','Outros']
+    categoriesOut:['Impostos','Fornecedores','Equipe','Infraestrutura/Ferramentas','Marketing','Deslocamento','Escritório','Cartão de Crédito','Empréstimo','Parcelamento','Contas a Pagar','Outros']
   }
 ];
 const BILLS_KEY = 'painel-financeiro:contas-a-pagar';
@@ -1121,7 +1122,7 @@ function catColor(cat){
   return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
 }
 function tagClass(cat){
-  if(cat === 'Impostos' || cat === 'Empréstimo') return 'tag tax';
+  if(cat === 'Impostos' || cat === 'Empréstimo' || cat === 'Parcelamento') return 'tag tax';
   if(cat === 'Cartão de Crédito') return 'tag credit';
   if(cat === 'Contas a Pagar') return 'tag bill';
   return 'tag';
@@ -1662,7 +1663,7 @@ document.getElementById('payModalForm').addEventListener('submit', async (e)=>{
   if(inst.mode==='variable') inst.referenceValue = val;
   const parcelaNum = inst.paidInstallments;
   const label = inst.totalInstallments ? `${parcelaNum}/${inst.totalInstallments}` : `nº ${parcelaNum}`;
-  const tipo = inst.category==='Empréstimo' ? 'parcela' : 'fatura';
+  const tipo = (inst.category==='Empréstimo' || inst.category==='Parcelamento') ? 'parcela' : 'fatura';
   let txId = null;
   if(inst.countInBalance !== false){
     txId = uid();
@@ -2257,7 +2258,7 @@ function getInstallmentBills(){
       const m = mIndex % 12;
       const dueDate = clampDueDate(y, m, inst.dueDay);
       const numLabel = total ? `${parcelaIndex+1}/${total}` : `nº ${parcelaIndex+1}`;
-      const tipo = inst.category==='Empréstimo' ? 'Parcela empréstimo' : 'Fatura cartão';
+      const tipo = inst.category==='Empréstimo' ? 'Parcela empréstimo' : (inst.category==='Parcelamento' ? 'Parcela' : 'Fatura cartão');
       out.push({
         id: `inst:${inst.id}:${parcelaIndex}`,
         installmentId: inst.id,

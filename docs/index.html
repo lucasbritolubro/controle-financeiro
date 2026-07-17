@@ -338,6 +338,7 @@
   .cal-chip.chip-bkind-cartao{ background:var(--orange-soft); color:var(--orange); }
   .cal-chip.chip-bkind-assinaturas{ background:rgba(168,85,247,0.18); color:#7C3AED; }
   .cal-chip.chip-bkind-emprestimo{ background:rgba(220,53,69,0.14); color:var(--rose); }
+  .cal-chip.chip-bkind-parcelamento{ background:rgba(217,119,6,0.14); color:#B45309; }
   .cal-chip.chip-bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
   .cal-chip.chip-urgent{ background:rgba(220,53,69,0.18); color:var(--rose); }
   .cal-chip.chip-paid{ background:rgba(15,157,99,0.18); color:var(--mint); }
@@ -359,6 +360,7 @@
   .bkind-other{ background:rgba(17,17,20,0.08); color:var(--ink-soft); }
 
   .bkind-emprestimo{ background:var(--rose-soft); color:var(--rose); }
+  .bkind-parcelamento{ background:rgba(217,119,6,0.14); color:#B45309; }
   .class-cardbrand{ background:rgba(168,85,247,0.1); color:#6D28D9; }
 
   footer.foot-note{ margin-top:36px; text-align:center; font-size:11.5px; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; }
@@ -678,6 +680,7 @@
           <select id="iCategoria">
             <option value="CARTÃO DE CRÉDITO">CARTÃO DE CRÉDITO</option>
             <option value="EMPRÉSTIMO">EMPRÉSTIMO</option>
+            <option value="PARCELAMENTO">PARCELAMENTO</option>
           </select>
         </div>
         <div class="field">
@@ -1223,19 +1226,19 @@ const PROFILES = [
     id:'lucas', name:'Lucas Brito', subtitle:'Finanças pessoais', initials:'LB', billLabel:'PESSOAL',
     mark:'linear-gradient(135deg, #3A3A46, #0B0B0D)', calDot:'#3A3A46',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['ALIMENTAÇÃO','TRANSPORTE','MORADIA','LAZER','SAÚDE','EDUCAÇÃO','ASSINATURAS','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
+    categoriesOut:['ALIMENTAÇÃO','TRANSPORTE','MORADIA','LAZER','SAÚDE','EDUCAÇÃO','ASSINATURAS','CARTÃO DE CRÉDITO','EMPRÉSTIMO','PARCELAMENTO','CONTAS A PAGAR','OUTROS']
   },
   {
     id:'lubro', name:'Lubro Comunicação e Marketing', subtitle:'Painel financeiro da agência', initials:'LUBRO', billLabel:'LUBRO COMUNICAÇÃO E MARKETING',
     mark:'linear-gradient(135deg, #45454F, #0B0B0D)', calDot:'#0369A1',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE/FREELANCERS','FERRAMENTAS/SOFTWARE','MARKETING PRÓPRIO','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
+    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE/FREELANCERS','FERRAMENTAS/SOFTWARE','MARKETING PRÓPRIO','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','PARCELAMENTO','CONTAS A PAGAR','OUTROS']
   },
   {
     id:'nexo', name:'Nexo Hub', subtitle:'Painel financeiro', initials:'NEXO', billLabel:'NEXO HUB',
     mark:'linear-gradient(135deg, #2E2E36, #0B0B0D)', calDot:'#0F9D63',
     categoriesIn: ENTRADA_CATEGORIES,
-    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE','INFRAESTRUTURA/FERRAMENTAS','MARKETING','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','CONTAS A PAGAR','OUTROS']
+    categoriesOut:['IMPOSTOS','FORNECEDORES','EQUIPE','INFRAESTRUTURA/FERRAMENTAS','MARKETING','DESLOCAMENTO','ESCRITÓRIO','CARTÃO DE CRÉDITO','EMPRÉSTIMO','PARCELAMENTO','CONTAS A PAGAR','OUTROS']
   }
 ];
 function catUpper(s){ return String(s||'').trim().toLocaleUpperCase('pt-BR'); }
@@ -1252,6 +1255,7 @@ function normalizeBillKind(kind){
   if(plain.includes('CARTAO') && plain.includes('CREDIT')) return 'CARTÃO DE CRÉDITO';
   if(plain === 'ASSINATURAS' || plain === 'ASSINATURA') return 'ASSINATURAS';
   if(plain === 'EMPRESTIMO' || k === 'EMPRÉSTIMO') return 'EMPRÉSTIMO';
+  if(plain === 'PARCELAMENTO') return 'PARCELAMENTO';
   return k;
 }
 function isSubscriptionKind(kind){
@@ -1482,7 +1486,7 @@ function catColor(cat){
 }
 function tagClass(cat){
   const c = catUpper(cat);
-  if(c === 'IMPOSTOS' || c === 'EMPRÉSTIMO') return 'tag tax';
+  if(c === 'IMPOSTOS' || c === 'EMPRÉSTIMO' || c === 'PARCELAMENTO') return 'tag tax';
   if(c === 'CARTÃO DE CRÉDITO') return 'tag credit';
   if(c === 'CONTAS A PAGAR') return 'tag bill';
   return 'tag';
@@ -1603,6 +1607,7 @@ function billKindCssClass(kind){
   if(k === 'CARTÃO DE CRÉDITO') return 'bkind-cartao';
   if(k === 'ASSINATURAS') return 'bkind-assinaturas';
   if(k === 'EMPRÉSTIMO') return 'bkind-emprestimo';
+  if(k === 'PARCELAMENTO') return 'bkind-parcelamento';
   return 'bkind-other';
 }
 function billDisplayKind(b){
@@ -2448,7 +2453,8 @@ document.getElementById('payModalForm').addEventListener('submit', async (e)=>{
   if(inst.mode==='variable') inst.referenceValue = val;
   const parcelaNum = inst.paidInstallments;
   const label = inst.totalInstallments ? `${parcelaNum}/${inst.totalInstallments}` : `nº ${parcelaNum}`;
-  const tipo = catUpper(inst.category)==='EMPRÉSTIMO' ? 'parcela' : 'fatura';
+  const cat = catUpper(inst.category);
+  const tipo = (cat === 'EMPRÉSTIMO' || cat === 'PARCELAMENTO') ? 'parcela' : 'fatura';
   let txId = null;
   if(payModalCountBalance !== 'nao'){
     txId = uid();
