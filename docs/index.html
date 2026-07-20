@@ -224,8 +224,8 @@
   .icon-btn{ background:var(--card-raised); border:1px solid var(--card-border); cursor:pointer; color:var(--ink-soft); font-size:12.5px; padding:6px 8px; border-radius:8px; }
   .icon-btn:hover{ color:#fff; background:var(--black); border-color:var(--black); }
 
-  form.goal-form{ display:grid; grid-template-columns:1.4fr 1fr 1fr auto; gap:12px; align-items:end; }
-  @media (max-width:760px){ form.goal-form{ grid-template-columns:1fr 1fr; } }
+  form.goal-form{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr auto; gap:12px; align-items:end; }
+  @media (max-width:900px){ form.goal-form{ grid-template-columns:1fr 1fr; } }
   form.inst-form{ display:grid; grid-template-columns:1.3fr 1fr 1fr .8fr auto; gap:12px; align-items:end; }
   @media (max-width:920px){ form.inst-form{ grid-template-columns:1fr 1fr; } }
   .bill-form-row1{ display:grid; grid-template-columns:1.4fr .9fr 1fr 1.1fr; gap:12px; margin-bottom:12px; }
@@ -1111,6 +1111,7 @@
       <form class="goal-form" id="goalForm">
         <div class="field"><label>Nome da meta</label><input type="text" id="gNome" placeholder="Ex: Reserva de emergência" required></div>
         <div class="field"><label>Valor alvo (R$)</label><input type="text" inputmode="decimal" class="currency-input" id="gValor" placeholder="0,00" required></div>
+        <div class="field"><label>Valor guardado (R$)</label><input type="text" inputmode="decimal" class="currency-input" id="gAtual" placeholder="0,00"></div>
         <div class="field"><label>Prazo</label><input type="date" id="gPrazo"></div>
         <button type="submit" class="btn-add" id="goalSubmitLabel">+ Criar meta</button>
       </form>
@@ -4045,16 +4046,19 @@ document.getElementById('goalForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const nome = document.getElementById('gNome').value.trim();
   const valor = parseCurrencyValue(document.getElementById('gValor'));
+  const atualRaw = document.getElementById('gAtual').value.trim();
+  const atual = atualRaw === '' ? 0 : parseCurrencyValue(document.getElementById('gAtual'));
   const prazo = document.getElementById('gPrazo').value;
   if(!nome || isNaN(valor) || valor<=0) return;
+  if(isNaN(atual) || atual<0) return;
   if(editingGoalId){
     const g = state.goals.find(x=>x.id===editingGoalId);
-    if(g){ g.name=nome; g.target=valor; g.deadline = prazo || null; }
+    if(g){ g.name=nome; g.target=valor; g.current=atual; g.deadline = prazo || null; }
     editingGoalId = null;
     document.getElementById('goalSubmitLabel').textContent = '+ Criar meta';
     document.getElementById('goalFormTitle').textContent = 'Nova meta';
   } else {
-    state.goals.push({ id: uid(), name: nome, target: valor, current: 0, deadline: prazo || null });
+    state.goals.push({ id: uid(), name: nome, target: valor, current: atual, deadline: prazo || null });
   }
   await saveState();
   e.target.reset();
@@ -4065,6 +4069,7 @@ function editGoal(id){
   if(!g) return;
   document.getElementById('gNome').value = g.name;
   document.getElementById('gValor').value = toCurrencyDisplay(g.target);
+  document.getElementById('gAtual').value = toCurrencyDisplay(g.current || 0);
   document.getElementById('gPrazo').value = g.deadline || '';
   editingGoalId = id;
   document.getElementById('goalSubmitLabel').textContent = 'Salvar edição';
@@ -4072,12 +4077,16 @@ function editGoal(id){
   document.querySelector('[data-tab="metas"]').click();
   window.scrollTo({top:0, behavior:'smooth'});
 }
-async function contributeGoal(id, inputEl){
+async function contributeGoal(id, inputEl, mode='add'){
   const val = parseCurrencyValue(inputEl);
-  if(isNaN(val) || val===0) return;
+  if(isNaN(val) || val<=0) return;
   const g = state.goals.find(x=>x.id===id);
   if(!g) return;
-  g.current = Math.max(0, g.current + val);
+  if(mode === 'withdraw'){
+    g.current = Math.max(0, (g.current||0) - val);
+  } else {
+    g.current = Math.max(0, (g.current||0) + val);
+  }
   await saveState();
   inputEl.value = '';
   renderGoals();
@@ -4116,8 +4125,9 @@ function renderGoals(){
         </div>
         <div class="meta-values">${fmtBRL(g.current)} de ${fmtBRL(g.target)} &middot; <b>faltam ${fmtBRL(restante)}</b></div>
         <div class="meta-actions">
-          <input type="text" inputmode="decimal" class="currency-input" placeholder="Guardar valor" id="contrib-${g.id}">
-          <button class="btn-mini" onclick="contributeGoal('${g.id}', document.getElementById('contrib-${g.id}'))">Adicionar</button>
+          <input type="text" inputmode="decimal" class="currency-input" placeholder="Valor" id="contrib-${g.id}">
+          <button class="btn-mini" onclick="contributeGoal('${g.id}', document.getElementById('contrib-${g.id}'), 'add')">Adicionar</button>
+          <button class="btn-mini ghost" onclick="contributeGoal('${g.id}', document.getElementById('contrib-${g.id}'), 'withdraw')">Retirar</button>
           <button class="icon-btn" title="Editar meta" onclick="editGoal('${g.id}')">✎</button>
           <button class="icon-btn" title="Excluir meta" onclick="deleteGoal('${g.id}')">✕</button>
         </div>
