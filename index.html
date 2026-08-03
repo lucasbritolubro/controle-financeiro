@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-valores-opcionais -->
+<!-- deploy-v20260803-unitario-auto -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -8196,24 +8196,50 @@ function switchCampanhaSub(sub){
     renderLiderancasUI();
   }
 }
-function calcCampanhaTotalSuggested(){
+function getCampanhaQtyBase(){
   const qtyEl = document.getElementById('campQty');
   const tirEl = document.getElementById('campTiragem');
-  const unEl = document.getElementById('campValorUn');
   const qty = qtyEl ? parseFloat(String(qtyEl.value || '').replace(',', '.')) : NaN;
   const tir = tirEl ? parseFloat(String(tirEl.value || '').replace(',', '.')) : NaN;
-  const unit = parseCurrencyValue(unEl);
-  const base = Number.isFinite(qty) && qty > 0 ? qty : (Number.isFinite(tir) && tir > 0 ? tir : 0);
+  if(Number.isFinite(qty) && qty > 0) return qty;
+  if(Number.isFinite(tir) && tir > 0) return tir;
+  return 0;
+}
+function calcCampanhaTotalSuggested(){
+  const unit = parseCurrencyValue(document.getElementById('campValorUn'));
+  const base = getCampanhaQtyBase();
   if(!Number.isFinite(unit) || unit < 0 || base <= 0) return null;
   return Math.round(base * unit * 100) / 100;
 }
+/** Unitário = valor total ÷ quantidade (quando o total é a referência). */
+function calcCampanhaUnitSuggested(){
+  const total = parseCurrencyValue(document.getElementById('campValorTotal'));
+  const base = getCampanhaQtyBase();
+  if(!Number.isFinite(total) || total < 0 || base <= 0) return null;
+  return Math.round((total / base) * 100) / 100;
+}
+function maybeAutofillCampanhaUnit(){
+  const unEl = document.getElementById('campValorUn');
+  if(!unEl) return;
+  const suggested = calcCampanhaUnitSuggested();
+  if(suggested == null) return;
+  unEl.value = toCurrencyDisplay(suggested);
+}
 function maybeAutofillCampanhaTotal(){
-  if(campanhaTotalManual) return;
+  // Se o total foi informado manualmente, recalcula o unitário a partir do total
+  if(campanhaTotalManual){
+    maybeAutofillCampanhaUnit();
+    return;
+  }
   const totalEl = document.getElementById('campValorTotal');
   if(!totalEl) return;
   const suggested = calcCampanhaTotalSuggested();
   if(suggested == null) return;
   totalEl.value = toCurrencyDisplay(suggested);
+}
+function maybeAutofillCampanhaValues(){
+  if(campanhaTotalManual) maybeAutofillCampanhaUnit();
+  else maybeAutofillCampanhaTotal();
 }
 function resetCampanhaForm(){
   campanhaEditingId = null;
@@ -8296,14 +8322,19 @@ function readCampanhaForm(){
   const tiragem = tirRaw === '' || tirRaw == null ? 0 : Number(tirRaw);
   if(!Number.isFinite(qty) || qty < 0) return { error: 'Quantidade total inválida.' };
   if(!Number.isFinite(tiragem) || tiragem < 0) return { error: 'Tiragem inválida.' };
-  // Valores unitário e total são opcionais
+  // Valores unitário e total são opcionais; um preenche o outro quando possível
   let unitValue = parseCurrencyValue(document.getElementById('campValorUn'));
   let totalValue = parseCurrencyValue(document.getElementById('campValorTotal'));
   if(!Number.isFinite(unitValue) || unitValue < 0) unitValue = 0;
-  if(!Number.isFinite(totalValue) || totalValue < 0){
-    // se total vazio e unitário preenchido, sugere unitário × quantidade
-    const suggested = unitValue > 0 ? calcCampanhaTotalSuggested() : null;
-    totalValue = suggested != null ? suggested : 0;
+  if(!Number.isFinite(totalValue) || totalValue < 0) totalValue = 0;
+  if(totalValue <= 0 && unitValue > 0){
+    // total vazio e unitário preenchido → total = unitário × quantidade
+    const suggested = calcCampanhaTotalSuggested();
+    if(suggested != null) totalValue = suggested;
+  } else if(unitValue <= 0 && totalValue > 0){
+    // unitário vazio e total preenchido → unitário = total ÷ quantidade
+    const suggestedUnit = calcCampanhaUnitSuggested();
+    if(suggestedUnit != null) unitValue = suggestedUnit;
   }
   const printShop = String(document.getElementById('campGrafica')?.value || '').trim();
   const cnpj = formatCnpjInput(document.getElementById('campCnpj')?.value || '');
@@ -9756,14 +9787,17 @@ function bindCampanhaModuleEvents(){
   document.getElementById('campCnpj')?.addEventListener('input', (e)=>{
     e.target.value = formatCnpjInput(e.target.value);
   });
-  document.getElementById('campQty')?.addEventListener('input', maybeAutofillCampanhaTotal);
-  document.getElementById('campTiragem')?.addEventListener('input', maybeAutofillCampanhaTotal);
+  document.getElementById('campQty')?.addEventListener('input', maybeAutofillCampanhaValues);
+  document.getElementById('campTiragem')?.addEventListener('input', maybeAutofillCampanhaValues);
   document.getElementById('campValorUn')?.addEventListener('input', ()=>{
+    // unitário informado → total = unitário × quantidade
     campanhaTotalManual = false;
     maybeAutofillCampanhaTotal();
   });
   document.getElementById('campValorTotal')?.addEventListener('input', ()=>{
+    // total informado → unitário = total ÷ quantidade
     campanhaTotalManual = true;
+    maybeAutofillCampanhaUnit();
   });
   document.getElementById('campanhaSearch')?.addEventListener('input', (e)=>{
     campanhaSearchQuery = e.target.value || '';
@@ -16206,7 +16240,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-valores-opcionais', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-unitario-auto', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
