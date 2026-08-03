@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-prod-unificada -->
+<!-- deploy-v20260803-pdf-categorias -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -633,6 +633,29 @@
   body.printing-campanha .campanha-type-card.collapsible .ctp-body{ display:block !important; }
   body.printing-campanha .campanha-type-card.collapsible .ctp-toggle,
   body.printing-campanha .campanha-panel-actions{ display:none !important; }
+  /* PDF só categorias: seções abertas, cards internos recolhidos, sem lista de lideranças */
+  body.printing-campanha.printing-campanha-categories #liderancaFormPanel,
+  body.printing-campanha.printing-campanha-categories #liderancaList,
+  body.printing-campanha.printing-campanha-categories #liderancaEmpty,
+  body.printing-campanha.printing-campanha-categories #liderancaFilters,
+  body.printing-campanha.printing-campanha-categories .lideranca-list,
+  body.printing-campanha.printing-campanha-categories .panel:has(#liderancaList){
+    display:none !important;
+  }
+  body.printing-campanha.printing-campanha-categories .campanha-type-card.collapsible .ctp-body,
+  body.printing-campanha.printing-campanha-categories .campanha-city-card .cc-body{
+    display:none !important;
+  }
+  body.printing-campanha.printing-campanha-categories .campanha-type-card.collapsible .ctp-toggle,
+  body.printing-campanha.printing-campanha-categories .campanha-city-card .cc-toggle{
+    display:none !important;
+  }
+  body.printing-campanha.printing-campanha-categories .campanha-type-panel.is-section-collapsible > .campanha-type-panel-body{
+    display:block !important;
+  }
+  body.printing-campanha.printing-campanha-categories .campanha-type-card.collapsible{
+    break-inside:avoid;
+  }
   .campanha-type-panel-empty{
     margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
   }
@@ -4526,14 +4549,24 @@
         <button type="button" data-campanhasub="liderancas" class="active">Lideranças</button>
       </nav>
       <div style="font-size:13px;font-weight:700;color:var(--ink-soft);">Campanha 2026 · Lideranças + Produção unificadas</div>
-      <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar em PDF">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M6 9V3h12v6"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect x="6" y="14" width="12" height="7"/>
-        </svg>
-        Imprimir / PDF
-      </button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="Imprimir ou PDF só das categorias (sem expandir cards internos)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9V3h12v6"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="7"/>
+          </svg>
+          PDF categorias
+        </button>
+        <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar PDF completo (tudo expandido)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9V3h12v6"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="7"/>
+          </svg>
+          PDF completo
+        </button>
+      </div>
     </div>
 
     <!-- SUB: PRODUÇÃO LEGADO (oculto — unificado em Lideranças) -->
@@ -10135,61 +10168,109 @@ function renderCampanhaModule(){
   switchCampanhaSub('liderancas');
 }
 
-/** Imprime / salva em PDF materiais + lideranças da Campanha 2026. */
-function printCampanhaModule(){
+/**
+ * Imprime / salva em PDF da Campanha 2026.
+ * mode: 'full' = tudo expandido | 'categories' = só categorias (cards internos recolhidos)
+ */
+function printCampanhaModule(opts){
   const root = document.getElementById('moduleCampanha');
   if(!root) return;
+  const mode = (opts && opts.mode === 'categories') ? 'categories' : 'full';
+  const categoriesOnly = mode === 'categories';
 
-  const prevSub = currentCampanhaSub || 'materiais';
+  const prevSub = currentCampanhaSub || 'liderancas';
   const prevCampSearch = campanhaSearchQuery;
   const prevLidSearch = liderancaSearchQuery;
   const campSearchEl = document.getElementById('campanhaSearch');
   const lidSearchEl = document.getElementById('liderancaSearch');
   const metaEl = document.getElementById('campanhaPrintMeta');
+  const printHeader = document.getElementById('campanhaPrintHeader');
+  const printHeaderTitle = printHeader?.querySelector('h1');
 
-  // Exibe tudo (sem filtro de busca) e expande materiais das lideranças
+  // Limpa busca para o relatório
   campanhaSearchQuery = '';
   liderancaSearchQuery = '';
   if(campSearchEl) campSearchEl.value = '';
   if(lidSearchEl) lidSearchEl.value = '';
-  liderancaMatsForceExpandAll = true;
-  liderancaCidadeForceExpandAll = true;
-  liderancaTypeForceExpandAll = true;
-  liderancaDepForceExpandAll = true;
-  liderancaPorLidForceExpandAll = true;
+
+  // full: expande cards internos; categories: não expande
+  liderancaMatsForceExpandAll = !categoriesOnly;
+  liderancaCidadeForceExpandAll = !categoriesOnly;
+  liderancaTypeForceExpandAll = !categoriesOnly;
+  liderancaDepForceExpandAll = !categoriesOnly;
+  liderancaPorLidForceExpandAll = !categoriesOnly;
+
   // seções macro abertas na impressão
   const prevBreakSections = { ...(liderancaBreakSectionsOpen || {}) };
   setAllLiderancaBreakSectionsOpen(true);
-  renderCampanhaStats();
-  renderCampanhaList();
+  if(!categoriesOnly){
+    renderCampanhaStats();
+    renderCampanhaList();
+  }
   renderLiderancaStats();
   renderLiderancasList();
   applyLiderancaBreakSectionState();
 
-  const matCount = (campanhaMaterials || []).length;
+  // no modo categorias: força cards internos fechados no DOM
+  if(categoriesOnly){
+    document.querySelectorAll(
+      '#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible, #liderancaPorLidGrid .campanha-type-card.collapsible, #liderancaCidadeGrid .campanha-city-card'
+    ).forEach(el=>{
+      el.classList.remove('is-open');
+      const btn = el.querySelector('[data-ctp-toggle], [data-city-toggle]');
+      if(btn){
+        btn.setAttribute('aria-expanded', 'false');
+        const lab = btn.querySelector('.toggle-label');
+        if(lab) lab.textContent = 'Expandir';
+      }
+    });
+    document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
+      el.classList.remove('is-open');
+    });
+  }
+
+  const matCount = (campanhaLeaderships || []).reduce((s,l)=> s + ((l.materials||[]).length), 0);
   const lidCount = (campanhaLeaderships || []).length;
   const when = new Date().toLocaleString('pt-BR', {
     day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
   });
+  if(printHeaderTitle){
+    printHeaderTitle.textContent = categoriesOnly
+      ? 'Campanha 2026 — Categorias (resumo)'
+      : 'Campanha 2026 — Relatório completo';
+  }
   if(metaEl){
-    metaEl.textContent = `Gerado em ${when} · ${matCount} material(is) · ${lidCount} liderança(s)`;
+    metaEl.textContent = categoriesOnly
+      ? `Gerado em ${when} · somente categorias · cards internos recolhidos · ${lidCount} liderança(s) · ${matCount} material(is)`
+      : `Gerado em ${when} · relatório completo · ${lidCount} liderança(s) · ${matCount} material(is)`;
   }
 
   document.body.classList.add('printing-campanha');
+  if(categoriesOnly) document.body.classList.add('printing-campanha-categories');
+  else document.body.classList.remove('printing-campanha-categories');
+
   document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
+    if(sec.id === 'campanhaSubMateriais'){
+      sec.classList.remove('active');
+      sec.style.display = 'none';
+      return;
+    }
     sec.classList.add('active');
     sec.style.display = 'block';
   });
-  // Garante expandido no DOM para impressão
-  document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
-    el.classList.add('is-open');
-  });
-  document.querySelectorAll('#liderancaCidadeGrid .campanha-city-card').forEach(el=>{
-    el.classList.add('is-open');
-  });
-  document.querySelectorAll('#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible, #liderancaPorLidGrid .campanha-type-card.collapsible').forEach(el=>{
-    el.classList.add('is-open');
-  });
+
+  if(!categoriesOnly){
+    // Garante expandido no DOM para impressão completa
+    document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
+      el.classList.add('is-open');
+    });
+    document.querySelectorAll('#liderancaCidadeGrid .campanha-city-card').forEach(el=>{
+      el.classList.add('is-open');
+    });
+    document.querySelectorAll('#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible, #liderancaPorLidGrid .campanha-type-card.collapsible').forEach(el=>{
+      el.classList.add('is-open');
+    });
+  }
 
   let cleaned = false;
   const cleanup = ()=>{
@@ -10207,6 +10288,7 @@ function printCampanhaModule(){
       cidade: prevBreakSections.cidade === true
     };
     document.body.classList.remove('printing-campanha');
+    document.body.classList.remove('printing-campanha-categories');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
       sec.style.display = '';
     });
@@ -10214,7 +10296,7 @@ function printCampanhaModule(){
     liderancaSearchQuery = prevLidSearch;
     if(campSearchEl) campSearchEl.value = prevCampSearch;
     if(lidSearchEl) lidSearchEl.value = prevLidSearch;
-    // Restaura abas e listas com os filtros anteriores (materiais/cidades recolhidos de novo)
+    if(printHeaderTitle) printHeaderTitle.textContent = 'Campanha 2026 — Relatório completo';
     switchCampanhaSub(prevSub);
     renderCampanhaList();
     renderLiderancasList();
@@ -10224,7 +10306,6 @@ function printCampanhaModule(){
 
   window.addEventListener('afterprint', cleanup);
 
-  // Aguarda o browser aplicar o layout de impressão
   requestAnimationFrame(()=>{
     setTimeout(()=>{
       try{
@@ -10233,10 +10314,12 @@ function printCampanhaModule(){
         cleanup();
         return;
       }
-      // Fallback se afterprint não disparar (alguns browsers/mobile)
       setTimeout(cleanup, 1500);
     }, 80);
   });
+}
+function printCampanhaCategoriesOnly(){
+  printCampanhaModule({ mode: 'categories' });
 }
 
 /* ===== Lideranças (dentro de Campanha 2026) ===== */
@@ -10962,10 +11045,16 @@ function bindCampanhaModuleEvents(){
     btn.addEventListener('click', ()=> switchCampanhaSub(btn.dataset.campanhasub));
   });
   document.getElementById('moduleCampanha')?.addEventListener('click', (e)=>{
+    const printCatBtn = e.target.closest('#campanhaPrintCategoriesBtn, [data-campanha-print-categories]');
+    if(printCatBtn){
+      e.preventDefault();
+      printCampanhaCategoriesOnly();
+      return;
+    }
     const printBtn = e.target.closest('#campanhaPrintBtn, [data-campanha-print]');
     if(printBtn){
       e.preventDefault();
-      printCampanhaModule();
+      printCampanhaModule({ mode: 'full' });
     }
   });
 
@@ -17530,7 +17619,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-prod-unificada', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-pdf-categorias', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
