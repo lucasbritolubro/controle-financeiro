@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-prod-hide-empty -->
+<!-- deploy-v20260803-prod-label -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -10152,7 +10152,7 @@ function renderCampanhaList(){
       </div>
       <div class="campanha-print-progress">
         <div class="campanha-print-progress-head">
-          <strong>Produção impressa</strong>
+          <strong>Produção</strong>
           <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
         </div>
         <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true">
@@ -10678,7 +10678,7 @@ function leadershipMatProductionBlockHtml(leadership, m){
   return `
   <div class="campanha-print-progress" style="margin-top:10px;">
     <div class="campanha-print-progress-head">
-      <strong>Produção impressa</strong>
+      <strong>Produção</strong>
       <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
     </div>
     <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
@@ -17644,7 +17644,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-prod-hide-empty', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-label', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
