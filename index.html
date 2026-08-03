@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-ctp-expand-fix -->
+<!-- deploy-v20260803-lote-edit-modal -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -733,12 +733,33 @@
   }
   .campanha-print-progress-bar.is-over > i{ background:#d97706; }
   .campanha-print-lots{
-    margin-top:10px; display:flex; flex-direction:column; gap:6px;
+    margin-top:10px; display:flex; flex-direction:column; gap:8px;
   }
   .campanha-print-lot{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
-    padding:8px 10px; border-radius:10px; background:#fff; border:1px solid var(--card-border);
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    padding:12px 12px; border-radius:12px; background:#fff; border:1px solid var(--card-border);
     font-size:12.5px; font-weight:600; color:var(--ink-soft);
+    box-shadow:0 1px 0 rgba(15,23,42,0.03);
+  }
+  .campanha-print-lot-main{ min-width:0; flex:1 1 180px; display:flex; flex-direction:column; gap:4px; }
+  .campanha-print-lot-title{
+    font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-.01em;
+  }
+  .campanha-print-lot-title b{ font-weight:900; }
+  .campanha-print-lot-meta{
+    display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
+    font-size:11.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .campanha-print-lot-chip{
+    display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:999px;
+    background:rgba(5,150,105,0.1); color:#047857; border:1px solid rgba(5,150,105,0.16);
+    font-size:11px; font-weight:800; letter-spacing:.02em;
+  }
+  .campanha-print-lot-actions{
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center; flex:0 0 auto;
+  }
+  .campanha-print-lot-actions .btn-mini{
+    min-width:72px; justify-content:center;
   }
   .campanha-print-lot b{ color:var(--ink); font-weight:800; }
   .campanha-print-lot-form{
@@ -756,6 +777,30 @@
   }
   @media (max-width:560px){
     .campanha-print-lot-form{ grid-template-columns:1fr; }
+    .campanha-print-lot-actions{ width:100%; }
+    .campanha-print-lot-actions .btn-mini{ flex:1; }
+  }
+  #printLotModal .modal-card{ max-width:440px; }
+  #printLotModal .print-lot-modal-fields{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 14px;
+  }
+  #printLotModal .print-lot-modal-fields .field{ margin:0; }
+  #printLotModal .print-lot-modal-fields label{
+    display:block; font-size:11px; font-weight:800; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px;
+  }
+  #printLotModal .print-lot-modal-fields input{
+    width:100%; box-sizing:border-box; padding:11px 12px; border-radius:12px;
+    border:1.5px solid var(--card-border); font:inherit; font-size:14px; font-weight:700;
+    background:var(--card-raised); color:var(--ink);
+  }
+  #printLotModal .print-lot-modal-hint{
+    margin:0 0 14px; padding:10px 12px; border-radius:12px;
+    background:rgba(5,150,105,0.08); border:1px solid rgba(5,150,105,0.16);
+    font-size:12.5px; font-weight:700; color:var(--ink-soft); line-height:1.4;
+  }
+  @media (max-width:520px){
+    #printLotModal .print-lot-modal-fields{ grid-template-columns:1fr; }
   }
   .campanha-art-link{
     display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px;
@@ -849,6 +894,8 @@
     body.printing-campanha [data-camp-edit],
     body.printing-campanha [data-camp-del],
     body.printing-campanha .campanha-print-lot-form,
+    body.printing-campanha .campanha-print-lot-actions,
+    body.printing-campanha [data-camp-lot-edit],
     body.printing-campanha [data-camp-lot-del],
     body.printing-campanha [data-lid-edit],
     body.printing-campanha [data-lid-del],
@@ -4794,6 +4841,34 @@
   </div>
 </div>
 
+<!-- Modal: editar lote de impressão -->
+<div class="modal-overlay" id="printLotModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="printLotModalTitle">
+  <div class="modal-card">
+    <div class="modal-icon primary" aria-hidden="true">✎</div>
+    <h3 class="modal-title" id="printLotModalTitle">Editar lote de impressão</h3>
+    <p class="modal-sub" id="printLotModalSub">Ajuste a quantidade impressa e a data de envio deste lote.</p>
+    <div class="print-lot-modal-hint" id="printLotModalHint"></div>
+    <form id="printLotModalForm" autocomplete="off">
+      <input type="hidden" id="printLotModalMaterialId" value="">
+      <input type="hidden" id="printLotModalLotId" value="">
+      <div class="print-lot-modal-fields">
+        <div class="field">
+          <label for="printLotModalQty">Qtd. impressa no lote</label>
+          <input type="number" id="printLotModalQty" min="1" step="1" placeholder="Ex: 1000" inputmode="numeric" required>
+        </div>
+        <div class="field">
+          <label for="printLotModalDate">Data de envio p/ impressão</label>
+          <input type="date" id="printLotModalDate" required>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn ghost" id="printLotModalCancel">Cancelar</button>
+        <button type="submit" class="modal-btn success" id="printLotModalSave">Salvar lote</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Feedback global: check verde animado após cadastros -->
 <div class="success-overlay" id="successFeedback" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
   <div class="success-card" id="successFeedbackCard">
@@ -8541,6 +8616,22 @@ function filteredCampanhaMaterials(){
     return hay.includes(q);
   });
 }
+function findCampanhaMaterialAndLot(materialId, lotId){
+  const idx = (campanhaMaterials || []).findIndex(m=> sameId(m.id, materialId));
+  if(idx < 0) return null;
+  const item = campanhaMaterials[idx];
+  const lotIdx = (item.printLots || []).findIndex(l=> sameId(l.id, lotId));
+  if(lotIdx < 0) return { idx, item, lot: null, lotIdx: -1 };
+  return { idx, item, lot: item.printLots[lotIdx], lotIdx };
+}
+function syncMaterialPrintLotsQty(item, printLots){
+  return {
+    ...item,
+    printLots,
+    qtyPrinted: printLots.reduce((s, l)=> s + (Number(l.qty) || 0), 0),
+    updatedAt: new Date().toISOString()
+  };
+}
 async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
   const idx = (campanhaMaterials || []).findIndex(m=> sameId(m.id, materialId));
   if(idx < 0) return;
@@ -8562,12 +8653,7 @@ async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
     createdAt: new Date().toISOString()
   };
   const printLots = [...(Array.isArray(item.printLots) ? item.printLots : []), lot];
-  campanhaMaterials[idx] = {
-    ...item,
-    printLots,
-    qtyPrinted: printLots.reduce((s, l)=> s + (Number(l.qty) || 0), 0),
-    updatedAt: new Date().toISOString()
-  };
+  campanhaMaterials[idx] = syncMaterialPrintLotsQty(item, printLots);
   await saveCampanha();
   renderCampanhaMaterialsUI();
   showSuccessFeedback(
@@ -8575,29 +8661,133 @@ async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
     `${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
   );
 }
-async function deleteCampanhaPrintLot(materialId, lotId){
-  const idx = (campanhaMaterials || []).findIndex(m=> sameId(m.id, materialId));
-  if(idx < 0) return;
-  const item = campanhaMaterials[idx];
-  const lot = (item.printLots || []).find(l=> sameId(l.id, lotId));
-  if(!lot) return;
-  let ok = true;
-  try{
-    ok = confirm(
-      `Remover o lote de ${(Number(lot.qty)||0).toLocaleString('pt-BR')} un.` +
-      (lot.sendDate ? ` (envio ${formatCampanhaDateBR(lot.sendDate)})` : '') + '?'
-    );
-  }catch(_e){}
-  if(!ok) return;
+function openPrintLotEditModal(materialId, lotId){
+  const found = findCampanhaMaterialAndLot(materialId, lotId);
+  if(!found || !found.lot) return;
+  const { item, lot } = found;
+  const modal = document.getElementById('printLotModal');
+  const matIdEl = document.getElementById('printLotModalMaterialId');
+  const lotIdEl = document.getElementById('printLotModalLotId');
+  const qtyEl = document.getElementById('printLotModalQty');
+  const dateEl = document.getElementById('printLotModalDate');
+  const hintEl = document.getElementById('printLotModalHint');
+  const subEl = document.getElementById('printLotModalSub');
+  if(matIdEl) matIdEl.value = String(item.id);
+  if(lotIdEl) lotIdEl.value = String(lot.id);
+  if(qtyEl) qtyEl.value = String(Number(lot.qty) || '');
+  if(dateEl) dateEl.value = String(lot.sendDate || todayISODateLocal());
+  if(subEl){
+    subEl.textContent = `Material: ${item.materialLabel || item.materialType || 'Produção'}` +
+      (item.printShop ? ` · ${item.printShop}` : '');
+  }
+  if(hintEl){
+    const total = getMaterialQtyTotal(item);
+    const printed = getMaterialQtyPrinted(item);
+    hintEl.innerHTML =
+      `<strong style="color:var(--ink);">Situação atual:</strong> ` +
+      `${printed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} un. impressas · ` +
+      `este lote: <strong style="color:var(--ink);">${(Number(lot.qty)||0).toLocaleString('pt-BR')} un.</strong>` +
+      (lot.sendDate ? ` · envio ${escapeHtml(formatCampanhaDateBR(lot.sendDate))}` : '');
+  }
+  if(modal) modal.style.display = 'flex';
+  setTimeout(()=>{ try{ qtyEl?.focus(); qtyEl?.select(); }catch(_e){} }, 30);
+}
+function closePrintLotEditModal(){
+  const modal = document.getElementById('printLotModal');
+  if(modal) modal.style.display = 'none';
+  const form = document.getElementById('printLotModalForm');
+  if(form) form.reset();
+  const matIdEl = document.getElementById('printLotModalMaterialId');
+  const lotIdEl = document.getElementById('printLotModalLotId');
+  if(matIdEl) matIdEl.value = '';
+  if(lotIdEl) lotIdEl.value = '';
+}
+async function savePrintLotEditFromModal(e){
+  e?.preventDefault?.();
+  const materialId = document.getElementById('printLotModalMaterialId')?.value || '';
+  const lotId = document.getElementById('printLotModalLotId')?.value || '';
+  const qtyRaw = document.getElementById('printLotModalQty')?.value;
+  const sendDateRaw = document.getElementById('printLotModalDate')?.value;
+  const qty = Number(qtyRaw);
+  if(!Number.isFinite(qty) || qty <= 0){
+    try{ alert('Informe a quantidade impressa neste lote (maior que zero).'); }catch(_e){}
+    return;
+  }
+  const sendDate = String(sendDateRaw || '').trim().slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)){
+    try{ alert('Informe a data de envio para impressão.'); }catch(_e){}
+    return;
+  }
+  const found = findCampanhaMaterialAndLot(materialId, lotId);
+  if(!found || !found.lot){
+    try{ alert('Lote não encontrado. Atualize a página e tente de novo.'); }catch(_e){}
+    closePrintLotEditModal();
+    return;
+  }
+  const { idx, item, lot } = found;
+  const printLots = (item.printLots || []).map(l=>{
+    if(!sameId(l.id, lot.id)) return l;
+    return {
+      ...l,
+      qty: Math.round(qty),
+      sendDate,
+      updatedAt: new Date().toISOString()
+    };
+  });
+  campanhaMaterials[idx] = syncMaterialPrintLotsQty(item, printLots);
+  await saveCampanha();
+  closePrintLotEditModal();
+  renderCampanhaMaterialsUI();
+  showSuccessFeedback(
+    'Lote atualizado!',
+    `${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
+  );
+}
+function askDeleteCampanhaPrintLot(materialId, lotId){
+  const found = findCampanhaMaterialAndLot(materialId, lotId);
+  if(!found || !found.lot) return;
+  const { item, lot } = found;
+  const qtyTxt = (Number(lot.qty) || 0).toLocaleString('pt-BR');
+  const dateTxt = lot.sendDate ? formatCampanhaDateBR(lot.sendDate) : '—';
+  const matLabel = escapeHtml(item.materialLabel || item.materialType || 'Material');
+  const shop = item.printShop ? escapeHtml(item.printShop) : 'Gráfica não informada';
+  openConfirmModal(
+    'Remover este lote?',
+    'O lote sairá do histórico de impressão e o total impresso será recalculado. Esta ação não pode ser desfeita.',
+    async ()=>{
+      await deleteCampanhaPrintLot(materialId, lotId, true);
+    },
+    'Remover lote',
+    {
+      mode: 'danger',
+      icon: '⌫',
+      cancelLabel: 'Manter lote',
+      detail:
+        `<span class="md-label">Material</span>${matLabel}` +
+        `<span class="md-label" style="margin-top:10px;">Gráfica</span>${shop}` +
+        `<span class="md-label" style="margin-top:10px;">Lote</span>` +
+        `<strong>${qtyTxt} un.</strong> · envio <strong>${escapeHtml(dateTxt)}</strong>`
+    }
+  );
+}
+async function deleteCampanhaPrintLot(materialId, lotId, skipConfirm){
+  const found = findCampanhaMaterialAndLot(materialId, lotId);
+  if(!found || !found.lot) return;
+  const { idx, item, lot } = found;
+  if(!skipConfirm){
+    askDeleteCampanhaPrintLot(materialId, lotId);
+    return;
+  }
+  const qtyTxt = (Number(lot.qty) || 0).toLocaleString('pt-BR');
+  const dateTxt = lot.sendDate ? formatCampanhaDateBR(lot.sendDate) : '';
   const printLots = (item.printLots || []).filter(l=> !sameId(l.id, lotId));
-  campanhaMaterials[idx] = {
-    ...item,
-    printLots,
-    qtyPrinted: printLots.reduce((s, l)=> s + (Number(l.qty) || 0), 0),
-    updatedAt: new Date().toISOString()
-  };
+  campanhaMaterials[idx] = syncMaterialPrintLotsQty(item, printLots);
   await saveCampanha();
   renderCampanhaMaterialsUI();
+  showSuccessFeedback(
+    'Lote removido',
+    `${qtyTxt} un.` + (dateTxt ? ` · envio ${dateTxt}` : '') + ' excluído do histórico.'
+  );
 }
 const CAMPANHA_TYPE_COLORS = [
   '#059669', '#4F46E5', '#D97706', '#DC2626', '#0891B2',
@@ -9116,12 +9306,24 @@ function renderCampanhaList(){
       return db.localeCompare(da);
     }) : [];
     const lotsHtml = lots.length
-      ? `<div class="campanha-print-lots">${lots.map(lot=>`
+      ? `<div class="campanha-print-lots">${lots.map((lot, lotIndex)=>{
+          const lotQty = (Number(lot.qty)||0).toLocaleString('pt-BR');
+          const lotDate = formatCampanhaDateBR(lot.sendDate);
+          return `
           <div class="campanha-print-lot">
-            <span><b>${(Number(lot.qty)||0).toLocaleString('pt-BR')}</b> un. · envio <b>${escapeHtml(formatCampanhaDateBR(lot.sendDate))}</b></span>
-            <button type="button" class="btn-mini ghost" data-camp-lot-del="${escapeHtml(String(lot.id))}" data-camp-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Remover</button>
-          </div>
-        `).join('')}</div>`
+            <div class="campanha-print-lot-main">
+              <div class="campanha-print-lot-title">Lote ${lots.length - lotIndex} · <b>${lotQty}</b> un.</div>
+              <div class="campanha-print-lot-meta">
+                <span class="campanha-print-lot-chip">Envio ${escapeHtml(lotDate)}</span>
+                ${lot.updatedAt ? `<span>editado</span>` : ''}
+              </div>
+            </div>
+            <div class="campanha-print-lot-actions no-print">
+              <button type="button" class="btn-mini ghost" data-camp-lot-edit="${escapeHtml(String(lot.id))}" data-camp-id="${escapeHtml(String(m.id))}">Editar</button>
+              <button type="button" class="btn-mini ghost" data-camp-lot-del="${escapeHtml(String(lot.id))}" data-camp-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Remover</button>
+            </div>
+          </div>`;
+        }).join('')}</div>`
       : `<p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso registrado ainda.</p>`;
     return `
     <article class="campanha-card" data-campid="${escapeHtml(String(m.id))}">
@@ -9961,9 +10163,14 @@ function bindCampanhaModuleEvents(){
       addCampanhaPrintLot(matId, qtyEl?.value, dateEl?.value);
       return;
     }
+    const lotEditBtn = e.target.closest('[data-camp-lot-edit]');
+    if(lotEditBtn){
+      openPrintLotEditModal(lotEditBtn.dataset.campId, lotEditBtn.dataset.campLotEdit);
+      return;
+    }
     const lotDelBtn = e.target.closest('[data-camp-lot-del]');
     if(lotDelBtn){
-      deleteCampanhaPrintLot(lotDelBtn.dataset.campId, lotDelBtn.dataset.campLotDel);
+      askDeleteCampanhaPrintLot(lotDelBtn.dataset.campId, lotDelBtn.dataset.campLotDel);
       return;
     }
     const editBtn = e.target.closest('[data-camp-edit]');
@@ -11432,6 +11639,18 @@ document.getElementById('confirmModalConfirm').addEventListener('click', async (
   const cb = confirmModalCallback;
   closeConfirmModal(false);
   await cb();
+});
+
+// Modal de edição de lote de impressão (Produção de Materiais)
+document.getElementById('printLotModalForm')?.addEventListener('submit', savePrintLotEditFromModal);
+document.getElementById('printLotModalCancel')?.addEventListener('click', ()=> closePrintLotEditModal());
+document.getElementById('printLotModal')?.addEventListener('click', (e)=>{
+  if(e.target && e.target.id === 'printLotModal') closePrintLotEditModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  const modal = document.getElementById('printLotModal');
+  if(modal && modal.style.display === 'flex') closePrintLotEditModal();
 });
 
 function setPanelEditing(panelOrFormId, editing){
@@ -16388,7 +16607,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-ctp-expand-fix', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-lote-edit-modal', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
