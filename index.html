@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-prod-label -->
+<!-- deploy-v20260803-prod-only-when-set -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -786,35 +786,44 @@
   .campanha-meta b{ color:var(--ink); font-weight:800; display:block; font-size:11px; letter-spacing:.04em; text-transform:uppercase; margin-bottom:2px; }
   .campanha-card-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .campanha-print-progress{
-    margin-top:2px; padding:12px 14px; border-radius:14px;
-    background:rgba(5,150,105,0.06); border:1px solid rgba(5,150,105,0.16);
+    margin-top:8px; padding:8px 10px; border-radius:10px;
+    background:#fff; border:1px solid rgba(15,23,42,0.08);
+    box-shadow:none;
   }
   .campanha-print-progress-head{
-    display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;
-    margin-bottom:8px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;
+    margin-bottom:6px;
   }
   .campanha-print-progress-head strong{
-    font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-.01em;
+    font-size:11.5px; font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
   }
   .campanha-print-progress-head span{
-    font-size:12px; font-weight:700; color:var(--ink-soft);
+    font-size:11.5px; font-weight:700; color:var(--ink-soft);
   }
   .campanha-print-progress-bar{
-    height:8px; border-radius:999px; background:rgba(15,23,42,0.08); overflow:hidden;
+    height:5px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
   }
   .campanha-print-progress-bar > i{
-    display:block; height:100%; border-radius:999px; background:#059669;
+    display:block; height:100%; border-radius:999px; background:rgba(100,116,139,0.75);
     min-width:0; transition:width .2s ease;
   }
   .campanha-print-progress-bar.is-over > i{ background:#d97706; }
+  .campanha-print-progress .campanha-meta{
+    margin-top:6px !important; gap:4px 10px;
+    grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));
+    font-size:11.5px;
+  }
+  .campanha-print-progress .campanha-meta b{
+    font-size:10px; margin-bottom:1px;
+  }
   .campanha-print-lots{
-    margin-top:10px; display:flex; flex-direction:column; gap:8px;
+    margin-top:6px; display:flex; flex-direction:column; gap:6px;
   }
   .campanha-print-lot{
-    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    padding:12px 12px; border-radius:12px; background:#fff; border:1px solid var(--card-border);
-    font-size:12.5px; font-weight:600; color:var(--ink-soft);
-    box-shadow:0 1px 0 rgba(15,23,42,0.03);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    padding:7px 9px; border-radius:10px; background:#fafafa; border:1px solid rgba(15,23,42,0.08);
+    font-size:12px; font-weight:600; color:var(--ink-soft);
+    box-shadow:none;
   }
   .campanha-print-lot-main{ min-width:0; flex:1 1 180px; display:flex; flex-direction:column; gap:4px; }
   .campanha-print-lot-title{
@@ -8118,13 +8127,15 @@ function getMaterialQtyPrinted(m){
   }
   return 0;
 }
+/** Produção só conta após cadastro real (modal PRODUÇÃO), não só pela qtd do material. */
 function materialHasProduction(m){
   if(!m) return false;
-  if(Array.isArray(m.printLots) && m.printLots.length) return true;
+  if(m.productionRegistered === true || m.productionRegistered === 1 || m.productionRegistered === '1') return true;
+  if(Array.isArray(m.printLots) && m.printLots.length > 0) return true;
   if(String(m.printShop || m.grafica || '').trim()) return true;
   if(Number(m.tiragem) > 0) return true;
   if(Number(m.unitValue) > 0 || Number(m.totalValue) > 0) return true;
-  if(Number(m.qtyTotal) > 0) return true;
+  // qtyTotal sozinho NÃO basta (é espelho da quantidade do material)
   return false;
 }
 function findLeadershipMaterial(leadershipId, materialId){
@@ -8242,6 +8253,7 @@ async function saveMatProdFromModal(e){
   mat.cnpj = formatCnpjInput(document.getElementById('matProdCnpj')?.value || '');
   mat.unitValue = unitValue;
   mat.totalValue = totalValue;
+  mat.productionRegistered = true;
   syncLidMatPrintLots(mat);
   lid.updatedAt = new Date().toISOString();
   await saveCampanha();
@@ -8272,6 +8284,7 @@ async function addLidMatPrintLot(leadershipId, materialId, qtyRaw, sendDateRaw){
     sendDate,
     createdAt: new Date().toISOString()
   });
+  mat.productionRegistered = true;
   syncLidMatPrintLots(mat);
   if(!(Number(mat.qtyTotal) > 0) && Number(mat.qty) > 0) mat.qtyTotal = Number(mat.qty);
   lid.updatedAt = new Date().toISOString();
@@ -8555,6 +8568,16 @@ function normalizeLeadershipMaterial(raw){
     qtyTotal,
     qtyPrinted: qtyPrintedSum,
     printLots,
+    productionRegistered: !!(
+      raw.productionRegistered === true ||
+      raw.productionRegistered === 1 ||
+      raw.productionRegistered === '1' ||
+      printLots.length ||
+      String(raw.printShop || raw.grafica || '').trim() ||
+      (Number.isFinite(tiragem) && tiragem > 0) ||
+      (Number.isFinite(unitValue) && unitValue > 0) ||
+      (Number.isFinite(totalValue) && totalValue > 0)
+    ),
     tiragem: Number.isFinite(tiragem) && tiragem >= 0 ? tiragem : 0,
     printShop: String(raw.printShop || raw.grafica || '').trim(),
     cnpj: String(raw.cnpj || '').trim(),
@@ -10641,16 +10664,17 @@ function renderLiderancaStats(){
   renderLiderancaTypeBreakdown();
 }
 function leadershipMatProductionBlockHtml(leadership, m){
+  // Só após o primeiro cadastro real de produção (modal PRODUÇÃO / lotes / gráfica)
+  if(!materialHasProduction(m)) return '';
   const qtyTotal = getMaterialQtyTotal(m);
   const qtyPrinted = getMaterialQtyPrinted(m);
   const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
   const isOver = qtyTotal > 0 && qtyPrinted > qtyTotal;
-  const hasProd = materialHasProduction(m);
   const lots = Array.isArray(m.printLots) ? m.printLots.slice().sort((a,b)=>{
     return String(b.sendDate || b.createdAt || '').localeCompare(String(a.sendDate || a.createdAt || ''));
   }) : [];
   const lotsHtml = lots.length
-    ? `<div class="campanha-print-lots">${lots.map((lot, lotIndex)=>{
+    ? `<div class="campanha-print-lots">${lots.map((lot)=>{
         const lotQty = (Number(lot.qty)||0).toLocaleString('pt-BR');
         const lotDate = formatCampanhaDateBR(lot.sendDate);
         const lotCode = formatPrintLotCode(lot.lotCode);
@@ -10672,25 +10696,24 @@ function leadershipMatProductionBlockHtml(leadership, m){
           </div>
         </div>`;
       }).join('')}</div>`
-    : `<p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso registrado ainda.</p>`;
-  // Só mostra a área grande após o primeiro cadastro de produção
-  if(!hasProd && !lots.length) return '';
+    : '';
+  const metaBits = [
+    `<div><b>Qtd. total</b>${qtyTotal.toLocaleString('pt-BR')}</div>`,
+    `<div><b>Impresso</b>${qtyPrinted.toLocaleString('pt-BR')}</div>`
+  ];
+  if(Number(m.tiragem) > 0) metaBits.push(`<div><b>Tiragem</b>${Number(m.tiragem).toLocaleString('pt-BR')}</div>`);
+  if(String(m.printShop || '').trim()) metaBits.push(`<div><b>Gráfica</b>${escapeHtml(m.printShop)}</div>`);
+  if(String(m.cnpj || '').trim()) metaBits.push(`<div><b>CNPJ</b>${escapeHtml(m.cnpj)}</div>`);
+  if(Number(m.unitValue) > 0) metaBits.push(`<div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue))}</div>`);
+  if(Number(m.totalValue) > 0) metaBits.push(`<div><b>Valor total</b>${fmtBRL(Number(m.totalValue))}</div>`);
   return `
-  <div class="campanha-print-progress" style="margin-top:10px;">
+  <div class="campanha-print-progress">
     <div class="campanha-print-progress-head">
       <strong>Produção</strong>
       <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
     </div>
     <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
-    <div class="campanha-meta" style="margin-top:10px;">
-      <div><b>Qtd. total</b>${qtyTotal.toLocaleString('pt-BR')}</div>
-      <div><b>Já impresso</b>${qtyPrinted.toLocaleString('pt-BR')}</div>
-      <div><b>Tiragem</b>${(Number(m.tiragem)||0).toLocaleString('pt-BR')}</div>
-      <div><b>Gráfica</b>${escapeHtml(m.printShop || '—')}</div>
-      <div><b>CNPJ</b>${escapeHtml(m.cnpj || '—')}</div>
-      <div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue)||0)}</div>
-      <div><b>Valor total</b>${fmtBRL(Number(m.totalValue)||0)}</div>
-    </div>
+    <div class="campanha-meta">${metaBits.join('')}</div>
     ${lotsHtml}
   </div>`;
 }
@@ -10993,19 +11016,21 @@ async function submitLeadershipMaterialForm(form){
     const idx = leadership.materials.findIndex(m=> sameId(m.id, editingMatId));
     if(idx >= 0){
       const prev = leadership.materials[idx];
-      const keepTotal = Number(prev.qtyTotal) > 0 && materialHasProduction(prev);
+      const keepProd = materialHasProduction(prev);
       leadership.materials[idx] = {
         ...prev,
         ...materialPayload,
-        qtyTotal: keepTotal ? Number(prev.qtyTotal) : qty
+        // qty do material; qtyTotal de produção só se já houver produção
+        qtyTotal: keepProd && Number(prev.qtyTotal) > 0 ? Number(prev.qtyTotal) : qty,
+        productionRegistered: keepProd ? true : (prev.productionRegistered || false)
       };
     } else {
       leadership.materials.unshift({
         id: uid(),
         ...materialPayload,
-        qtyTotal: qty,
         printLots: [],
         qtyPrinted: 0,
+        productionRegistered: false,
         createdAt: now
       });
     }
@@ -11013,9 +11038,9 @@ async function submitLeadershipMaterialForm(form){
     leadership.materials.unshift({
       id: uid(),
       ...materialPayload,
-      qtyTotal: qty,
       printLots: [],
       qtyPrinted: 0,
+      productionRegistered: false,
       createdAt: now
     });
   }
@@ -17644,7 +17669,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-prod-label', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-only-when-set', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
