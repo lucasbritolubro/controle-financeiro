@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-dep-lista-outro -->
+<!-- deploy-v20260803-mats-recolhido -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -840,6 +840,31 @@
   .lideranca-mats-head h4{
     margin:0; font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
   }
+  .lideranca-mats-head-left{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0;
+  }
+  .lideranca-mats-summary{
+    font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:none; letter-spacing:0;
+  }
+  .lideranca-mats-toggle{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--font); font-weight:800; font-size:11.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding:8px 12px; border-radius:999px; border:1.5px solid var(--card-border);
+    background:var(--card-raised); color:var(--ink); cursor:pointer;
+    transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease);
+  }
+  .lideranca-mats-toggle:hover{
+    background:#fff; border-color:rgba(5,150,105,0.35); color:#047857;
+  }
+  .lideranca-mats-toggle .chev{
+    display:inline-block; transition:transform .2s var(--ease); font-size:12px; line-height:1;
+  }
+  .lideranca-mats.is-open .lideranca-mats-toggle .chev{ transform:rotate(180deg); }
+  .lideranca-mats-body{ display:none; flex-direction:column; gap:10px; }
+  .lideranca-mats.is-open .lideranca-mats-body{ display:flex; }
+  /* Na impressão, sempre expandido */
+  body.printing-campanha .lideranca-mats-body{ display:flex !important; }
+  body.printing-campanha .lideranca-mats-toggle{ display:none !important; }
   .lideranca-mat-form{
     display:grid; grid-template-columns:1.2fr 1fr 1.6fr; gap:10px; align-items:end;
   }
@@ -7043,6 +7068,9 @@ let liderancaSearchQuery = '';
 let liderancaFilterDeputado = '';
 let liderancaFilterCidade = '';
 let liderancaMatEditing = null; // { leadershipId, materialId }
+/** IDs de lideranças com bloco de materiais expandido na UI */
+let liderancaMatsExpanded = new Set();
+let liderancaMatsForceExpandAll = false; // usado na impressão
 
 /* ===== Notas (estilo Apple Notes) ===== */
 let notes = [];
@@ -8287,11 +8315,12 @@ function printCampanhaModule(){
   const lidSearchEl = document.getElementById('liderancaSearch');
   const metaEl = document.getElementById('campanhaPrintMeta');
 
-  // Exibe tudo (sem filtro de busca) no relatório
+  // Exibe tudo (sem filtro de busca) e expande materiais das lideranças
   campanhaSearchQuery = '';
   liderancaSearchQuery = '';
   if(campSearchEl) campSearchEl.value = '';
   if(lidSearchEl) lidSearchEl.value = '';
+  liderancaMatsForceExpandAll = true;
   renderCampanhaStats();
   renderCampanhaList();
   renderLiderancaStats();
@@ -8311,11 +8340,16 @@ function printCampanhaModule(){
     sec.classList.add('active');
     sec.style.display = 'block';
   });
+  // Garante expandido no DOM para impressão
+  document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
+    el.classList.add('is-open');
+  });
 
   let cleaned = false;
   const cleanup = ()=>{
     if(cleaned) return;
     cleaned = true;
+    liderancaMatsForceExpandAll = false;
     document.body.classList.remove('printing-campanha');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
       sec.style.display = '';
@@ -8324,7 +8358,7 @@ function printCampanhaModule(){
     liderancaSearchQuery = prevLidSearch;
     if(campSearchEl) campSearchEl.value = prevCampSearch;
     if(lidSearchEl) lidSearchEl.value = prevLidSearch;
-    // Restaura abas e listas com os filtros anteriores
+    // Restaura abas e listas com os filtros anteriores (materiais recolhidos de novo)
     switchCampanhaSub(prevSub);
     renderCampanhaList();
     renderLiderancasList();
@@ -8736,13 +8770,31 @@ function renderLiderancasList(){
         <div><b>Qtd. total</b>${matQty.toLocaleString('pt-BR')}</div>
       </div>
       ${l.notes ? `<p class="lideranca-obs">${escapeHtml(l.notes)}</p>` : ''}
-      <div class="lideranca-mats">
+      ${(()=>{
+        const lidKey = String(l.id);
+        const isEditingMat = !!(liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, l.id));
+        const isOpen = liderancaMatsForceExpandAll
+          || isEditingMat
+          || (liderancaMatsExpanded && liderancaMatsExpanded.has(lidKey));
+        const summary = `${matCount} material(is) · ${matQty.toLocaleString('pt-BR')} un.`;
+        return `
+      <div class="lideranca-mats${isOpen ? ' is-open' : ''}" data-lid-mats="${escapeHtml(lidKey)}">
         <div class="lideranca-mats-head">
-          <h4>Material da liderança</h4>
+          <div class="lideranca-mats-head-left">
+            <h4>Material da liderança</h4>
+            <span class="lideranca-mats-summary">${escapeHtml(summary)}</span>
+          </div>
+          <button type="button" class="lideranca-mats-toggle no-print" data-lid-mats-toggle="${escapeHtml(lidKey)}" aria-expanded="${isOpen ? 'true' : 'false'}">
+            <span class="toggle-label">${isOpen ? 'Recolher' : 'Expandir'}</span>
+            <span class="chev" aria-hidden="true">▾</span>
+          </button>
         </div>
-        ${leadershipMaterialFormHtml(l)}
-        ${leadershipMaterialRowsHtml(l)}
-      </div>
+        <div class="lideranca-mats-body">
+          ${leadershipMaterialFormHtml(l)}
+          ${leadershipMaterialRowsHtml(l)}
+        </div>
+      </div>`;
+      })()}
     </article>`;
   }).join('');
 }
@@ -8844,6 +8896,8 @@ async function submitLeadershipMaterialForm(form){
   }
   leadership.updatedAt = now;
   liderancaMatEditing = null;
+  if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
+  liderancaMatsExpanded.add(String(leadershipId));
   ensureCampanhaCustomTypeFromMaterial({ materialType: type.id, materialLabel: type.label });
   await saveCampanha();
   renderLiderancasUI();
@@ -8998,6 +9052,24 @@ function bindCampanhaModuleEvents(){
     if(depOther) depOther.value = toDeputadoName(depOther.value);
   }, true);
   document.getElementById('liderancaList')?.addEventListener('click', (e)=>{
+    const matsToggle = e.target.closest('[data-lid-mats-toggle]');
+    if(matsToggle){
+      e.preventDefault();
+      const lidId = String(matsToggle.dataset.lidMatsToggle || '');
+      if(!lidId) return;
+      if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
+      const wrap = matsToggle.closest('.lideranca-mats');
+      const willOpen = !(wrap && wrap.classList.contains('is-open'));
+      if(willOpen) liderancaMatsExpanded.add(lidId);
+      else liderancaMatsExpanded.delete(lidId);
+      if(wrap){
+        wrap.classList.toggle('is-open', willOpen);
+        matsToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        const lab = matsToggle.querySelector('.toggle-label');
+        if(lab) lab.textContent = willOpen ? 'Recolher' : 'Expandir';
+      }
+      return;
+    }
     const editBtn = e.target.closest('[data-lid-edit]');
     if(editBtn){
       const item = getLeadershipById(editBtn.dataset.lidEdit);
@@ -9012,6 +9084,11 @@ function bindCampanhaModuleEvents(){
     const matEdit = e.target.closest('[data-lid-mat-edit]');
     if(matEdit){
       liderancaMatEditing = { leadershipId: matEdit.dataset.lidMatEdit, materialId: matEdit.dataset.matId };
+      // Mantém expandido ao editar material
+      if(liderancaMatEditing.leadershipId){
+        if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
+        liderancaMatsExpanded.add(String(liderancaMatEditing.leadershipId));
+      }
       renderLiderancasList();
       return;
     }
@@ -15203,7 +15280,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-dep-lista', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-mats-recolhido', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
