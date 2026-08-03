@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-candidato-principal-force -->
+<!-- deploy-v20260803-prod-unificada -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4521,11 +4521,12 @@
       <p id="campanhaPrintMeta">Produção de materiais e lideranças</p>
     </div>
     <div class="campanha-toolbar no-print">
-      <nav class="campanha-subnav" id="campanhaSubnav" aria-label="Seções da Campanha 2026">
-        <button type="button" data-campanhasub="materiais" class="active">Produção de Materiais</button>
-        <button type="button" data-campanhasub="liderancas">Lideranças</button>
+      <nav class="campanha-subnav" id="campanhaSubnav" aria-label="Seções da Campanha 2026" style="display:none;">
+        <button type="button" data-campanhasub="materiais">Produção (legado)</button>
+        <button type="button" data-campanhasub="liderancas" class="active">Lideranças</button>
       </nav>
-      <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar em PDF produção e lideranças">
+      <div style="font-size:13px;font-weight:700;color:var(--ink-soft);">Campanha 2026 · Lideranças + Produção unificadas</div>
+      <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar em PDF">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M6 9V3h12v6"/>
           <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -4535,8 +4536,8 @@
       </button>
     </div>
 
-    <!-- SUB: PRODUÇÃO DE MATERIAIS -->
-    <div class="campanha-sub active" id="campanhaSubMateriais" data-campanhasub="materiais">
+    <!-- SUB: PRODUÇÃO LEGADO (oculto — unificado em Lideranças) -->
+    <div class="campanha-sub" id="campanhaSubMateriais" data-campanhasub="materiais" style="display:none !important;">
       <div class="campanha-hero">
         <div>
           <h2>Campanha 2026 · produção de materiais</h2>
@@ -4643,12 +4644,12 @@
       </div>
     </div><!-- /campanhaSubMateriais -->
 
-    <!-- SUB: LIDERANÇAS -->
-    <div class="campanha-sub" id="campanhaSubLiderancas" data-campanhasub="liderancas">
+    <!-- SUB: LIDERANÇAS + PRODUÇÃO (visão unificada) -->
+    <div class="campanha-sub active" id="campanhaSubLiderancas" data-campanhasub="liderancas">
       <div class="campanha-hero">
         <div>
-          <h2>Campanha 2026 · lideranças</h2>
-          <p>Cadastre lideranças com cidade, telefone, observações e o material destinado a cada uma.</p>
+          <h2>Campanha 2026 · lideranças e produção</h2>
+          <p>Cadastre lideranças/candidatos, materiais e a produção (gráfica, tiragem e lotes impressos) em um só lugar.</p>
           <button type="button" class="campanha-print-btn no-print" data-campanha-print style="margin-top:12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7"/>
@@ -4932,6 +4933,7 @@
     <p class="modal-sub" id="printLotModalSub">Ajuste a quantidade impressa e a data de envio deste lote.</p>
     <div class="print-lot-modal-hint" id="printLotModalHint"></div>
     <form id="printLotModalForm" autocomplete="off">
+      <input type="hidden" id="printLotModalLeadershipId" value="">
       <input type="hidden" id="printLotModalMaterialId" value="">
       <input type="hidden" id="printLotModalLotId" value="">
       <div class="print-lot-modal-fields">
@@ -4947,6 +4949,62 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn ghost" id="printLotModalCancel">Cancelar</button>
         <button type="submit" class="modal-btn success" id="printLotModalSave">Salvar lote</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: PRODUÇÃO do material da liderança -->
+<div class="modal-overlay" id="matProdModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="matProdModalTitle">
+  <div class="modal-card modal-wide">
+    <div class="modal-icon success" aria-hidden="true">▣</div>
+    <h3 class="modal-title" id="matProdModalTitle">Produção do material</h3>
+    <p class="modal-sub" id="matProdModalSub">Preencha gráfica, quantidades e registre os lotes impressos.</p>
+    <form id="matProdModalForm" autocomplete="off">
+      <input type="hidden" id="matProdLeadershipId" value="">
+      <input type="hidden" id="matProdMaterialId" value="">
+      <div class="print-lot-modal-fields" style="grid-template-columns:1fr 1fr; margin-bottom:12px;">
+        <div class="field">
+          <label for="matProdQtyTotal">Quantidade total</label>
+          <input type="number" id="matProdQtyTotal" min="0" step="1" placeholder="Ex: 5000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="matProdTiragem">Tiragem</label>
+          <input type="number" id="matProdTiragem" min="0" step="1" placeholder="Ex: 10000" inputmode="numeric">
+        </div>
+        <div class="field" style="grid-column:1 / -1;">
+          <label for="matProdGrafica">Nome da gráfica</label>
+          <input type="text" id="matProdGrafica" placeholder="Ex: Gráfica Central" maxlength="120" autocomplete="organization">
+        </div>
+        <div class="field">
+          <label for="matProdCnpj">CNPJ da gráfica</label>
+          <input type="text" id="matProdCnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="matProdValorUn">Valor unidade (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional · até 4 decimais)</span></label>
+          <input type="text" inputmode="decimal" class="currency-input currency-input-4dec" id="matProdValorUn" placeholder="0,0000">
+        </div>
+        <div class="field">
+          <label for="matProdValorTotal">Valor total (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+          <input type="text" inputmode="decimal" class="currency-input" id="matProdValorTotal" placeholder="0,00">
+        </div>
+      </div>
+      <div class="print-lot-modal-hint" id="matProdModalHint" style="margin-bottom:12px;"></div>
+      <div id="matProdLotsBox" style="margin-bottom:14px;"></div>
+      <div class="campanha-print-lot-form" style="margin:0 0 14px;">
+        <div class="field">
+          <label for="matProdLotQty">Qtd. impressa no lote</label>
+          <input type="number" id="matProdLotQty" min="1" step="1" placeholder="Ex: 1000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="matProdLotDate">Data de envio p/ impressão</label>
+          <input type="date" id="matProdLotDate">
+        </div>
+        <button type="button" class="btn-add" id="matProdLotAddBtn" style="white-space:nowrap;">+ Registrar lote</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn ghost" id="matProdModalCancel">Fechar</button>
+        <button type="submit" class="modal-btn success" id="matProdModalSave">Salvar produção</button>
       </div>
     </form>
   </div>
@@ -7457,7 +7515,7 @@ let campanhaStorageError = false;
 let campanhaEditingId = null;
 let campanhaSearchQuery = '';
 let campanhaTotalManual = false;
-let currentCampanhaSub = 'materiais';
+let currentCampanhaSub = 'liderancas';
 let liderancaEditingId = null;
 let liderancaSearchQuery = '';
 let liderancaFilterDeputado = '';
@@ -7889,12 +7947,16 @@ function formatPrintLotCode(code){
 }
 function collectUsedPrintLotCodes(excludeLotId){
   const used = new Set();
-  (campanhaMaterials || []).forEach(m=>{
-    (m.printLots || []).forEach(lot=>{
+  const scanLots = (lots)=>{
+    (lots || []).forEach(lot=>{
       if(excludeLotId && sameId(lot.id, excludeLotId)) return;
       const c = normalizePrintLotCode(lot.lotCode || lot.code || '');
       if(c) used.add(c);
     });
+  };
+  (campanhaMaterials || []).forEach(m=> scanLots(m.printLots));
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(m=> scanLots(m.printLots));
   });
   return used;
 }
@@ -7938,25 +8000,36 @@ function generateUniquePrintLotCode(usedSet){
   return fallback.length === 8 ? fallback : ('#' + randomPrintLotBody());
 }
 /** Atribui código a lotes sem ID ou com duplicata. Retorna true se algo mudou. */
+function ensurePrintLotCodesOnMaterial(m, used){
+  if(!m || !Array.isArray(m.printLots) || !m.printLots.length) return false;
+  let changed = false;
+  m.printLots = m.printLots.map(lot=>{
+    let code = normalizePrintLotCode(lot.lotCode || lot.code || '');
+    if(code && used.has(code)) code = '';
+    if(!code){
+      code = generateUniquePrintLotCode(used);
+      changed = true;
+      return { ...lot, lotCode: code };
+    }
+    used.add(code);
+    if(lot.lotCode !== code){
+      changed = true;
+      return { ...lot, lotCode: code };
+    }
+    return lot;
+  });
+  m.qtyPrinted = m.printLots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+  return changed;
+}
 function ensureAllPrintLotCodes(){
   const used = new Set();
   let changed = false;
   (campanhaMaterials || []).forEach(m=>{
-    if(!Array.isArray(m.printLots) || !m.printLots.length) return;
-    m.printLots = m.printLots.map(lot=>{
-      let code = normalizePrintLotCode(lot.lotCode || lot.code || '');
-      if(code && used.has(code)) code = ''; // duplicado → regera
-      if(!code){
-        code = generateUniquePrintLotCode(used);
-        changed = true;
-        return { ...lot, lotCode: code };
-      }
-      used.add(code);
-      if(lot.lotCode !== code){
-        changed = true;
-        return { ...lot, lotCode: code };
-      }
-      return lot;
+    if(ensurePrintLotCodesOnMaterial(m, used)) changed = true;
+  });
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(m=>{
+      if(ensurePrintLotCodesOnMaterial(m, used)) changed = true;
     });
   });
   return changed;
@@ -7979,8 +8052,11 @@ function normalizePrintLot(raw){
 function getMaterialQtyTotal(m){
   if(!m) return 0;
   const total = Number(m.qtyTotal);
-  if(Number.isFinite(total) && total >= 0) return total;
-  // legado: qtyPrinted era o campo principal do formulário
+  if(Number.isFinite(total) && total > 0) return total;
+  // material da liderança: qty = quantidade planejada/total
+  const qty = Number(m.qty ?? m.quantidade);
+  if(Number.isFinite(qty) && qty >= 0) return qty;
+  // legado produção avulsa
   const legacy = Number(m.qtyPrinted);
   return Number.isFinite(legacy) && legacy >= 0 ? legacy : 0;
 }
@@ -7991,6 +8067,263 @@ function getMaterialQtyPrinted(m){
     return lots.reduce((s, lot)=> s + (Number(lot.qty) || 0), 0);
   }
   return 0;
+}
+function materialHasProduction(m){
+  if(!m) return false;
+  if(Array.isArray(m.printLots) && m.printLots.length) return true;
+  if(String(m.printShop || m.grafica || '').trim()) return true;
+  if(Number(m.tiragem) > 0) return true;
+  if(Number(m.unitValue) > 0 || Number(m.totalValue) > 0) return true;
+  if(Number(m.qtyTotal) > 0) return true;
+  return false;
+}
+function findLeadershipMaterial(leadershipId, materialId){
+  const lid = getLeadershipById(leadershipId);
+  if(!lid) return null;
+  const idx = (lid.materials || []).findIndex(m=> sameId(m.id, materialId));
+  if(idx < 0) return { lid, mat: null, matIdx: -1 };
+  return { lid, mat: lid.materials[idx], matIdx: idx };
+}
+function syncLidMatPrintLots(mat){
+  if(!mat) return mat;
+  const printLots = Array.isArray(mat.printLots) ? mat.printLots : [];
+  mat.printLots = printLots;
+  mat.qtyPrinted = printLots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+  if(!(Number(mat.qtyTotal) > 0) && Number(mat.qty) > 0) mat.qtyTotal = Number(mat.qty);
+  mat.updatedAt = new Date().toISOString();
+  return mat;
+}
+function renderMatProdLotsBox(leadershipId, mat){
+  const box = document.getElementById('matProdLotsBox');
+  if(!box || !mat) return;
+  const lots = Array.isArray(mat.printLots) ? mat.printLots.slice().sort((a,b)=>
+    String(b.sendDate||b.createdAt||'').localeCompare(String(a.sendDate||a.createdAt||''))
+  ) : [];
+  if(!lots.length){
+    box.innerHTML = `<p style="margin:0;font-size:12.5px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso neste material.</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="campanha-print-lots">${lots.map(lot=>`
+    <div class="campanha-print-lot">
+      <div class="campanha-print-lot-main">
+        <div class="campanha-print-lot-title">
+          <span class="campanha-print-lot-code">${escapeHtml(formatPrintLotCode(lot.lotCode))}</span>
+          · <b>${(Number(lot.qty)||0).toLocaleString('pt-BR')}</b> un.
+        </div>
+        <div class="campanha-print-lot-meta">
+          <span class="campanha-print-lot-chip">Envio ${escapeHtml(formatCampanhaDateBR(lot.sendDate))}</span>
+        </div>
+      </div>
+      <div class="campanha-print-lot-actions">
+        <button type="button" class="btn-mini ghost" data-lid-lot-edit="${escapeHtml(String(lot.id))}" data-lid-id="${escapeHtml(String(leadershipId))}" data-mat-id="${escapeHtml(String(mat.id))}">Editar</button>
+        <button type="button" class="btn-mini ghost" data-lid-lot-del="${escapeHtml(String(lot.id))}" data-lid-id="${escapeHtml(String(leadershipId))}" data-mat-id="${escapeHtml(String(mat.id))}" style="color:var(--rose);">Remover</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+function openMatProdModal(leadershipId, materialId){
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat) return;
+  const { lid, mat } = found;
+  const modal = document.getElementById('matProdModal');
+  document.getElementById('matProdLeadershipId').value = String(lid.id);
+  document.getElementById('matProdMaterialId').value = String(mat.id);
+  document.getElementById('matProdModalTitle').textContent = 'Produção · ' + (mat.materialLabel || mat.materialType || 'Material');
+  document.getElementById('matProdModalSub').textContent =
+    `${leadershipRoleLabel(lid.role)}: ${toLeadershipName(lid.name)}` +
+    (mat.artLink ? ' · arte vinculada neste material' : ' · sem link de arte');
+  const qtyTotal = getMaterialQtyTotal(mat);
+  const qtyPrinted = getMaterialQtyPrinted(mat);
+  document.getElementById('matProdQtyTotal').value = qtyTotal || '';
+  document.getElementById('matProdTiragem').value = mat.tiragem || '';
+  document.getElementById('matProdGrafica').value = mat.printShop || '';
+  document.getElementById('matProdCnpj').value = formatCnpjInput(mat.cnpj || '');
+  document.getElementById('matProdValorUn').value = mat.unitValue ? toCurrencyDisplay(mat.unitValue, 4) : '';
+  document.getElementById('matProdValorTotal').value = mat.totalValue ? toCurrencyDisplay(mat.totalValue) : '';
+  const dateEl = document.getElementById('matProdLotDate');
+  if(dateEl && !dateEl.value) dateEl.value = todayISODateLocal();
+  const hint = document.getElementById('matProdModalHint');
+  if(hint){
+    hint.innerHTML = `<strong style="color:var(--ink);">Progresso:</strong> ${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} un. impressas` +
+      (mat.printShop ? ` · gráfica <strong style="color:var(--ink);">${escapeHtml(mat.printShop)}</strong>` : '');
+  }
+  renderMatProdLotsBox(lid.id, mat);
+  if(modal) modal.style.display = 'flex';
+}
+function closeMatProdModal(){
+  const modal = document.getElementById('matProdModal');
+  if(modal) modal.style.display = 'none';
+}
+async function saveMatProdFromModal(e){
+  e?.preventDefault?.();
+  const leadershipId = document.getElementById('matProdLeadershipId')?.value || '';
+  const materialId = document.getElementById('matProdMaterialId')?.value || '';
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat){
+    try{ alert('Material não encontrado.'); }catch(_e){}
+    return;
+  }
+  const { lid, mat } = found;
+  const qtyTotalRaw = document.getElementById('matProdQtyTotal')?.value;
+  const tirRaw = document.getElementById('matProdTiragem')?.value;
+  const qtyTotal = qtyTotalRaw === '' || qtyTotalRaw == null ? 0 : Number(qtyTotalRaw);
+  const tiragem = tirRaw === '' || tirRaw == null ? 0 : Number(tirRaw);
+  if(!Number.isFinite(qtyTotal) || qtyTotal < 0){
+    try{ alert('Quantidade total inválida.'); }catch(_e){}
+    return;
+  }
+  if(!Number.isFinite(tiragem) || tiragem < 0){
+    try{ alert('Tiragem inválida.'); }catch(_e){}
+    return;
+  }
+  let unitValue = parseCurrencyValue(document.getElementById('matProdValorUn'));
+  let totalValue = parseCurrencyValue(document.getElementById('matProdValorTotal'));
+  if(!Number.isFinite(unitValue) || unitValue < 0) unitValue = 0;
+  if(!Number.isFinite(totalValue) || totalValue < 0) totalValue = 0;
+  if(totalValue <= 0 && unitValue > 0 && qtyTotal > 0){
+    totalValue = Math.round(unitValue * qtyTotal * 100) / 100;
+  } else if(unitValue <= 0 && totalValue > 0 && qtyTotal > 0){
+    unitValue = Math.round((totalValue / qtyTotal) * 10000) / 10000;
+  }
+  mat.qtyTotal = qtyTotal;
+  if(qtyTotal > 0) mat.qty = qtyTotal; // mantém qty alinhada ao total planejado
+  mat.tiragem = tiragem;
+  mat.printShop = String(document.getElementById('matProdGrafica')?.value || '').trim();
+  mat.cnpj = formatCnpjInput(document.getElementById('matProdCnpj')?.value || '');
+  mat.unitValue = unitValue;
+  mat.totalValue = totalValue;
+  syncLidMatPrintLots(mat);
+  lid.updatedAt = new Date().toISOString();
+  await saveCampanha();
+  closeMatProdModal();
+  renderLiderancasUI();
+  showSuccessFeedback('Produção salva!', `${mat.materialLabel || 'Material'} · ${toLeadershipName(lid.name)}`);
+}
+async function addLidMatPrintLot(leadershipId, materialId, qtyRaw, sendDateRaw){
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat) return;
+  const qty = Number(qtyRaw);
+  if(!Number.isFinite(qty) || qty <= 0){
+    try{ alert('Informe a quantidade impressa neste lote (maior que zero).'); }catch(_e){}
+    return;
+  }
+  const sendDate = String(sendDateRaw || '').trim().slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)){
+    try{ alert('Informe a data de envio para impressão.'); }catch(_e){}
+    return;
+  }
+  const { lid, mat } = found;
+  if(!Array.isArray(mat.printLots)) mat.printLots = [];
+  const lotCode = generateUniquePrintLotCode();
+  mat.printLots.push({
+    id: uid(),
+    lotCode,
+    qty: Math.round(qty),
+    sendDate,
+    createdAt: new Date().toISOString()
+  });
+  syncLidMatPrintLots(mat);
+  if(!(Number(mat.qtyTotal) > 0) && Number(mat.qty) > 0) mat.qtyTotal = Number(mat.qty);
+  lid.updatedAt = new Date().toISOString();
+  await saveCampanha();
+  // se modal de produção aberto, atualiza lotes
+  if(document.getElementById('matProdModal')?.style.display === 'flex'){
+    renderMatProdLotsBox(lid.id, mat);
+    const hint = document.getElementById('matProdModalHint');
+    if(hint){
+      hint.innerHTML = `<strong style="color:var(--ink);">Progresso:</strong> ${getMaterialQtyPrinted(mat).toLocaleString('pt-BR')} de ${getMaterialQtyTotal(mat).toLocaleString('pt-BR')} un. impressas`;
+    }
+    const qEl = document.getElementById('matProdLotQty');
+    if(qEl) qEl.value = '';
+  }
+  renderLiderancasUI();
+  showSuccessFeedback('Lote registrado!', `${lotCode} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`);
+}
+function openLidMatLotEditModal(leadershipId, materialId, lotId){
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat) return;
+  const lot = (found.mat.printLots || []).find(l=> sameId(l.id, lotId));
+  if(!lot) return;
+  document.getElementById('printLotModalLeadershipId').value = String(leadershipId);
+  document.getElementById('printLotModalMaterialId').value = String(materialId);
+  document.getElementById('printLotModalLotId').value = String(lot.id);
+  document.getElementById('printLotModalQty').value = String(Number(lot.qty) || '');
+  document.getElementById('printLotModalDate').value = String(lot.sendDate || todayISODateLocal());
+  document.getElementById('printLotModalSub').textContent =
+    `${found.mat.materialLabel || 'Material'} · ${toLeadershipName(found.lid.name)}`;
+  const hint = document.getElementById('printLotModalHint');
+  if(hint){
+    hint.innerHTML = `<strong style="color:var(--ink);">ID:</strong> <span style="font-family:ui-monospace,Menlo,monospace;font-weight:800;">${escapeHtml(formatPrintLotCode(lot.lotCode))}</span>`;
+  }
+  document.getElementById('printLotModal').style.display = 'flex';
+}
+async function saveLidMatLotEditFromModal(e){
+  e?.preventDefault?.();
+  const leadershipId = document.getElementById('printLotModalLeadershipId')?.value || '';
+  const materialId = document.getElementById('printLotModalMaterialId')?.value || '';
+  const lotId = document.getElementById('printLotModalLotId')?.value || '';
+  // se veio do fluxo legado campanhaMaterials (sem leadershipId), usa path antigo
+  if(!leadershipId){
+    return savePrintLotEditFromModal(e);
+  }
+  const qty = Number(document.getElementById('printLotModalQty')?.value);
+  const sendDate = String(document.getElementById('printLotModalDate')?.value || '').trim().slice(0, 10);
+  if(!Number.isFinite(qty) || qty <= 0){
+    try{ alert('Informe a quantidade impressa neste lote (maior que zero).'); }catch(_e){}
+    return;
+  }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)){
+    try{ alert('Informe a data de envio para impressão.'); }catch(_e){}
+    return;
+  }
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat) return;
+  const lot = (found.mat.printLots || []).find(l=> sameId(l.id, lotId));
+  if(!lot) return;
+  lot.qty = Math.round(qty);
+  lot.sendDate = sendDate;
+  lot.updatedAt = new Date().toISOString();
+  syncLidMatPrintLots(found.mat);
+  found.lid.updatedAt = new Date().toISOString();
+  await saveCampanha();
+  closePrintLotEditModal();
+  renderLiderancasUI();
+  if(document.getElementById('matProdModal')?.style.display === 'flex'){
+    openMatProdModal(leadershipId, materialId);
+  }
+  showSuccessFeedback('Lote atualizado!', `${formatPrintLotCode(lot.lotCode)} · ${Math.round(qty).toLocaleString('pt-BR')} un.`);
+}
+function askDeleteLidMatPrintLot(leadershipId, materialId, lotId){
+  const found = findLeadershipMaterial(leadershipId, materialId);
+  if(!found || !found.mat) return;
+  const lot = (found.mat.printLots || []).find(l=> sameId(l.id, lotId));
+  if(!lot) return;
+  const code = formatPrintLotCode(lot.lotCode);
+  openConfirmModal(
+    'Remover este lote?',
+    'O lote sairá do histórico de impressão e o total impresso será recalculado.',
+    async ()=>{
+      found.mat.printLots = (found.mat.printLots || []).filter(l=> !sameId(l.id, lotId));
+      syncLidMatPrintLots(found.mat);
+      found.lid.updatedAt = new Date().toISOString();
+      await saveCampanha();
+      renderLiderancasUI();
+      if(document.getElementById('matProdModal')?.style.display === 'flex'){
+        openMatProdModal(leadershipId, materialId);
+      }
+      showSuccessFeedback('Lote removido', `${code} excluído do histórico.`);
+    },
+    'Remover lote',
+    {
+      mode: 'danger',
+      icon: '⌫',
+      cancelLabel: 'Manter lote',
+      detail:
+        `<span class="md-label">ID do lote</span><strong style="font-family:ui-monospace,Menlo,monospace;">${escapeHtml(code)}</strong>` +
+        `<span class="md-label" style="margin-top:10px;">Material</span>${escapeHtml(found.mat.materialLabel || '—')}` +
+        `<span class="md-label" style="margin-top:10px;">Lote</span><strong>${(Number(lot.qty)||0).toLocaleString('pt-BR')} un.</strong> · envio <strong>${escapeHtml(formatCampanhaDateBR(lot.sendDate))}</strong>`
+    }
+  );
 }
 function formatCampanhaDateBR(isoDate){
   const s = String(isoDate || '').trim();
@@ -8153,12 +8486,30 @@ function normalizeLeadershipMaterial(raw){
   const materialLabel = toCampanhaTypeLabel(raw.materialLabel || raw.label || materialType || '');
   if(!materialType && !materialLabel) return null;
   const qty = Number(raw.qty ?? raw.quantidade ?? raw.qtyPrinted);
+  const qtySafe = Number.isFinite(qty) && qty >= 0 ? qty : 0;
+  const qtyTotalRaw = Number(raw.qtyTotal != null ? raw.qtyTotal : (raw.quantidadeTotal != null ? raw.quantidadeTotal : qtySafe));
+  const qtyTotal = Number.isFinite(qtyTotalRaw) && qtyTotalRaw >= 0 ? qtyTotalRaw : qtySafe;
+  const printLots = Array.isArray(raw.printLots)
+    ? raw.printLots.map(normalizePrintLot).filter(Boolean)
+    : (Array.isArray(raw.lotesImpressao) ? raw.lotesImpressao.map(normalizePrintLot).filter(Boolean) : []);
+  const qtyPrintedSum = printLots.reduce((s, lot)=> s + (Number(lot.qty) || 0), 0);
+  const tiragem = Number(raw.tiragem);
+  const unitValue = Number(raw.unitValue ?? raw.valorUnidade);
+  const totalValue = Number(raw.totalValue ?? raw.valorTotal);
   const depName = toDeputadoName(raw.deputadoEstadual || raw.deputado || raw.depEstadual || '');
   return {
     id: raw.id || uid(),
     materialType: materialType || materialLabel,
     materialLabel: materialLabel || toCampanhaTypeLabel(materialType),
-    qty: Number.isFinite(qty) && qty >= 0 ? qty : 0,
+    qty: qtySafe,
+    qtyTotal,
+    qtyPrinted: qtyPrintedSum,
+    printLots,
+    tiragem: Number.isFinite(tiragem) && tiragem >= 0 ? tiragem : 0,
+    printShop: String(raw.printShop || raw.grafica || '').trim(),
+    cnpj: String(raw.cnpj || '').trim(),
+    unitValue: Number.isFinite(unitValue) && unitValue >= 0 ? unitValue : 0,
+    totalValue: Number.isFinite(totalValue) && totalValue >= 0 ? totalValue : 0,
     artLink: String(raw.artLink || raw.link || '').trim(),
     notes: String(raw.notes || raw.observacao || raw.obs || '').trim(),
     deputadoEstadual: depName,
@@ -8166,6 +8517,83 @@ function normalizeLeadershipMaterial(raw){
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || raw.createdAt || new Date().toISOString()
   };
+}
+/** Migra materiais avulsos de PRODUÇÃO (campanhaMaterials) para a liderança vinculada. */
+function migrateProductionMaterialsIntoLeaderships(){
+  let changed = false;
+  const remaining = [];
+  (campanhaMaterials || []).forEach(pm=>{
+    const lidId = pm.leadershipId || null;
+    const lid = lidId ? getLeadershipById(lidId) : null;
+    if(!lid){
+      remaining.push(pm);
+      return;
+    }
+    if(!Array.isArray(lid.materials)) lid.materials = [];
+    // tenta casar por tipo + arte; senão cria novo material na liderança
+    let mat = lid.materials.find(m=>{
+      const sameType = toCampanhaTypeLabel(m.materialLabel || m.materialType) === toCampanhaTypeLabel(pm.materialLabel || pm.materialType);
+      const sameArt = String(m.artLink || '') === String(pm.artLink || '');
+      return sameType && (sameArt || !pm.artLink || !m.artLink);
+    });
+    if(!mat){
+      mat = normalizeLeadershipMaterial({
+        materialType: pm.materialType,
+        materialLabel: pm.materialLabel,
+        qty: getMaterialQtyTotal(pm),
+        artLink: pm.artLink,
+        notes: pm.notes,
+        qtyTotal: getMaterialQtyTotal(pm),
+        tiragem: pm.tiragem,
+        printShop: pm.printShop,
+        cnpj: pm.cnpj,
+        unitValue: pm.unitValue,
+        totalValue: pm.totalValue,
+        printLots: pm.printLots,
+        createdAt: pm.createdAt,
+        updatedAt: pm.updatedAt
+      });
+      if(mat){
+        lid.materials.push(mat);
+        changed = true;
+      }
+    } else {
+      // mescla campos de produção se vazios no material da liderança
+      if(!materialHasProduction(mat)){
+        mat.qtyTotal = getMaterialQtyTotal(pm) || mat.qtyTotal || mat.qty;
+        mat.tiragem = Number(pm.tiragem) || mat.tiragem || 0;
+        mat.printShop = pm.printShop || mat.printShop || '';
+        mat.cnpj = pm.cnpj || mat.cnpj || '';
+        mat.unitValue = Number(pm.unitValue) || mat.unitValue || 0;
+        mat.totalValue = Number(pm.totalValue) || mat.totalValue || 0;
+        mat.printLots = Array.isArray(pm.printLots) ? pm.printLots.map(normalizePrintLot).filter(Boolean) : (mat.printLots || []);
+        mat.qtyPrinted = (mat.printLots || []).reduce((s,l)=> s + (Number(l.qty)||0), 0);
+        if(pm.artLink && !mat.artLink) mat.artLink = pm.artLink;
+        if(pm.notes && !mat.notes) mat.notes = pm.notes;
+        changed = true;
+      } else if(Array.isArray(pm.printLots) && pm.printLots.length){
+        const existingIds = new Set((mat.printLots||[]).map(l=> String(l.id)));
+        const existingCodes = new Set((mat.printLots||[]).map(l=> normalizePrintLotCode(l.lotCode||'')).filter(Boolean));
+        (pm.printLots || []).forEach(lot=>{
+          const n = normalizePrintLot(lot);
+          if(!n) return;
+          if(existingIds.has(String(n.id))) return;
+          const code = normalizePrintLotCode(n.lotCode||'');
+          if(code && existingCodes.has(code)) return;
+          mat.printLots = mat.printLots || [];
+          mat.printLots.push(n);
+          changed = true;
+        });
+        mat.qtyPrinted = (mat.printLots || []).reduce((s,l)=> s + (Number(l.qty)||0), 0);
+      }
+    }
+    lid.updatedAt = new Date().toISOString();
+  });
+  if(remaining.length !== (campanhaMaterials || []).length){
+    campanhaMaterials = remaining;
+    changed = true;
+  }
+  return changed;
 }
 function toLeadershipName(name){
   // Normaliza ao salvar/carregar. Não usar no evento "input" (trim remove o espaço ao digitar).
@@ -8485,6 +8913,8 @@ async function loadCampanha(){
     campanhaDeputados = (deputados || []).map(normalizeDeputadoEntry).filter(Boolean);
     campanhaLeaderships = leaderships.map(normalizeLeadership).filter(Boolean);
     migrateCampanhaDeputadosInMemory();
+    // unifica produção avulsa → materiais da liderança
+    const migratedProd = migrateProductionMaterialsIntoLeaderships();
     // recupera tipos custom e só deputados usados em materiais
     campanhaMaterials.forEach(ensureCampanhaCustomTypeFromMaterial);
     campanhaLeaderships.forEach(l=>{
@@ -8499,7 +8929,7 @@ async function loadCampanha(){
     const principalFixed = ensurePrincipalCandidatesInMemory();
     // códigos únicos de lote (#XXXXXXX) para impressões antigas
     const lotsFixed = ensureAllPrintLotCodes();
-    if(principalFixed || lotsFixed){
+    if(principalFixed || lotsFixed || migratedProd){
       try{
         if(window.storage && typeof window.storage.set === 'function'){
           await window.storage.set(CAMPANHA_KEY, JSON.stringify({
@@ -8620,19 +9050,22 @@ function formatPhoneBR(value){
   return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
 }
 function switchCampanhaSub(sub){
-  if(sub !== 'materiais' && sub !== 'liderancas') sub = 'materiais';
+  // Unificado: sempre lideranças (+ produção embutida). Aba produção legada ocultada.
+  sub = 'liderancas';
   currentCampanhaSub = sub;
   document.querySelectorAll('#campanhaSubnav button[data-campanhasub]').forEach(b=>{
     b.classList.toggle('active', b.dataset.campanhasub === sub);
   });
   document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
-    sec.classList.toggle('active', sec.dataset.campanhasub === sub);
+    const isLid = sec.dataset.campanhasub === 'liderancas';
+    sec.classList.toggle('active', isLid);
+    if(sec.id === 'campanhaSubMateriais'){
+      sec.style.display = 'none';
+    } else if(isLid){
+      sec.style.display = '';
+    }
   });
-  if(sub === 'materiais'){
-    renderCampanhaMaterialsUI();
-  } else {
-    renderLiderancasUI();
-  }
+  renderLiderancasUI();
 }
 function getCampanhaQtyBase(){
   const qtyEl = document.getElementById('campQty');
@@ -9699,7 +10132,7 @@ function renderCampanhaMaterialsUI(){
   renderCampanhaList();
 }
 function renderCampanhaModule(){
-  switchCampanhaSub(currentCampanhaSub || 'materiais');
+  switchCampanhaSub('liderancas');
 }
 
 /** Imprime / salva em PDF materiais + lideranças da Campanha 2026. */
@@ -10092,10 +10525,70 @@ function renderLiderancaStats(){
   if(q) q.textContent = qty.toLocaleString('pt-BR');
   renderLiderancaTypeBreakdown();
 }
+function leadershipMatProductionBlockHtml(leadership, m){
+  const qtyTotal = getMaterialQtyTotal(m);
+  const qtyPrinted = getMaterialQtyPrinted(m);
+  const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
+  const isOver = qtyTotal > 0 && qtyPrinted > qtyTotal;
+  const hasProd = materialHasProduction(m);
+  const lots = Array.isArray(m.printLots) ? m.printLots.slice().sort((a,b)=>{
+    return String(b.sendDate || b.createdAt || '').localeCompare(String(a.sendDate || a.createdAt || ''));
+  }) : [];
+  const lotsHtml = lots.length
+    ? `<div class="campanha-print-lots">${lots.map((lot, lotIndex)=>{
+        const lotQty = (Number(lot.qty)||0).toLocaleString('pt-BR');
+        const lotDate = formatCampanhaDateBR(lot.sendDate);
+        const lotCode = formatPrintLotCode(lot.lotCode);
+        return `
+        <div class="campanha-print-lot">
+          <div class="campanha-print-lot-main">
+            <div class="campanha-print-lot-title">
+              <span class="campanha-print-lot-code">${escapeHtml(lotCode)}</span>
+              · <b>${lotQty}</b> un.
+            </div>
+            <div class="campanha-print-lot-meta">
+              <span class="campanha-print-lot-chip">Envio ${escapeHtml(lotDate)}</span>
+              ${lot.updatedAt ? `<span>editado</span>` : ''}
+            </div>
+          </div>
+          <div class="campanha-print-lot-actions no-print">
+            <button type="button" class="btn-mini ghost" data-lid-lot-edit="${escapeHtml(String(lot.id))}" data-lid-id="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}">Editar</button>
+            <button type="button" class="btn-mini ghost" data-lid-lot-del="${escapeHtml(String(lot.id))}" data-lid-id="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Remover</button>
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    : `<p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso registrado ainda.</p>`;
+  if(!hasProd && !lots.length){
+    return `<div class="campanha-print-progress" style="margin-top:10px;background:rgba(15,23,42,0.03);">
+      <div class="campanha-print-progress-head">
+        <strong>Produção</strong>
+        <span>não cadastrada</span>
+      </div>
+      <p style="margin:6px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Use o botão PRODUÇÃO para gráfica, totais e lotes.</p>
+    </div>`;
+  }
+  return `
+  <div class="campanha-print-progress" style="margin-top:10px;">
+    <div class="campanha-print-progress-head">
+      <strong>Produção impressa</strong>
+      <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
+    </div>
+    <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
+    <div class="campanha-meta" style="margin-top:10px;">
+      <div><b>Qtd. total</b>${qtyTotal.toLocaleString('pt-BR')}</div>
+      <div><b>Já impresso</b>${qtyPrinted.toLocaleString('pt-BR')}</div>
+      <div><b>Tiragem</b>${(Number(m.tiragem)||0).toLocaleString('pt-BR')}</div>
+      <div><b>Gráfica</b>${escapeHtml(m.printShop || '—')}</div>
+      <div><b>CNPJ</b>${escapeHtml(m.cnpj || '—')}</div>
+      <div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue)||0)}</div>
+      <div><b>Valor total</b>${fmtBRL(Number(m.totalValue)||0)}</div>
+    </div>
+    ${lotsHtml}
+  </div>`;
+}
 function leadershipMaterialRowsHtml(leadership){
   const mats = leadership.materials || [];
-  const linked = getMaterialsLinkedToLeadership(leadership.id);
-  if(!mats.length && !linked.length){
+  if(!mats.length){
     return `<p class="lideranca-mat-empty">Nenhum material vinculado a esta liderança.</p>`;
   }
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
@@ -10115,46 +10608,31 @@ function leadershipMaterialRowsHtml(leadership){
     const obs = notesTxt
       ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
+    const qtyTotal = getMaterialQtyTotal(m);
+    const qtyPrinted = getMaterialQtyPrinted(m);
     return `
-    <div class="lideranca-mat-row" data-lid-mat-id="${escapeHtml(String(m.id))}">
-      <div style="flex:1; min-width:0;">
-        <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
-        <div class="lm-meta">Qtd: ${(Number(m.qty)||0).toLocaleString('pt-BR')}</div>
-        ${depTag}
-        ${obs}
+    <div class="lideranca-mat-row" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch;">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; width:100%;">
+        <div style="flex:1; min-width:0;">
+          <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
+          <div class="lm-meta">Qtd: ${qtyTotal.toLocaleString('pt-BR')}${qtyPrinted ? ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}` : ''}</div>
+          ${depTag}
+          ${obs}
+        </div>
+        <div class="campanha-card-actions">
+          ${art}
+          <button type="button" class="btn-mini" data-lid-mat-prod="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}">PRODUÇÃO</button>
+          <button type="button" class="btn-mini ghost" data-lid-mat-edit="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}">Editar</button>
+          <button type="button" class="btn-mini ghost" data-lid-mat-del="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Excluir</button>
+        </div>
       </div>
-      <div class="campanha-card-actions">
-        ${art}
-        <button type="button" class="btn-mini ghost" data-lid-mat-edit="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}">Editar</button>
-        <button type="button" class="btn-mini ghost" data-lid-mat-del="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Excluir</button>
-      </div>
+      ${leadershipMatProductionBlockHtml(leadership, m)}
     </div>`;
   }).join('');
-  const linkedRows = depFilter ? '' : linked.map(m=>{
-    const art = m.artLink
-      ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
-      : `<span class="campanha-art-missing">Sem arte</span>`;
-    const notesTxt = String(m.notes || '').trim();
-    const obs = notesTxt
-      ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
-      : '';
-    return `
-    <div class="lideranca-mat-row" data-linked-mat-id="${escapeHtml(String(m.id))}">
-      <div style="flex:1; min-width:0;">
-        <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
-        <div class="lm-meta">Qtd total: ${getMaterialQtyTotal(m).toLocaleString('pt-BR')} · impresso: ${getMaterialQtyPrinted(m).toLocaleString('pt-BR')} · via Produção</div>
-        ${obs}
-      </div>
-      <div class="campanha-card-actions">
-        ${art}
-        <span class="campanha-lideranca-tag">PRODUÇÃO DE MATERIAIS</span>
-      </div>
-    </div>`;
-  }).join('');
-  if(!ownRows && !linkedRows){
+  if(!ownRows){
     return `<p class="lideranca-mat-empty">${depFilter ? 'Nenhum material deste deputado nesta liderança.' : 'Nenhum material vinculado a esta liderança.'}</p>`;
   }
-  return `<div class="lideranca-mat-list">${ownRows}${linkedRows}</div>`;
+  return `<div class="lideranca-mat-list">${ownRows}</div>`;
 }
 function leadershipMaterialFormHtml(leadership){
   const editing = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadership.id)
@@ -10406,18 +10884,31 @@ async function submitLeadershipMaterialForm(form){
   if(editingMatId){
     const idx = leadership.materials.findIndex(m=> sameId(m.id, editingMatId));
     if(idx >= 0){
+      const prev = leadership.materials[idx];
+      const keepTotal = Number(prev.qtyTotal) > 0 && materialHasProduction(prev);
       leadership.materials[idx] = {
-        ...leadership.materials[idx],
-        ...materialPayload
+        ...prev,
+        ...materialPayload,
+        qtyTotal: keepTotal ? Number(prev.qtyTotal) : qty
       };
     } else {
       leadership.materials.unshift({
-        id: uid(), ...materialPayload, createdAt: now
+        id: uid(),
+        ...materialPayload,
+        qtyTotal: qty,
+        printLots: [],
+        qtyPrinted: 0,
+        createdAt: now
       });
     }
   } else {
     leadership.materials.unshift({
-      id: uid(), ...materialPayload, createdAt: now
+      id: uid(),
+      ...materialPayload,
+      qtyTotal: qty,
+      printLots: [],
+      qtyPrinted: 0,
+      createdAt: now
     });
   }
   // Garante notes/deputado/urna no objeto em memória
@@ -10757,6 +11248,30 @@ function bindCampanhaModuleEvents(){
     const delBtn = e.target.closest('[data-lid-del]');
     if(delBtn){
       deleteLideranca(delBtn.dataset.lidDel);
+      return;
+    }
+    const matProd = e.target.closest('[data-lid-mat-prod]');
+    if(matProd){
+      e.preventDefault();
+      const lidId = matProd.dataset.lidMatProd;
+      const matId = matProd.dataset.matId;
+      if(lidId){
+        if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
+        liderancaMatsExpanded.add(String(lidId));
+      }
+      openMatProdModal(lidId, matId);
+      return;
+    }
+    const lotEdit = e.target.closest('[data-lid-lot-edit]');
+    if(lotEdit){
+      e.preventDefault();
+      openLidMatLotEditModal(lotEdit.dataset.lidId, lotEdit.dataset.matId, lotEdit.dataset.lidLotEdit);
+      return;
+    }
+    const lotDel = e.target.closest('[data-lid-lot-del]');
+    if(lotDel){
+      e.preventDefault();
+      askDeleteLidMatPrintLot(lotDel.dataset.lidId, lotDel.dataset.matId, lotDel.dataset.lidLotDel);
       return;
     }
     const matEdit = e.target.closest('[data-lid-mat-edit]');
@@ -12004,16 +12519,61 @@ document.getElementById('confirmModalConfirm').addEventListener('click', async (
   await cb();
 });
 
-// Modal de edição de lote de impressão (Produção de Materiais)
-document.getElementById('printLotModalForm')?.addEventListener('submit', savePrintLotEditFromModal);
+// Modal de edição de lote de impressão (liderança unificada + legado)
+document.getElementById('printLotModalForm')?.addEventListener('submit', saveLidMatLotEditFromModal);
 document.getElementById('printLotModalCancel')?.addEventListener('click', ()=> closePrintLotEditModal());
 document.getElementById('printLotModal')?.addEventListener('click', (e)=>{
   if(e.target && e.target.id === 'printLotModal') closePrintLotEditModal();
 });
+// Modal PRODUÇÃO do material
+document.getElementById('matProdModalForm')?.addEventListener('submit', saveMatProdFromModal);
+document.getElementById('matProdModalCancel')?.addEventListener('click', ()=> closeMatProdModal());
+document.getElementById('matProdModal')?.addEventListener('click', (e)=>{
+  if(e.target && e.target.id === 'matProdModal') closeMatProdModal();
+  const lotEdit = e.target.closest('[data-lid-lot-edit]');
+  if(lotEdit){
+    e.preventDefault();
+    openLidMatLotEditModal(lotEdit.dataset.lidId, lotEdit.dataset.matId, lotEdit.dataset.lidLotEdit);
+    return;
+  }
+  const lotDel = e.target.closest('[data-lid-lot-del]');
+  if(lotDel){
+    e.preventDefault();
+    askDeleteLidMatPrintLot(lotDel.dataset.lidId, lotDel.dataset.matId, lotDel.dataset.lidLotDel);
+  }
+});
+document.getElementById('matProdCnpj')?.addEventListener('input', (e)=>{
+  e.target.value = formatCnpjInput(e.target.value);
+});
+document.getElementById('matProdLotAddBtn')?.addEventListener('click', ()=>{
+  const lidId = document.getElementById('matProdLeadershipId')?.value || '';
+  const matId = document.getElementById('matProdMaterialId')?.value || '';
+  const qty = document.getElementById('matProdLotQty')?.value;
+  const date = document.getElementById('matProdLotDate')?.value;
+  addLidMatPrintLot(lidId, matId, qty, date);
+});
+document.getElementById('matProdValorUn')?.addEventListener('input', ()=>{
+  const qty = Number(document.getElementById('matProdQtyTotal')?.value || 0);
+  const unit = parseCurrencyValue(document.getElementById('matProdValorUn'));
+  const totEl = document.getElementById('matProdValorTotal');
+  if(totEl && Number.isFinite(unit) && unit > 0 && qty > 0){
+    totEl.value = toCurrencyDisplay(Math.round(unit * qty * 100) / 100);
+  }
+});
+document.getElementById('matProdValorTotal')?.addEventListener('input', ()=>{
+  const qty = Number(document.getElementById('matProdQtyTotal')?.value || 0);
+  const total = parseCurrencyValue(document.getElementById('matProdValorTotal'));
+  const unEl = document.getElementById('matProdValorUn');
+  if(unEl && Number.isFinite(total) && total > 0 && qty > 0){
+    unEl.value = toCurrencyDisplay(Math.round((total / qty) * 10000) / 10000, 4);
+  }
+});
 document.addEventListener('keydown', (e)=>{
   if(e.key !== 'Escape') return;
-  const modal = document.getElementById('printLotModal');
-  if(modal && modal.style.display === 'flex') closePrintLotEditModal();
+  const lotModal = document.getElementById('printLotModal');
+  if(lotModal && lotModal.style.display === 'flex') closePrintLotEditModal();
+  const prodModal = document.getElementById('matProdModal');
+  if(prodModal && prodModal.style.display === 'flex') closeMatProdModal();
 });
 
 function setPanelEditing(panelOrFormId, editing){
@@ -16970,7 +17530,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-candidato-principal-force', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-unificada', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
