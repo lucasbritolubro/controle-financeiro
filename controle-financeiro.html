@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-sem-mat-top -->
+<!-- deploy-v20260803-tipo-sem-dep -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4663,7 +4663,7 @@
           <div class="campanha-type-panel-head">
             <div>
               <h3>Por tipo de material</h3>
-              <span class="ctp-sub" id="liderancaTypePanelSub">Só materiais da liderança com deputado</span>
+              <span class="ctp-sub" id="liderancaTypePanelSub">Todos os materiais da liderança (com ou sem deputado)</span>
             </div>
             <div class="campanha-panel-actions no-print">
               <button type="button" class="campanha-section-toggle" data-break-section-toggle="type" aria-expanded="false">
@@ -4676,7 +4676,7 @@
           </div>
           <div class="campanha-type-panel-body">
             <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
-            <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material de liderança com deputado cadastrado.</p>
+            <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material de liderança cadastrado.</p>
           </div>
         </div>
         <div class="campanha-type-panel is-section-collapsible" id="liderancaDepPanel" data-break-section="dep" aria-live="polite">
@@ -9059,42 +9059,54 @@ function leadershipsForBreakdown(){
     return true;
   });
 }
-/** Materiais próprios da liderança (com deputado), para painéis da aba Lideranças. */
-function eachLeadershipOwnMaterial(cb){
+/**
+ * Materiais próprios da liderança para painéis da aba Lideranças.
+ * opts.requireDeputado (default true): só materiais com deputado estadual.
+ * Por tipo de material usa requireDeputado:false (inclui santinhos sem deputado).
+ */
+function eachLeadershipOwnMaterial(cb, opts){
+  const requireDep = !(opts && opts.requireDeputado === false);
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
   leadershipsForBreakdown().forEach(l=>{
     (l.materials || []).forEach(m=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
-      // Painéis de liderança usam só materiais com deputado preenchido
-      // (materiais "via Materiais" não têm esse campo e distorciam os totais)
-      if(!dep) return;
-      if(depFilter && dep !== depFilter) return;
+      if(depFilter){
+        // filtro ativo: só materiais daquele deputado
+        if(dep !== depFilter) return;
+      } else if(requireDep && !dep){
+        // painéis de deputado: ignora sem deputado
+        return;
+      }
       cb(l, m, dep);
     });
   });
 }
-/** Por tipo de material: totais + detalhe (deputados e lideranças) para o expandir. */
+/** Por tipo de material: totais de TODOS os materiais (com ou sem deputado). */
 function collectLiderancasByTipoRows(){
-  const map = new Map(); // type -> { label, qty, count, deps: Map, lids: Map }
+  const map = new Map(); // type -> { label, qty, count, deps: Map, noDepQty, lids: Map }
   eachLeadershipOwnMaterial((l, m, dep)=>{
     const typeLabel = toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO';
     const qty = Number(m.qty) || 0;
     if(!map.has(typeLabel)){
-      map.set(typeLabel, { label: typeLabel, qty: 0, count: 0, deps: new Map(), lids: new Map() });
+      map.set(typeLabel, { label: typeLabel, qty: 0, count: 0, deps: new Map(), noDepQty: 0, lids: new Map() });
     }
     const row = map.get(typeLabel);
     row.qty += qty;
     row.count += 1;
     if(dep) row.deps.set(dep, (row.deps.get(dep) || 0) + qty);
+    else row.noDepQty += qty;
     if(l && l.name){
       const lidName = toLeadershipName(l.name);
       row.lids.set(lidName, (row.lids.get(lidName) || 0) + qty);
     }
-  });
+  }, { requireDeputado: false });
   return Array.from(map.values()).map(r=>{
     const depsLines = Array.from(r.deps.entries())
       .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0], 'pt-BR'))
       .map(([d,q])=> `${d}: ${q.toLocaleString('pt-BR')} un.`);
+    if(r.noDepQty > 0){
+      depsLines.push(`SEM DEPUTADO: ${r.noDepQty.toLocaleString('pt-BR')} un.`);
+    }
     const lidsLines = Array.from(r.lids.entries())
       .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0], 'pt-BR'))
       .map(([n,q])=> `${n}: ${q.toLocaleString('pt-BR')} un.`);
@@ -9102,7 +9114,7 @@ function collectLiderancasByTipoRows(){
     if(depsLines.length) detailBlocks.push({ title: 'Deputados', lines: depsLines });
     if(lidsLines.length) detailBlocks.push({ title: 'Lideranças / candidatos', lines: lidsLines });
     if(!detailBlocks.length){
-      detailBlocks.push({ title: 'Detalhe', lines: ['Sem deputado ou liderança vinculada neste recorte.'] });
+      detailBlocks.push({ title: 'Detalhe', lines: ['Sem registros neste recorte.'] });
     }
     // texto plano (busca/print) + blocos estruturados (UI)
     const detail = detailBlocks.map(b=> `${b.title}: ${b.lines.join(' · ')}`).join(' · ');
@@ -9432,7 +9444,7 @@ function renderLiderancaTypeBreakdown(){
     'liderancaTypeEmpty',
     'liderancaTypePanelSub',
     typeRows,
-    { showValue: false, emptySub: 'Nenhum material de liderança com deputado', collapsible: true, expandGroup: 'type', skipSubText: true }
+    { showValue: false, emptySub: 'Nenhum material de liderança cadastrado', collapsible: true, expandGroup: 'type', skipSubText: true }
   );
   renderMaterialTypePanel(
     'liderancaDepGrid',
@@ -9464,9 +9476,9 @@ function renderLiderancaTypeBreakdown(){
     if(typeRows.length){
       const q = typeRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
       const c = typeRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-      typeSub.textContent = `${typeRows.length} tipo(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un. (com deputado)`;
+      typeSub.textContent = `${typeRows.length} tipo(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un. (com e sem deputado)`;
     } else {
-      typeSub.textContent = 'Só materiais da liderança com deputado';
+      typeSub.textContent = 'Todos os materiais da liderança (com ou sem deputado)';
     }
   }
   const lidSub = document.getElementById('liderancaPorLidPanelSub');
@@ -9967,13 +9979,12 @@ function populateLiderancaFilterSelects(){
   }
 }
 function renderLiderancaStats(){
-  // Stats no hero: materiais próprios da liderança (com/sem filtro de deputado)
+  // Stats no hero: todos os materiais próprios (com ou sem deputado; respeita filtro de deputado)
   const filtered = filteredLeaderships();
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
   const mats = filtered.reduce((s,l)=>{
     return s + (l.materials || []).filter(m=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
-      if(!dep) return false; // só conta com deputado (coerente com os painéis)
       if(depFilter && dep !== depFilter) return false;
       return true;
     }).length;
@@ -9981,7 +9992,6 @@ function renderLiderancaStats(){
   const qty = filtered.reduce((s,l)=>{
     return s + (l.materials || []).reduce((ss,m)=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
-      if(!dep) return ss;
       if(depFilter && dep !== depFilter) return ss;
       return ss + (Number(m.qty)||0);
     }, 0);
@@ -16872,7 +16882,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-sem-mat-top', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-tipo-sem-dep', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
