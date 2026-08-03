@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-candidato-principal -->
+<!-- deploy-v20260803-candidato-principal-force -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -8369,6 +8369,20 @@ function isCandidateRole(role){
   const r = normalizeLeadershipRole(role);
   return r === 'candidato' || r === 'candidato_principal';
 }
+/** Nomes que devem permanecer sempre como CANDIDATO PRINCIPAL (evita sobrescrita de aba antiga). */
+const PRINCIPAL_CANDIDATE_NAMES = new Set(['ADRIANO LIMA']);
+function ensurePrincipalCandidatesInMemory(){
+  let changed = false;
+  (campanhaLeaderships || []).forEach(l=>{
+    const name = toLeadershipName(l.name);
+    if(!name || !PRINCIPAL_CANDIDATE_NAMES.has(name)) return;
+    if(normalizeLeadershipRole(l.role) !== 'candidato_principal'){
+      l.role = 'candidato_principal';
+      changed = true;
+    }
+  });
+  return changed;
+}
 function getLiderancaRoleFromToggle(){
   const active = document.querySelector('#lidRoleToggle button.active[data-lidrole]');
   return normalizeLeadershipRole(active?.dataset?.lidrole || 'lideranca');
@@ -8399,7 +8413,9 @@ function normalizeLeadership(raw){
       ? raw.cities
       : (raw.city || raw.cidade || raw.cidades || '')
   );
-  const role = normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca');
+  let role = normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca');
+  // Adriano Lima (e nomes em PRINCIPAL_CANDIDATE_NAMES) sempre como candidato principal
+  if(PRINCIPAL_CANDIDATE_NAMES.has(name)) role = 'candidato_principal';
   return {
     id: raw.id || uid(),
     name,
@@ -8479,8 +8495,11 @@ async function loadCampanha(){
     });
     // limpa lista de deputados: só quem aparece em materiais
     getDeputadoOptions();
+    // garante CANDIDATO PRINCIPAL (ex.: ADRIANO LIMA) mesmo se uma aba antiga sobrescreveu
+    const principalFixed = ensurePrincipalCandidatesInMemory();
     // códigos únicos de lote (#XXXXXXX) para impressões antigas
-    if(ensureAllPrintLotCodes()){
+    const lotsFixed = ensureAllPrintLotCodes();
+    if(principalFixed || lotsFixed){
       try{
         if(window.storage && typeof window.storage.set === 'function'){
           await window.storage.set(CAMPANHA_KEY, JSON.stringify({
@@ -8510,6 +8529,8 @@ async function saveCampanha(){
     migrateCampanhaDeputadosInMemory();
     getDeputadoOptions().forEach(n=> ensureDeputadoName(n));
     ensureAllPrintLotCodes();
+    // reaplica candidatos principais antes de gravar (protege contra estado antigo em memória)
+    ensurePrincipalCandidatesInMemory();
     await window.storage.set(CAMPANHA_KEY, JSON.stringify({
       materials: campanhaMaterials,
       customTypes: campanhaCustomTypes,
@@ -16949,7 +16970,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-candidato-principal', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-candidato-principal-force', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
