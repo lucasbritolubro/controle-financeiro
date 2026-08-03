@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-painel-tipos-material -->
+<!-- deploy-v20260803-dep-cidades-filtros -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -797,6 +797,30 @@
     font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
     background:rgba(5,150,105,0.12); color:#047857;
   }
+  .lideranca-cities{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .lideranca-cities .lideranca-city{ margin-top:0; }
+  .lideranca-filters{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:end;
+    margin:0 0 16px; padding:14px 16px; border-radius:var(--radius);
+    background:rgba(255,255,255,0.9); border:1px solid var(--card-border); box-shadow:var(--shadow-sm);
+  }
+  .lideranca-filters .field{ margin:0; min-width:160px; flex:1 1 160px; }
+  .lideranca-filters .field label{
+    display:block; margin-bottom:5px; font-size:11px; font-weight:800;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  .lideranca-filters select,
+  .lideranca-filters input[type="search"]{
+    width:100%; padding:10px 12px; border:1.5px solid var(--card-border); border-radius:12px;
+    font:inherit; font-size:13px; font-weight:600; background:var(--card-raised); color:var(--ink);
+  }
+  .lideranca-filters .lf-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .lideranca-dep-tag{
+    display:inline-flex; margin-top:4px; padding:3px 9px; border-radius:999px;
+    font-size:10.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+    background:rgba(79,70,229,0.12); color:#4338CA; border:1px solid rgba(79,70,229,0.2);
+  }
+  .campanha-break-stack{ display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
   #lidRoleToggle button.active[data-lidrole="lideranca"]{
     background:linear-gradient(135deg, #059669 0%, #047857 100%); color:#fff;
   }
@@ -4339,13 +4363,53 @@
         </div>
       </div>
 
-      <div class="campanha-type-panel" id="liderancaTypePanel" aria-live="polite">
-        <div class="campanha-type-panel-head">
-          <h3>Por tipo de material</h3>
-          <span class="ctp-sub" id="liderancaTypePanelSub">Quantitativo nas lideranças</span>
+      <div class="campanha-break-stack" id="liderancaBreakStack">
+        <div class="campanha-type-panel" id="liderancaTypePanel" aria-live="polite">
+          <div class="campanha-type-panel-head">
+            <h3>Por tipo de material</h3>
+            <span class="ctp-sub" id="liderancaTypePanelSub">Quantitativo nas lideranças</span>
+          </div>
+          <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
+          <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material vinculado às lideranças ainda.</p>
         </div>
-        <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
-        <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material vinculado às lideranças ainda.</p>
+        <div class="campanha-type-panel" id="liderancaDepPanel" aria-live="polite">
+          <div class="campanha-type-panel-head">
+            <h3>Por deputado estadual</h3>
+            <span class="ctp-sub" id="liderancaDepPanelSub">Quantidade e tipos por deputado</span>
+          </div>
+          <div class="campanha-type-grid" id="liderancaDepGrid"></div>
+          <p class="campanha-type-panel-empty" id="liderancaDepEmpty" style="display:none;">Nenhum material com deputado estadual informado.</p>
+        </div>
+        <div class="campanha-type-panel" id="liderancaCidadePanel" aria-live="polite">
+          <div class="campanha-type-panel-head">
+            <h3>Por cidade</h3>
+            <span class="ctp-sub" id="liderancaCidadePanelSub">Quantidade e tipos por cidade</span>
+          </div>
+          <div class="campanha-type-grid" id="liderancaCidadeGrid"></div>
+          <p class="campanha-type-panel-empty" id="liderancaCidadeEmpty" style="display:none;">Nenhuma cidade cadastrada nas lideranças.</p>
+        </div>
+      </div>
+
+      <div class="lideranca-filters no-print" id="liderancaFilters">
+        <div class="field">
+          <label for="lidFilterDeputado">Filtrar por deputado estadual</label>
+          <select id="lidFilterDeputado">
+            <option value="">Todos os deputados</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="lidFilterCidade">Filtrar por cidade</label>
+          <select id="lidFilterCidade">
+            <option value="">Todas as cidades</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="liderancaSearch">Buscar</label>
+          <input type="search" id="liderancaSearch" placeholder="Nome, telefone, material..." autocomplete="off">
+        </div>
+        <div class="lf-actions">
+          <button type="button" class="btn-mini ghost" id="lidFilterClear">Limpar filtros</button>
+        </div>
       </div>
 
       <div class="panel" id="liderancaFormPanel">
@@ -4362,9 +4426,9 @@
               <button type="button" data-lidrole="candidato">CANDIDATO</button>
             </div>
           </div>
-          <div class="field">
-            <label for="lidCidade">Cidade</label>
-            <input type="text" id="lidCidade" placeholder="Ex: Salvador" maxlength="80" autocomplete="address-level2">
+          <div class="field span-all">
+            <label for="lidCidades">Cidades <span style="font-weight:600;color:var(--ink-faint);">(pode ser mais de uma, separadas por vírgula)</span></label>
+            <input type="text" id="lidCidades" placeholder="Ex: Salvador, Feira de Santana, Camaçari" maxlength="300" autocomplete="address-level2" style="text-transform:uppercase;">
           </div>
           <div class="field">
             <label for="lidTelefone">Telefone</label>
@@ -4396,7 +4460,7 @@
       <div class="panel" style="margin-top:16px;">
         <h2 class="panel-title">
           Lideranças cadastradas
-          <input type="search" id="liderancaSearch" placeholder="Buscar nome, cidade, telefone..." style="max-width:260px; padding:8px 12px; border:1.5px solid var(--card-border); border-radius:999px; font:inherit; font-size:12.5px; font-weight:600; background:var(--card-raised);">
+          <span id="liderancaListFilterHint" style="font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:none; letter-spacing:0;"></span>
         </h2>
         <div class="lideranca-list" id="liderancaList"></div>
         <p class="empty-note" id="liderancaEmpty" style="display:none;">Nenhuma liderança cadastrada ainda.</p>
@@ -6973,6 +7037,8 @@ let campanhaTotalManual = false;
 let currentCampanhaSub = 'materiais';
 let liderancaEditingId = null;
 let liderancaSearchQuery = '';
+let liderancaFilterDeputado = '';
+let liderancaFilterCidade = '';
 let liderancaMatEditing = null; // { leadershipId, materialId }
 
 /* ===== Notas (estilo Apple Notes) ===== */
@@ -7372,7 +7438,8 @@ function populateCampanhaLeadershipSelect(selectedId){
   const opts = [`<option value="">Nenhuma liderança</option>`].concat(
     list.map(l=>{
       const role = leadershipRoleLabel(l.role);
-      const city = l.city ? ` · ${escapeHtml(l.city)}` : '';
+      const cityLabel = leadershipCitiesLabel(l);
+      const city = cityLabel ? ` · ${escapeHtml(cityLabel)}` : '';
       return `<option value="${escapeHtml(String(l.id))}">${escapeHtml(l.name)} · ${escapeHtml(role)}${city}</option>`;
     })
   );
@@ -7419,6 +7486,7 @@ function normalizeLeadershipMaterial(raw){
     qty: Number.isFinite(qty) && qty >= 0 ? qty : 0,
     artLink: String(raw.artLink || raw.link || '').trim(),
     notes: String(raw.notes || raw.observacao || raw.obs || '').trim(),
+    deputadoEstadual: toDeputadoName(raw.deputadoEstadual || raw.deputado || raw.depEstadual || ''),
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || raw.createdAt || new Date().toISOString()
   };
@@ -7429,6 +7497,34 @@ function toLeadershipName(name){
 }
 function toLeadershipNameLive(name){
   // Em tempo de digitação: só maiúsculas, preserva espaços (ex.: "JOÃO SILVA").
+  return String(name || '').toLocaleUpperCase('pt-BR');
+}
+function toCityName(name){
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+function parseCitiesList(raw){
+  if(Array.isArray(raw)){
+    return [...new Set(raw.map(toCityName).filter(Boolean))];
+  }
+  const text = String(raw || '').trim();
+  if(!text) return [];
+  return [...new Set(
+    text.split(/[,;\n|/]+/).map(toCityName).filter(Boolean)
+  )];
+}
+function leadershipCities(l){
+  if(!l) return [];
+  if(Array.isArray(l.cities) && l.cities.length) return l.cities.map(toCityName).filter(Boolean);
+  return parseCitiesList(l.city || '');
+}
+function leadershipCitiesLabel(l){
+  const cities = leadershipCities(l);
+  return cities.length ? cities.join(', ') : '';
+}
+function toDeputadoName(name){
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+function toDeputadoNameLive(name){
   return String(name || '').toLocaleUpperCase('pt-BR');
 }
 function normalizeLeadershipRole(raw){
@@ -7456,11 +7552,17 @@ function normalizeLeadership(raw){
   const materials = Array.isArray(raw.materials)
     ? raw.materials.map(normalizeLeadershipMaterial).filter(Boolean)
     : [];
+  const cities = parseCitiesList(
+    Array.isArray(raw.cities) && raw.cities.length
+      ? raw.cities
+      : (raw.city || raw.cidade || raw.cidades || '')
+  );
   return {
     id: raw.id || uid(),
     name,
     role: normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca'),
-    city: String(raw.city || raw.cidade || '').trim(),
+    cities,
+    city: cities[0] || '', // legado (primeira cidade)
     phone: String(raw.phone || raw.telefone || '').trim(),
     assessoriaName: String(raw.assessoriaName || raw.assessoriaNome || raw.nomeAssessoria || '').trim(),
     assessoriaPhone: String(raw.assessoriaPhone || raw.assessoriaTel || raw.telefoneAssessoria || '').trim(),
@@ -7864,10 +7966,21 @@ function collectMateriaisTypeItems(){
     totalValue: Number(m.totalValue) || 0
   }));
 }
+function leadershipsForBreakdown(){
+  // Painéis usam o mesmo recorte dos filtros (sem a busca livre, para o resumo ficar estável)
+  const dep = toDeputadoName(liderancaFilterDeputado || '');
+  const cidade = toCityName(liderancaFilterCidade || '');
+  return (campanhaLeaderships || []).filter(l=>{
+    if(!leadershipHasCidade(l, cidade)) return false;
+    if(!leadershipHasDeputado(l, dep)) return false;
+    return true;
+  });
+}
 function collectLiderancasTypeItems(){
   const items = [];
-  (campanhaLeaderships || []).forEach(l=>{
+  leadershipsForBreakdown().forEach(l=>{
     (l.materials || []).forEach(m=>{
+      if(liderancaFilterDeputado && toDeputadoName(m.deputadoEstadual) !== toDeputadoName(liderancaFilterDeputado)) return;
       items.push({
         label: m.materialLabel || m.materialType,
         qty: Number(m.qty) || 0,
@@ -7875,16 +7988,86 @@ function collectLiderancasTypeItems(){
         totalValue: 0
       });
     });
-    getMaterialsLinkedToLeadership(l.id).forEach(m=>{
-      items.push({
-        label: m.materialLabel || m.materialType,
-        qty: Number(m.qtyPrinted) || 0,
-        count: 1,
-        totalValue: Number(m.totalValue) || 0
+    // Materiais vinculados via aba Materiais (sem deputado no cadastro de materiais)
+    if(!liderancaFilterDeputado){
+      getMaterialsLinkedToLeadership(l.id).forEach(m=>{
+        items.push({
+          label: m.materialLabel || m.materialType,
+          qty: Number(m.qtyPrinted) || 0,
+          count: 1,
+          totalValue: Number(m.totalValue) || 0
+        });
+      });
+    }
+  });
+  return items;
+}
+function collectLiderancasByDeputadoRows(){
+  const map = new Map(); // dep -> { label, qty, count, types: Map }
+  const depFilter = toDeputadoName(liderancaFilterDeputado || '');
+  leadershipsForBreakdown().forEach(l=>{
+    (l.materials || []).forEach(m=>{
+      const dep = toDeputadoName(m.deputadoEstadual) || 'SEM DEPUTADO';
+      if(depFilter && dep !== depFilter) return;
+      const qty = Number(m.qty) || 0;
+      const typeLabel = toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO';
+      if(!map.has(dep)) map.set(dep, { label: dep, qty: 0, count: 0, types: new Map() });
+      const row = map.get(dep);
+      row.qty += qty;
+      row.count += 1;
+      row.types.set(typeLabel, (row.types.get(typeLabel) || 0) + qty);
+    });
+  });
+  return Array.from(map.values()).map(r=>{
+    const typesTxt = Array.from(r.types.entries())
+      .sort((a,b)=> b[1]-a[1])
+      .map(([t,q])=> `${t}: ${q.toLocaleString('pt-BR')}`)
+      .join(' · ');
+    return { label: r.label, qty: r.qty, count: r.count, totalValue: 0, detail: typesTxt };
+  }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
+}
+function collectLiderancasByCidadeRows(){
+  const map = new Map(); // city -> { label, qty, count, types: Map }
+  const cityFilter = toCityName(liderancaFilterCidade || '');
+  const depFilter = toDeputadoName(liderancaFilterDeputado || '');
+  leadershipsForBreakdown().forEach(l=>{
+    let cities = leadershipCities(l);
+    if(!cities.length) cities = ['SEM CIDADE'];
+    if(cityFilter) cities = cities.filter(c=> c === cityFilter);
+    if(!cities.length) return;
+    const matEntries = [];
+    (l.materials || []).forEach(m=>{
+      if(depFilter && toDeputadoName(m.deputadoEstadual) !== depFilter) return;
+      matEntries.push({
+        typeLabel: toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO',
+        qty: Number(m.qty) || 0
+      });
+    });
+    if(!depFilter){
+      getMaterialsLinkedToLeadership(l.id).forEach(m=>{
+        matEntries.push({
+          typeLabel: toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO',
+          qty: Number(m.qtyPrinted) || 0
+        });
+      });
+    }
+    cities.forEach(city=>{
+      if(!map.has(city)) map.set(city, { label: city, qty: 0, count: 0, types: new Map() });
+      const row = map.get(city);
+      matEntries.forEach(me=>{
+        row.qty += me.qty;
+        row.count += 1;
+        row.types.set(me.typeLabel, (row.types.get(me.typeLabel) || 0) + me.qty);
       });
     });
   });
-  return items;
+  return Array.from(map.values()).map(r=>{
+    const typesTxt = Array.from(r.types.entries())
+      .sort((a,b)=> b[1]-a[1])
+      .map(([t,q])=> `${t}: ${q.toLocaleString('pt-BR')}`)
+      .join(' · ');
+    return { label: r.label, qty: r.qty, count: r.count, totalValue: 0, detail: typesTxt };
+  }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
 }
 function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
   const grid = document.getElementById(gridId);
@@ -7912,11 +8095,15 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
     const valueLine = showValue && r.totalValue > 0
       ? ` · ${fmtBRL(r.totalValue)}`
       : '';
+    const detail = r.detail
+      ? `<div class="ctp-meta" style="margin-top:2px; line-height:1.35;">${escapeHtml(r.detail)}</div>`
+      : '';
     return `
     <article class="campanha-type-card" style="--ctp-accent:${accent}; --ctp-pct:${pct}%;">
       <div class="ctp-label">${escapeHtml(r.label)}</div>
       <div class="ctp-qty">${(Number(r.qty)||0).toLocaleString('pt-BR')}</div>
       <div class="ctp-meta">${(Number(r.count)||0).toLocaleString('pt-BR')} reg.${valueLine}</div>
+      ${detail}
       <div class="ctp-bar" aria-hidden="true"><i></i></div>
     </article>`;
   }).join('');
@@ -7939,6 +8126,20 @@ function renderLiderancaTypeBreakdown(){
     'liderancaTypePanelSub',
     rows,
     { showValue: false, emptySub: 'Nenhum material nas lideranças' }
+  );
+  renderMaterialTypePanel(
+    'liderancaDepGrid',
+    'liderancaDepEmpty',
+    'liderancaDepPanelSub',
+    collectLiderancasByDeputadoRows(),
+    { showValue: false, emptySub: 'Nenhum material com deputado estadual' }
+  );
+  renderMaterialTypePanel(
+    'liderancaCidadeGrid',
+    'liderancaCidadeEmpty',
+    'liderancaCidadePanelSub',
+    collectLiderancasByCidadeRows(),
+    { showValue: false, emptySub: 'Nenhuma cidade nas lideranças' }
   );
 }
 function renderCampanhaStats(){
@@ -8106,7 +8307,7 @@ function fillLiderancaForm(item){
   if(!item) return;
   liderancaEditingId = item.id;
   const nome = document.getElementById('lidNome');
-  const cidade = document.getElementById('lidCidade');
+  const cidades = document.getElementById('lidCidades');
   const tel = document.getElementById('lidTelefone');
   const assNome = document.getElementById('lidAssessoriaNome');
   const assTel = document.getElementById('lidAssessoriaTel');
@@ -8114,7 +8315,7 @@ function fillLiderancaForm(item){
   const obs = document.getElementById('lidObs');
   if(nome) nome.value = toLeadershipName(item.name || '');
   setLiderancaRoleToggle(item.role || 'lideranca');
-  if(cidade) cidade.value = item.city || '';
+  if(cidades) cidades.value = leadershipCitiesLabel(item);
   if(tel) tel.value = formatPhoneBR(item.phone || '');
   if(assNome) assNome.value = item.assessoriaName || '';
   if(assTel) assTel.value = formatPhoneBR(item.assessoriaPhone || '');
@@ -8135,10 +8336,12 @@ function readLiderancaForm(){
   if(photoFolderLink && !/^https?:\/\//i.test(photoFolderLink)){
     return { error: 'O link da pasta com a foto deve começar com http:// ou https://' };
   }
+  const cities = parseCitiesList(document.getElementById('lidCidades')?.value || '');
   return {
     name,
     role: getLiderancaRoleFromToggle(),
-    city: String(document.getElementById('lidCidade')?.value || '').trim(),
+    cities,
+    city: cities[0] || '',
     phone: formatPhoneBR(document.getElementById('lidTelefone')?.value || ''),
     assessoriaName: String(document.getElementById('lidAssessoriaNome')?.value || '').trim(),
     assessoriaPhone: formatPhoneBR(document.getElementById('lidAssessoriaTel')?.value || ''),
@@ -8196,32 +8399,104 @@ async function deleteLideranca(id){
   await saveCampanha();
   renderLiderancasUI();
 }
+function leadershipHasDeputado(l, dep){
+  if(!dep) return true;
+  const target = toDeputadoName(dep);
+  return (l.materials || []).some(m=> toDeputadoName(m.deputadoEstadual) === target);
+}
+function leadershipHasCidade(l, cidade){
+  if(!cidade) return true;
+  const target = toCityName(cidade);
+  return leadershipCities(l).some(c=> c === target);
+}
 function filteredLeaderships(){
   const q = String(liderancaSearchQuery || '').trim().toLowerCase();
+  const dep = toDeputadoName(liderancaFilterDeputado || '');
+  const cidade = toCityName(liderancaFilterCidade || '');
   let list = (campanhaLeaderships || []).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'pt-BR'));
-  if(!q) return list;
   return list.filter(l=>{
-    const mats = (l.materials || []).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''}`).join(' ');
+    if(!leadershipHasCidade(l, cidade)) return false;
+    if(!leadershipHasDeputado(l, dep)) return false;
+    if(!q) return true;
+    const cities = leadershipCitiesLabel(l);
+    const mats = (l.materials || []).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''} ${m.deputadoEstadual || ''}`).join(' ');
     const linkedMats = getMaterialsLinkedToLeadership(l.id).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''}`).join(' ');
-    const hay = `${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${l.city}\n${l.phone}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase();
+    const hay = `${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${cities}\n${l.city||''}\n${l.phone}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase();
     return hay.includes(q);
   });
 }
+function listAllDeputadosEstaduais(){
+  const set = new Set();
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(m=>{
+      const d = toDeputadoName(m.deputadoEstadual);
+      if(d) set.add(d);
+    });
+  });
+  return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+}
+function listAllLeadershipCities(){
+  const set = new Set();
+  (campanhaLeaderships || []).forEach(l=>{
+    leadershipCities(l).forEach(c=> set.add(c));
+  });
+  return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+}
+function populateLiderancaFilterSelects(){
+  const depSel = document.getElementById('lidFilterDeputado');
+  const citySel = document.getElementById('lidFilterCidade');
+  if(depSel){
+    const deps = listAllDeputadosEstaduais();
+    const prev = toDeputadoName(liderancaFilterDeputado || depSel.value || '');
+    depSel.innerHTML = [`<option value="">Todos os deputados</option>`]
+      .concat(deps.map(d=> `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`))
+      .join('');
+    depSel.value = deps.includes(prev) ? prev : '';
+    liderancaFilterDeputado = depSel.value || '';
+  }
+  if(citySel){
+    const cities = listAllLeadershipCities();
+    const prev = toCityName(liderancaFilterCidade || citySel.value || '');
+    citySel.innerHTML = [`<option value="">Todas as cidades</option>`]
+      .concat(cities.map(c=> `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`))
+      .join('');
+    citySel.value = cities.includes(prev) ? prev : '';
+    liderancaFilterCidade = citySel.value || '';
+  }
+  const hint = document.getElementById('liderancaListFilterHint');
+  if(hint){
+    const parts = [];
+    if(liderancaFilterDeputado) parts.push(`Dep.: ${liderancaFilterDeputado}`);
+    if(liderancaFilterCidade) parts.push(`Cidade: ${liderancaFilterCidade}`);
+    if(liderancaSearchQuery) parts.push(`Busca: “${liderancaSearchQuery}”`);
+    hint.textContent = parts.length ? `· Filtro: ${parts.join(' · ')}` : '';
+  }
+}
 function renderLiderancaStats(){
-  const list = campanhaLeaderships || [];
-  const mats = list.reduce((s,l)=>{
-    const linked = getMaterialsLinkedToLeadership(l.id).length;
-    return s + ((l.materials || []).length) + linked;
+  // Stats no hero: recorte dos filtros ativos
+  const filtered = filteredLeaderships();
+  const mats = filtered.reduce((s,l)=>{
+    const own = (l.materials || []).filter(m=>{
+      if(!liderancaFilterDeputado) return true;
+      return toDeputadoName(m.deputadoEstadual) === toDeputadoName(liderancaFilterDeputado);
+    }).length;
+    const linked = liderancaFilterDeputado ? 0 : getMaterialsLinkedToLeadership(l.id).length;
+    return s + own + linked;
   }, 0);
-  const qty = list.reduce((s,l)=>{
-    const own = (l.materials || []).reduce((ss,m)=> ss + (Number(m.qty)||0), 0);
-    const linked = getMaterialsLinkedToLeadership(l.id).reduce((ss,m)=> ss + (Number(m.qtyPrinted)||0), 0);
+  const qty = filtered.reduce((s,l)=>{
+    const own = (l.materials || []).reduce((ss,m)=>{
+      if(liderancaFilterDeputado && toDeputadoName(m.deputadoEstadual) !== toDeputadoName(liderancaFilterDeputado)) return ss;
+      return ss + (Number(m.qty)||0);
+    }, 0);
+    const linked = liderancaFilterDeputado
+      ? 0
+      : getMaterialsLinkedToLeadership(l.id).reduce((ss,m)=> ss + (Number(m.qtyPrinted)||0), 0);
     return s + own + linked;
   }, 0);
   const c = document.getElementById('liderancaStatCount');
   const m = document.getElementById('liderancaStatMats');
   const q = document.getElementById('liderancaStatQty');
-  if(c) c.textContent = String(list.length);
+  if(c) c.textContent = String(filtered.length);
   if(m) m.textContent = String(mats);
   if(q) q.textContent = qty.toLocaleString('pt-BR');
   renderLiderancaTypeBreakdown();
@@ -8232,11 +8507,19 @@ function leadershipMaterialRowsHtml(leadership){
   if(!mats.length && !linked.length){
     return `<p class="lideranca-mat-empty">Nenhum material vinculado a esta liderança.</p>`;
   }
-  const ownRows = mats.map(m=>{
+  const depFilter = toDeputadoName(liderancaFilterDeputado || '');
+  const ownRows = mats.filter(m=>{
+    if(!depFilter) return true;
+    return toDeputadoName(m.deputadoEstadual) === depFilter;
+  }).map(m=>{
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
       : `<span class="campanha-art-missing">Sem arte</span>`;
     const notesTxt = String(m.notes || '').trim();
+    const depTxt = toDeputadoName(m.deputadoEstadual);
+    const depTag = depTxt
+      ? `<span class="lideranca-dep-tag">Dep. Est.: ${escapeHtml(depTxt)}</span>`
+      : '';
     const obs = notesTxt
       ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
@@ -8245,6 +8528,7 @@ function leadershipMaterialRowsHtml(leadership){
       <div style="flex:1; min-width:0;">
         <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
         <div class="lm-meta">Qtd: ${(Number(m.qty)||0).toLocaleString('pt-BR')}</div>
+        ${depTag}
         ${obs}
       </div>
       <div class="campanha-card-actions">
@@ -8254,7 +8538,7 @@ function leadershipMaterialRowsHtml(leadership){
       </div>
     </div>`;
   }).join('');
-  const linkedRows = linked.map(m=>{
+  const linkedRows = depFilter ? '' : linked.map(m=>{
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
       : `<span class="campanha-art-missing">Sem arte</span>`;
@@ -8275,6 +8559,9 @@ function leadershipMaterialRowsHtml(leadership){
       </div>
     </div>`;
   }).join('');
+  if(!ownRows && !linkedRows){
+    return `<p class="lideranca-mat-empty">${depFilter ? 'Nenhum material deste deputado nesta liderança.' : 'Nenhum material vinculado a esta liderança.'}</p>`;
+  }
   return `<div class="lideranca-mat-list">${ownRows}${linkedRows}</div>`;
 }
 function leadershipMaterialFormHtml(leadership){
@@ -8294,8 +8581,10 @@ function leadershipMaterialFormHtml(leadership){
   }
   if(selectedType === '__outros__') showOther = true;
   const notesVal = editing ? String(editing.notes || '') : '';
+  const depVal = editing ? toDeputadoName(editing.deputadoEstadual || '') : '';
+  const formId = escapeHtml(String(leadership.id));
   return `
-  <form class="lideranca-mat-form" data-lid-mat-form="${escapeHtml(String(leadership.id))}" autocomplete="off">
+  <form class="lideranca-mat-form" data-lid-mat-form="${formId}" autocomplete="off">
     <div class="field">
       <label>Tipo de material</label>
       <select name="lidMatType" data-lid-mat-type style="text-transform:uppercase;">${campanhaTypeOptionsHtml(selectedType)}</select>
@@ -8315,12 +8604,16 @@ function leadershipMaterialFormHtml(leadership){
       </div>
     </div>
     <div class="field span-all">
-      <label for="lidMatNotes-${escapeHtml(String(leadership.id))}">Observação do material <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-      <textarea id="lidMatNotes-${escapeHtml(String(leadership.id))}" name="lidMatNotes" data-lid-mat-notes placeholder="Anotações sobre o material, entrega, cores, tamanhos..." maxlength="2000" rows="3">${escapeHtml(notesVal)}</textarea>
+      <label for="lidMatDep-${formId}">Deputado estadual <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+      <input type="text" id="lidMatDep-${formId}" name="lidMatDep" data-lid-mat-dep placeholder="Ex: NOME DO DEPUTADO" maxlength="120" autocomplete="off" spellcheck="false" style="text-transform:uppercase;" value="${escapeHtml(depVal)}">
+    </div>
+    <div class="field span-all">
+      <label for="lidMatNotes-${formId}">Observação do material <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+      <textarea id="lidMatNotes-${formId}" name="lidMatNotes" data-lid-mat-notes placeholder="Anotações sobre o material, entrega, cores, tamanhos..." maxlength="2000" rows="3">${escapeHtml(notesVal)}</textarea>
     </div>
     <div class="lideranca-mat-form-actions">
       <button type="submit" class="btn-mini">${editing ? 'Salvar material' : '+ Adicionar material'}</button>
-      ${editing ? `<button type="button" class="btn-mini ghost" data-lid-mat-cancel="${escapeHtml(String(leadership.id))}">Cancelar edição</button>` : ''}
+      ${editing ? `<button type="button" class="btn-mini ghost" data-lid-mat-cancel="${formId}">Cancelar edição</button>` : ''}
     </div>
   </form>`;
 }
@@ -8342,9 +8635,15 @@ function renderLiderancasList(){
   if(empty) empty.style.display = 'none';
   box.innerHTML = list.map(l=>{
     const linked = getMaterialsLinkedToLeadership(l.id);
-    const matCount = (l.materials || []).length + linked.length;
-    const matQty = (l.materials || []).reduce((s,m)=> s + (Number(m.qty)||0), 0)
-      + linked.reduce((s,m)=> s + (Number(m.qtyPrinted)||0), 0);
+    const depFilter = toDeputadoName(liderancaFilterDeputado || '');
+    const ownMats = (l.materials || []).filter(m=> !depFilter || toDeputadoName(m.deputadoEstadual) === depFilter);
+    const matCount = ownMats.length + (depFilter ? 0 : linked.length);
+    const matQty = ownMats.reduce((s,m)=> s + (Number(m.qty)||0), 0)
+      + (depFilter ? 0 : linked.reduce((s,m)=> s + (Number(m.qtyPrinted)||0), 0));
+    const cities = leadershipCities(l);
+    const cityTags = cities.length
+      ? `<div class="lideranca-cities">${cities.map(c=> `<span class="lideranca-city">${escapeHtml(c)}</span>`).join('')}</div>`
+      : '';
     return `
     <article class="lideranca-card" data-lid="${escapeHtml(String(l.id))}">
       <div class="lideranca-card-top">
@@ -8353,7 +8652,7 @@ function renderLiderancasList(){
             <h3 class="lideranca-name">${escapeHtml(l.name)}</h3>
             <span class="lideranca-role-tag role-${escapeHtml(normalizeLeadershipRole(l.role))}">${escapeHtml(leadershipRoleLabel(l.role))}</span>
           </div>
-          ${l.city ? `<span class="lideranca-city">${escapeHtml(l.city)}</span>` : ''}
+          ${cityTags}
         </div>
         <div class="campanha-card-actions">
           ${l.photoFolderLink
@@ -8364,6 +8663,7 @@ function renderLiderancasList(){
         </div>
       </div>
       <div class="campanha-meta">
+        <div><b>Cidades</b>${escapeHtml(cities.length ? cities.join(', ') : '—')}</div>
         <div><b>Telefone</b>${escapeHtml(l.phone || '—')}</div>
         <div><b>Assessoria</b>${escapeHtml(l.assessoriaName || '—')}</div>
         <div><b>Tel. assessoria</b>${escapeHtml(l.assessoriaPhone || '—')}</div>
@@ -8382,6 +8682,7 @@ function renderLiderancasList(){
   }).join('');
 }
 function renderLiderancasUI(){
+  populateLiderancaFilterSelects();
   renderLiderancaStats();
   renderLiderancasList();
 }
@@ -8398,6 +8699,7 @@ async function submitLeadershipMaterialForm(form){
   const qtyEl = form.querySelector('[data-lid-mat-qty], [name="lidMatQty"]');
   const linkEl = form.querySelector('[data-lid-mat-link], [name="lidMatLink"]');
   const notesEl = form.querySelector('[data-lid-mat-notes], [name="lidMatNotes"], textarea[name="lidMatNotes"]');
+  const depEl = form.querySelector('[data-lid-mat-dep], [name="lidMatDep"]');
   const type = resolveCampanhaTypeFromFields(sel, other);
   if(!type){
     try{ alert('Informe o tipo de material (ou digite o nome em OUTROS).'); }catch(_e){}
@@ -8425,6 +8727,16 @@ async function submitLeadershipMaterialForm(form){
     }catch(_e){ notes = ''; }
   }
   notes = String(notes || '').trim();
+  let deputadoEstadual = '';
+  if(depEl && typeof depEl.value === 'string') deputadoEstadual = depEl.value;
+  else if(form.elements && form.elements.lidMatDep) deputadoEstadual = form.elements.lidMatDep.value || '';
+  else {
+    try{
+      const fd = new FormData(form);
+      deputadoEstadual = String(fd.get('lidMatDep') || '');
+    }catch(_e){ deputadoEstadual = ''; }
+  }
+  deputadoEstadual = toDeputadoName(deputadoEstadual);
   const now = new Date().toISOString();
   if(!Array.isArray(leadership.materials)) leadership.materials = [];
   const editingMatId = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadershipId)
@@ -8437,6 +8749,7 @@ async function submitLeadershipMaterialForm(form){
     qty,
     artLink,
     notes,
+    deputadoEstadual,
     updatedAt: now
   };
   if(editingMatId){
@@ -8456,13 +8769,16 @@ async function submitLeadershipMaterialForm(form){
       id: uid(), ...materialPayload, createdAt: now
     });
   }
-  // Garante que o objeto em campanhaLeaderships recebeu notes
-  const savedMat = leadership.materials[0];
+  // Garante notes/deputado no objeto em memória
+  const ensureFields = (mat)=>{
+    if(!mat) return;
+    mat.notes = notes;
+    mat.deputadoEstadual = deputadoEstadual;
+  };
   if(editingMatId){
-    const check = leadership.materials.find(m=> sameId(m.id, editingMatId));
-    if(check) check.notes = notes;
-  } else if(savedMat){
-    savedMat.notes = notes;
+    ensureFields(leadership.materials.find(m=> sameId(m.id, editingMatId)));
+  } else {
+    ensureFields(leadership.materials[0]);
   }
   leadership.updatedAt = now;
   liderancaMatEditing = null;
@@ -8470,9 +8786,10 @@ async function submitLeadershipMaterialForm(form){
   await saveCampanha();
   renderLiderancasUI();
   const notesHint = notes ? ` · obs: ${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}` : '';
+  const depHint = deputadoEstadual ? ` · dep.: ${deputadoEstadual}` : '';
   showSuccessFeedback(
     wasEdit ? 'Material atualizado!' : 'Material adicionado!',
-    `${type.label} · ${leadership.name} · qtd ${(Number(qty)||0).toLocaleString('pt-BR')}${notesHint}`
+    `${type.label} · ${leadership.name} · qtd ${(Number(qty)||0).toLocaleString('pt-BR')}${depHint}${notesHint}`
   );
 }
 async function deleteLeadershipMaterial(leadershipId, materialId){
@@ -8561,6 +8878,9 @@ function bindCampanhaModuleEvents(){
   document.getElementById('lidNome')?.addEventListener('blur', (e)=>{
     e.target.value = toLeadershipName(e.target.value);
   });
+  document.getElementById('lidCidades')?.addEventListener('blur', (e)=>{
+    e.target.value = leadershipCitiesLabel({ cities: parseCitiesList(e.target.value) });
+  });
   document.getElementById('lidTelefone')?.addEventListener('input', (e)=>{
     e.target.value = formatPhoneBR(e.target.value);
   });
@@ -8569,8 +8889,36 @@ function bindCampanhaModuleEvents(){
   });
   document.getElementById('liderancaSearch')?.addEventListener('input', (e)=>{
     liderancaSearchQuery = e.target.value || '';
-    renderLiderancasList();
+    renderLiderancasUI();
   });
+  document.getElementById('lidFilterDeputado')?.addEventListener('change', (e)=>{
+    liderancaFilterDeputado = e.target.value || '';
+    renderLiderancasUI();
+  });
+  document.getElementById('lidFilterCidade')?.addEventListener('change', (e)=>{
+    liderancaFilterCidade = e.target.value || '';
+    renderLiderancasUI();
+  });
+  document.getElementById('lidFilterClear')?.addEventListener('click', ()=>{
+    liderancaFilterDeputado = '';
+    liderancaFilterCidade = '';
+    liderancaSearchQuery = '';
+    const s = document.getElementById('liderancaSearch');
+    if(s) s.value = '';
+    renderLiderancasUI();
+  });
+  document.getElementById('liderancaList')?.addEventListener('input', (e)=>{
+    const dep = e.target.closest('[data-lid-mat-dep]');
+    if(!dep) return;
+    const start = dep.selectionStart;
+    const end = dep.selectionEnd;
+    dep.value = toDeputadoNameLive(dep.value);
+    try{ dep.setSelectionRange(start, end); }catch(_e){}
+  });
+  document.getElementById('liderancaList')?.addEventListener('blur', (e)=>{
+    const dep = e.target.closest('[data-lid-mat-dep]');
+    if(dep) dep.value = toDeputadoName(dep.value);
+  }, true);
   document.getElementById('liderancaList')?.addEventListener('click', (e)=>{
     const editBtn = e.target.closest('[data-lid-edit]');
     if(editBtn){
@@ -14777,7 +15125,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-painel-tipos', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-dep-cidades', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
