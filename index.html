@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-prod-modal-lg -->
+<!-- deploy-v20260803-prod-modal-compact -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -3096,46 +3096,67 @@
   }
   @keyframes modalPop{ from{ opacity:0; transform:translateY(10px) scale(.98); } to{ opacity:1; transform:none; } }
   .modal-card.modal-wide{ max-width:520px; max-height:90vh; overflow:auto; }
-  /* Modal de cadastro de PRODUÇÃO — tela maior */
+  /* Modal de cadastro de PRODUÇÃO — largo, altura pelo conteúdo (sem faixa branca) */
   #matProdModal{
-    align-items:flex-start; padding:24px 16px; overflow:auto;
+    align-items:center; justify-content:center; padding:16px; overflow:auto;
   }
   #matProdModal .modal-card{
-    max-width:min(920px, 96vw);
+    max-width:min(860px, 96vw);
     width:100%;
+    height:auto;
     max-height:min(92vh, 900px);
     overflow:auto;
-    padding:28px 28px 22px;
-    margin:auto;
+    padding:22px 24px 18px;
+    margin:0 auto;
   }
-  #matProdModal .modal-title{ font-size:20px; }
-  #matProdModal .modal-sub{ font-size:14px; max-width:52ch; margin-left:auto; margin-right:auto; }
+  #matProdModal .modal-icon{ margin-bottom:10px; width:48px; height:48px; border-radius:14px; font-size:18px; }
+  #matProdModal .modal-title{ font-size:18px; margin-bottom:4px; }
+  #matProdModal .modal-sub{ font-size:13px; max-width:56ch; margin:0 auto 12px; }
   #matProdModal .print-lot-modal-fields{
     display:grid !important;
     grid-template-columns:1fr 1fr !important;
-    gap:14px 16px !important;
+    gap:10px 14px !important;
+    margin-bottom:10px !important;
   }
+  #matProdModal .print-lot-modal-fields .field{ margin:0; }
   #matProdModal .print-lot-modal-fields .field input{
-    padding:12px 14px;
-    font-size:14.5px;
-    min-height:46px;
+    padding:10px 12px;
+    font-size:14px;
+    min-height:42px;
+  }
+  #matProdModal #matProdModalHint{
+    margin:0 0 10px !important;
+    padding:8px 10px !important;
+  }
+  #matProdModal #matProdModalHint:empty{ display:none !important; margin:0 !important; padding:0 !important; }
+  #matProdModal #matProdLotsBox{
+    margin:0 0 10px !important;
+  }
+  #matProdModal #matProdLotsBox:empty,
+  #matProdModal #matProdLotsBox.is-empty{
+    display:none !important;
+    margin:0 !important;
+    min-height:0 !important;
   }
   #matProdModal .campanha-print-lot-form{
+    display:grid !important;
     grid-template-columns:1fr 1fr auto !important;
-    gap:12px !important;
+    gap:10px 12px !important;
     align-items:end;
+    margin:0 0 12px !important;
   }
+  #matProdModal .campanha-print-lot-form .field{ margin:0; }
   #matProdModal .campanha-print-lot-form input{
-    padding:12px 14px;
+    padding:10px 12px;
     font-size:14px;
-    min-height:46px;
+    min-height:42px;
   }
   #matProdModal .modal-actions{
-    margin-top:10px;
+    margin-top:4px;
   }
   #matProdModal .modal-btn{
-    padding:14px 16px;
-    font-size:14px;
+    padding:12px 14px;
+    font-size:13.5px;
   }
   @media (max-width:700px){
     #matProdModal .print-lot-modal-fields,
@@ -5069,7 +5090,7 @@
     <form id="matProdModalForm" autocomplete="off">
       <input type="hidden" id="matProdLeadershipId" value="">
       <input type="hidden" id="matProdMaterialId" value="">
-      <div class="print-lot-modal-fields" style="grid-template-columns:1fr 1fr; margin-bottom:12px;">
+      <div class="print-lot-modal-fields">
         <div class="field">
           <label for="matProdQtyTotal">Quantidade total</label>
           <input type="number" id="matProdQtyTotal" min="0" step="1" placeholder="Ex: 5000" inputmode="numeric">
@@ -5095,9 +5116,9 @@
           <input type="text" inputmode="decimal" class="currency-input" id="matProdValorTotal" placeholder="0,00">
         </div>
       </div>
-      <div class="print-lot-modal-hint" id="matProdModalHint" style="margin-bottom:12px;"></div>
-      <div id="matProdLotsBox" style="margin-bottom:14px;"></div>
-      <div class="campanha-print-lot-form" style="margin:0 0 14px;">
+      <div class="print-lot-modal-hint" id="matProdModalHint"></div>
+      <div id="matProdLotsBox" class="is-empty"></div>
+      <div class="campanha-print-lot-form">
         <div class="field">
           <label for="matProdLotQty">Qtd. impressa no lote</label>
           <input type="number" id="matProdLotQty" min="1" step="1" placeholder="Ex: 1000" inputmode="numeric">
@@ -8208,9 +8229,11 @@ function renderMatProdLotsBox(leadershipId, mat){
     String(b.sendDate||b.createdAt||'').localeCompare(String(a.sendDate||a.createdAt||''))
   ) : [];
   if(!lots.length){
-    box.innerHTML = `<p style="margin:0;font-size:12.5px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso neste material.</p>`;
+    box.innerHTML = '';
+    box.classList.add('is-empty');
     return;
   }
+  box.classList.remove('is-empty');
   box.innerHTML = `<div class="campanha-print-lots">${lots.map(lot=>`
     <div class="campanha-print-lot">
       <div class="campanha-print-lot-main">
@@ -17716,7 +17739,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-prod-modal-lg', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-modal-compact', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
