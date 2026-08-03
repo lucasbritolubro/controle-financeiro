@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-numero-urna -->
+<!-- deploy-v20260803-por-lid-expand-dep-clean -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4510,8 +4510,14 @@
         </div>
         <div class="campanha-type-panel" id="liderancaPorLidPanel" aria-live="polite">
           <div class="campanha-type-panel-head">
-            <h3>Por liderança</h3>
-            <span class="ctp-sub" id="liderancaPorLidPanelSub">Quantidade de material por liderança</span>
+            <div>
+              <h3>Por liderança</h3>
+              <span class="ctp-sub" id="liderancaPorLidPanelSub">Quantidade de material por liderança</span>
+            </div>
+            <div class="campanha-panel-actions no-print">
+              <button type="button" class="btn-mini ghost" id="lidPorLidExpandAll">Expandir todas</button>
+              <button type="button" class="btn-mini ghost" id="lidPorLidCollapseAll">Recolher todas</button>
+            </div>
           </div>
           <div class="campanha-type-grid" id="liderancaPorLidGrid"></div>
           <p class="campanha-type-panel-empty" id="liderancaPorLidEmpty" style="display:none;">Nenhuma liderança com material cadastrado.</p>
@@ -7203,8 +7209,10 @@ let liderancaCidadeForceExpandAll = false;
 /** Cards expandidos nos painéis Por tipo / Por deputado */
 let liderancaTypeExpanded = new Set();
 let liderancaDepExpanded = new Set();
+let liderancaPorLidExpanded = new Set();
 let liderancaTypeForceExpandAll = false;
 let liderancaDepForceExpandAll = false;
+let liderancaPorLidForceExpandAll = false;
 
 /* ===== Notas (estilo Apple Notes) ===== */
 let notes = [];
@@ -7740,20 +7748,46 @@ function ensureDeputadoName(name, numeroUrna){
   campanhaDeputados.sort((a,b)=> a.name.localeCompare(b.name, 'pt-BR'));
   return label;
 }
+/**
+ * Lista de deputados estaduais = só quem foi escolhido como deputado em algum material
+ * (ou está no cadastro de deputados usado em materiais). NÃO inclui lideranças/candidatos
+ * só porque existem no cadastro (evita Otto, etc.).
+ */
 function getDeputadoOptions(){
   migrateCampanhaDeputadosInMemory();
-  const set = new Set((campanhaDeputados || []).map(d=> d.name).filter(Boolean));
+  const used = new Set();
   (campanhaLeaderships || []).forEach(l=>{
     (l.materials || []).forEach(m=>{
       const n = toDeputadoName(m.deputadoEstadual);
-      if(n) set.add(n);
+      if(n) used.add(n);
     });
-    // Candidato também pode ser usado como deputado (mesmo nome)
-    if(normalizeLeadershipRole(l.role) === 'candidato' && l.name){
-      set.add(toLeadershipName(l.name));
-    }
   });
-  return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+  // Mantém no registro só deputados que já foram usados em materiais
+  // (limpa nomes de lideranças/candidatos que entraram por engano)
+  if(used.size){
+    campanhaDeputados = (campanhaDeputados || []).filter(d=> used.has(d.name));
+    // reintroduz urnas de materiais
+    used.forEach(n=>{
+      if(!(campanhaDeputados || []).some(d=> d.name === n)){
+        campanhaDeputados.push({ name: n, numeroUrna: '' });
+      }
+    });
+    (campanhaLeaderships || []).forEach(l=>{
+      (l.materials || []).forEach(m=>{
+        const n = toDeputadoName(m.deputadoEstadual);
+        if(!n) return;
+        const urna = normalizeNumeroUrna(m.deputadoNumeroUrna || '');
+        if(!urna) return;
+        const ent = campanhaDeputados.find(d=> d.name === n);
+        if(ent && !ent.numeroUrna) ent.numeroUrna = urna;
+      });
+    });
+    campanhaDeputados.sort((a,b)=> a.name.localeCompare(b.name, 'pt-BR'));
+  } else {
+    // Sem nenhum material com deputado: lista vazia (não polui com nomes aleatórios)
+    campanhaDeputados = [];
+  }
+  return Array.from(used).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
 }
 /** Resolve número de urna do deputado: registro global, materiais, ou candidato com mesmo nome. */
 function getDeputadoUrna(name, leadership){
@@ -7926,17 +7960,16 @@ async function loadCampanha(){
     campanhaDeputados = (deputados || []).map(normalizeDeputadoEntry).filter(Boolean);
     campanhaLeaderships = leaderships.map(normalizeLeadership).filter(Boolean);
     migrateCampanhaDeputadosInMemory();
-    // recupera tipos custom e deputados usados em materiais existentes
+    // recupera tipos custom e só deputados usados em materiais
     campanhaMaterials.forEach(ensureCampanhaCustomTypeFromMaterial);
     campanhaLeaderships.forEach(l=>{
-      if(normalizeLeadershipRole(l.role) === 'candidato' && l.numeroUrna){
-        ensureDeputadoName(l.name, l.numeroUrna);
-      }
       (l.materials || []).forEach(m=>{
         ensureCampanhaCustomTypeFromMaterial(m);
         if(m.deputadoEstadual) ensureDeputadoName(m.deputadoEstadual, m.deputadoNumeroUrna);
       });
     });
+    // limpa lista de deputados: só quem aparece em materiais
+    getDeputadoOptions();
     campanhaStorageReady = true;
   }catch(e){
     console.error('Falha ao carregar campanha 2026', e);
@@ -8501,7 +8534,7 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
   if(!grid) return;
   const showValue = !!(opts && opts.showValue);
   const collapsible = !!(opts && opts.collapsible);
-  const expandGroup = String((opts && opts.expandGroup) || ''); // 'type' | 'dep' | ''
+  const expandGroup = String((opts && opts.expandGroup) || ''); // 'type' | 'dep' | 'lid' | ''
   const totalQty = rows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
   const totalCount = rows.reduce((s,r)=> s + (Number(r.count)||0), 0);
   const maxQty = rows.reduce((m,r)=> Math.max(m, Number(r.qty)||0), 0) || 1;
@@ -8527,6 +8560,10 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
     if(!liderancaDepExpanded) liderancaDepExpanded = new Set();
     expandedSet = liderancaDepExpanded;
     forceAll = !!liderancaDepForceExpandAll;
+  } else if(expandGroup === 'lid'){
+    if(!liderancaPorLidExpanded) liderancaPorLidExpanded = new Set();
+    expandedSet = liderancaPorLidExpanded;
+    forceAll = !!liderancaPorLidForceExpandAll;
   }
 
   grid.innerHTML = rows.map((r, i)=>{
@@ -8592,6 +8629,17 @@ function setAllDepCardsExpanded(open){
   }
   renderLiderancaTypeBreakdown();
 }
+function setAllPorLidCardsExpanded(open){
+  if(!liderancaPorLidExpanded) liderancaPorLidExpanded = new Set();
+  if(open){
+    collectLiderancasByLiderancaRows().forEach(r=>{
+      if(r.label) liderancaPorLidExpanded.add(String(r.label));
+    });
+  } else {
+    liderancaPorLidExpanded.clear();
+  }
+  renderLiderancaTypeBreakdown();
+}
 function renderCampanhaTypeBreakdown(){
   const rows = aggregateMaterialTypes(collectMateriaisTypeItems());
   renderMaterialTypePanel(
@@ -8625,7 +8673,7 @@ function renderLiderancaTypeBreakdown(){
     'liderancaPorLidEmpty',
     'liderancaPorLidPanelSub',
     lidRows,
-    { showValue: false, emptySub: 'Nenhuma liderança com material cadastrado' }
+    { showValue: false, emptySub: 'Nenhuma liderança com material cadastrado', collapsible: true, expandGroup: 'lid', skipSubText: true }
   );
   // Ajusta subtítulos com totais
   const depSub = document.getElementById('liderancaDepPanelSub');
@@ -8649,10 +8697,14 @@ function renderLiderancaTypeBreakdown(){
     }
   }
   const lidSub = document.getElementById('liderancaPorLidPanelSub');
-  if(lidSub && lidRows.length){
-    const q = lidRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-    const c = lidRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-    lidSub.textContent = `${lidRows.length} liderança(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
+  if(lidSub){
+    if(lidRows.length){
+      const q = lidRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
+      const c = lidRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
+      lidSub.textContent = `${lidRows.length} liderança(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
+    } else {
+      lidSub.textContent = 'Quantidade de material por liderança';
+    }
   }
   renderLiderancaCidadePanel();
 }
@@ -8749,6 +8801,7 @@ function printCampanhaModule(){
   liderancaCidadeForceExpandAll = true;
   liderancaTypeForceExpandAll = true;
   liderancaDepForceExpandAll = true;
+  liderancaPorLidForceExpandAll = true;
   renderCampanhaStats();
   renderCampanhaList();
   renderLiderancaStats();
@@ -8775,7 +8828,7 @@ function printCampanhaModule(){
   document.querySelectorAll('#liderancaCidadeGrid .campanha-city-card').forEach(el=>{
     el.classList.add('is-open');
   });
-  document.querySelectorAll('#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible').forEach(el=>{
+  document.querySelectorAll('#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible, #liderancaPorLidGrid .campanha-type-card.collapsible').forEach(el=>{
     el.classList.add('is-open');
   });
 
@@ -8787,6 +8840,7 @@ function printCampanhaModule(){
     liderancaCidadeForceExpandAll = false;
     liderancaTypeForceExpandAll = false;
     liderancaDepForceExpandAll = false;
+    liderancaPorLidForceExpandAll = false;
     document.body.classList.remove('printing-campanha');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
       sec.style.display = '';
@@ -8921,10 +8975,7 @@ async function submitLiderancaForm(e){
       updatedAt: now
     });
   }
-  // Se for candidato com urna, registra também no cadastro de deputados (mesmo nome)
-  if(data.role === 'candidato' && data.name){
-    ensureDeputadoName(data.name, data.numeroUrna);
-  }
+  // NÃO adiciona candidato/liderança à lista de deputados automaticamente
   await saveCampanha();
   resetLiderancaForm();
   renderLiderancasUI();
@@ -9555,6 +9606,8 @@ function bindCampanhaModuleEvents(){
   document.getElementById('lidTypeCollapseAll')?.addEventListener('click', ()=> setAllTypeCardsExpanded(false));
   document.getElementById('lidDepExpandAll')?.addEventListener('click', ()=> setAllDepCardsExpanded(true));
   document.getElementById('lidDepCollapseAll')?.addEventListener('click', ()=> setAllDepCardsExpanded(false));
+  document.getElementById('lidPorLidExpandAll')?.addEventListener('click', ()=> setAllPorLidCardsExpanded(true));
+  document.getElementById('lidPorLidCollapseAll')?.addEventListener('click', ()=> setAllPorLidCardsExpanded(false));
   document.getElementById('liderancaCidadeGrid')?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-city-toggle]');
     if(!btn) return;
@@ -9584,7 +9637,9 @@ function bindCampanhaModuleEvents(){
       ? (liderancaTypeExpanded || (liderancaTypeExpanded = new Set()))
       : group === 'dep'
         ? (liderancaDepExpanded || (liderancaDepExpanded = new Set()))
-        : null;
+        : group === 'lid'
+          ? (liderancaPorLidExpanded || (liderancaPorLidExpanded = new Set()))
+          : null;
     if(!set) return;
     const card = btn.closest('.campanha-type-card');
     const willOpen = !(card && card.classList.contains('is-open'));
@@ -9599,6 +9654,7 @@ function bindCampanhaModuleEvents(){
   };
   document.getElementById('liderancaTypeGrid')?.addEventListener('click', toggleCtpCard);
   document.getElementById('liderancaDepGrid')?.addEventListener('click', toggleCtpCard);
+  document.getElementById('liderancaPorLidGrid')?.addEventListener('click', toggleCtpCard);
   function autofillDepUrnaFromForm(form){
     if(!form) return;
     const depSel = form.querySelector('[data-lid-mat-dep-sel]');
@@ -15891,7 +15947,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-numero-urna', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-por-lid-dep-clean', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
