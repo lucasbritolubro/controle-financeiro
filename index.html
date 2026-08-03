@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-tag-sem-material -->
+<!-- deploy-v20260803-filtro-lideranca -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4503,6 +4503,12 @@
           </select>
         </div>
         <div class="field">
+          <label for="lidFilterLideranca">Filtrar por liderança</label>
+          <select id="lidFilterLideranca">
+            <option value="">Todas as lideranças</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="lidFilterCidade">Filtrar por cidade</label>
           <select id="lidFilterCidade">
             <option value="">Todas as cidades</option>
@@ -7145,6 +7151,7 @@ let liderancaEditingId = null;
 let liderancaSearchQuery = '';
 let liderancaFilterDeputado = '';
 let liderancaFilterCidade = '';
+let liderancaFilterLideranca = ''; // id da liderança
 let liderancaMatEditing = null; // { leadershipId, materialId }
 /** IDs de lideranças com bloco de materiais expandido na UI */
 let liderancaMatsExpanded = new Set();
@@ -8138,9 +8145,12 @@ function collectMateriaisTypeItems(){
 }
 function leadershipsForBreakdown(){
   // Painéis usam o mesmo recorte dos filtros (sem a busca livre, para o resumo ficar estável)
+  // Deputado + liderança + cidade = AND (podem ser usados juntos ou isolados)
   const dep = toDeputadoName(liderancaFilterDeputado || '');
   const cidade = toCityName(liderancaFilterCidade || '');
+  const lidId = String(liderancaFilterLideranca || '').trim();
   return (campanhaLeaderships || []).filter(l=>{
+    if(lidId && !sameId(l.id, lidId)) return false;
     if(!leadershipHasCidade(l, cidade)) return false;
     if(!leadershipHasDeputado(l, dep)) return false;
     return true;
@@ -8715,8 +8725,11 @@ function filteredLeaderships(){
   const q = String(liderancaSearchQuery || '').trim().toLowerCase();
   const dep = toDeputadoName(liderancaFilterDeputado || '');
   const cidade = toCityName(liderancaFilterCidade || '');
+  const lidId = String(liderancaFilterLideranca || '').trim();
   let list = (campanhaLeaderships || []).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'pt-BR'));
   return list.filter(l=>{
+    // Liderança isolada OU combinada com deputado/cidade (AND)
+    if(lidId && !sameId(l.id, lidId)) return false;
     if(!leadershipHasCidade(l, cidade)) return false;
     if(!leadershipHasDeputado(l, dep)) return false;
     if(!q) return true;
@@ -8739,6 +8752,7 @@ function listAllLeadershipCities(){
 }
 function populateLiderancaFilterSelects(){
   const depSel = document.getElementById('lidFilterDeputado');
+  const lidSel = document.getElementById('lidFilterLideranca');
   const citySel = document.getElementById('lidFilterCidade');
   if(depSel){
     const deps = listAllDeputadosEstaduais();
@@ -8748,6 +8762,22 @@ function populateLiderancaFilterSelects(){
       .join('');
     depSel.value = deps.includes(prev) ? prev : '';
     liderancaFilterDeputado = depSel.value || '';
+  }
+  if(lidSel){
+    const lids = (campanhaLeaderships || []).slice()
+      .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'pt-BR'));
+    const prev = String(liderancaFilterLideranca || lidSel.value || '');
+    lidSel.innerHTML = [`<option value="">Todas as lideranças</option>`]
+      .concat(lids.map(l=>{
+        const role = leadershipRoleLabel(l.role);
+        const cities = leadershipCitiesLabel(l);
+        const extra = cities ? ` · ${cities}` : '';
+        return `<option value="${escapeHtml(String(l.id))}">${escapeHtml(l.name || '—')} · ${escapeHtml(role)}${escapeHtml(extra)}</option>`;
+      }))
+      .join('');
+    const stillExists = lids.some(l=> sameId(l.id, prev));
+    lidSel.value = stillExists ? String(prev) : '';
+    liderancaFilterLideranca = lidSel.value || '';
   }
   if(citySel){
     const cities = listAllLeadershipCities();
@@ -8762,6 +8792,10 @@ function populateLiderancaFilterSelects(){
   if(hint){
     const parts = [];
     if(liderancaFilterDeputado) parts.push(`Dep.: ${liderancaFilterDeputado}`);
+    if(liderancaFilterLideranca){
+      const lid = getLeadershipById(liderancaFilterLideranca);
+      parts.push(`Lid.: ${lid ? (lid.name || liderancaFilterLideranca) : liderancaFilterLideranca}`);
+    }
     if(liderancaFilterCidade) parts.push(`Cidade: ${liderancaFilterCidade}`);
     if(liderancaSearchQuery) parts.push(`Busca: “${liderancaSearchQuery}”`);
     hint.textContent = parts.length ? `· Filtro: ${parts.join(' · ')}` : '';
@@ -9223,16 +9257,27 @@ function bindCampanhaModuleEvents(){
     liderancaFilterDeputado = e.target.value || '';
     renderLiderancasUI();
   });
+  document.getElementById('lidFilterLideranca')?.addEventListener('change', (e)=>{
+    liderancaFilterLideranca = e.target.value || '';
+    renderLiderancasUI();
+  });
   document.getElementById('lidFilterCidade')?.addEventListener('change', (e)=>{
     liderancaFilterCidade = e.target.value || '';
     renderLiderancasUI();
   });
   document.getElementById('lidFilterClear')?.addEventListener('click', ()=>{
     liderancaFilterDeputado = '';
+    liderancaFilterLideranca = '';
     liderancaFilterCidade = '';
     liderancaSearchQuery = '';
     const s = document.getElementById('liderancaSearch');
     if(s) s.value = '';
+    const lidSel = document.getElementById('lidFilterLideranca');
+    if(lidSel) lidSel.value = '';
+    const depSel = document.getElementById('lidFilterDeputado');
+    if(depSel) depSel.value = '';
+    const citySel = document.getElementById('lidFilterCidade');
+    if(citySel) citySel.value = '';
     renderLiderancasUI();
   });
   document.getElementById('lidCidadeExpandAll')?.addEventListener('click', ()=> setAllCidadeCardsExpanded(true));
@@ -15512,7 +15557,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-sem-material-tag', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-filtro-lideranca', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
