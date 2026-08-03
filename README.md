@@ -29,31 +29,55 @@ No Supabase: **Project Settings** → **API**
 3. Em **Environment Variables**, adicione:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
+   - `GOOGLE_CLIENT_ID` (opcional — integração com Google Agenda)
 4. Clique em **Deploy**
 
 O site ficará em um endereço como `https://controle-financeiro.vercel.app`.
 
-### 5. Domínio próprio (financas.lubrosolutions.com)
+### Agenda pessoal + Google Calendar / Tasks
 
-**Na Vercel** (ou via script):
+O módulo **Agenda** é independente do Financeiro. Sincroniza de forma **bidirecional** com o Google:
+
+- **Lê** eventos de todos os calendários selecionados (com paginação) e **tarefas** do Google Tasks
+- **Cria / edita / exclui** no app:
+  - **Tarefa** → Google Tasks (com data de vencimento, aparece no Google Agenda como tarefa)
+  - **Compromisso / aniversário** → Google Calendar (evento)
+
+Configuração:
+
+1. No [Google Cloud Console](https://console.cloud.google.com/) crie um projeto (ou use um existente)
+2. Ative a **Google Calendar API** e a **Google Tasks API**
+3. Em **APIs e serviços → Credenciais**, crie um **ID do cliente OAuth** do tipo **Aplicativo da Web**
+4. Em **Origens JavaScript autorizadas**, inclua seu domínio (ex.: `https://agenda.lubrosolutions.com` e `http://localhost:3000` para teste)
+5. Na tela de consentimento OAuth, se o app estiver em modo **Teste**, adicione seu e-mail em **Usuários de teste**
+6. Copie o **Client ID** para a variável `GOOGLE_CLIENT_ID` na Vercel e faça redeploy
+
+No app: módulo **Agenda** → **Conectar Google** → autorize **Calendar** e **Tasks** (é preciso reconectar se você já tinha conectado só leitura).
+
+### 5. Domínio próprio (agenda.lubrosolutions.com)
+
+**Na Vercel** (já adicionado ao projeto `controle-financeiro-novo`, ou via script):
 
 ```bash
 ./scripts/add-domain.sh
+# ou:
+# DOMAIN=agenda.lubrosolutions.com ./scripts/add-domain.sh
 ```
 
-**No DNS** (onde `lubrosolutions.com` é gerenciado):
+**No DNS** (Locaweb — `lubrosolutions.com`):
 
 | Tipo | Nome | Destino |
 |------|------|---------|
-| CNAME | `financas` | *(valor exato que a Vercel mostrar)* |
+| CNAME | `agenda` | `d6a2117d3759f49d.vercel-dns-017.com` |
 
-**Importante:** adicione pelo painel do projeto (não use `vercel alias`):
+Confirme o valor em:  
+[vercel.com/lubro/controle-financeiro-novo/settings/domains](https://vercel.com/lubro/controle-financeiro-novo/settings/domains) → `agenda.lubrosolutions.com`.
 
-[vercel.com/lubro/controle-financeiro/settings/domains](https://vercel.com/lubro/controle-financeiro/settings/domains) → **Add** → `financas.lubrosolutions.com`
+Aguarde a propagação DNS (minutos a ~1 h) e o SSL automático da Vercel. Depois acesse `https://agenda.lubrosolutions.com`.
 
-Copie o CNAME que a Vercel exibir (pode ser `cname.vercel-dns.com` ou um endereço `*.vercel-dns-017.com`).
+**Google OAuth:** atualize também as **Origens JavaScript autorizadas** com `https://agenda.lubrosolutions.com`.
 
-Aguarde alguns minutos e acesse `https://financas.lubrosolutions.com`.
+**Domínio antigo:** `financas.lubrosolutions.com` pode continuar apontando até você remover o CNAME `financas` no DNS e o domínio no painel da Vercel.
 
 ### 6. Testar localmente (opcional)
 
@@ -68,7 +92,7 @@ Ou use `python3 -m http.server` apenas para ver o layout — login e banco exige
 
 ## Estrutura dos dados
 
-Cada perfil (Lucas, Lubro, Nexo) e as contas a pagar são salvos como JSON na tabela `app_storage`, isolados pelo seu usuário (Row Level Security).
+Cada perfil (Lucas, Lubro, Nexo), as contas a pagar e a agenda pessoal são salvos como JSON na tabela `app_storage`, isolados pelo seu usuário (Row Level Security). A agenda usa a chave `painel-financeiro:agenda-pessoal` (compartilhada entre perfis).
 
 ## Repositório
 

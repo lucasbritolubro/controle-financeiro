@@ -33,4 +33,4 @@ echo "3. Connect → ${NEW_OWNER}/${REPO_NAME}"
 echo "4. Deployments → Create Deployment → branch main"
 echo "5. Confirme SUPABASE_URL e SUPABASE_ANON_KEY em Settings → Environment Variables"
 echo
-echo "URL esperada: https://financas.lubrosolutions.com"
+echo "URL esperada: https://agenda.lubrosolutions.com"
