@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-lideranca-mat-notes-fix -->
+<!-- deploy-v20260803-lideranca-nome-espaco -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -7347,7 +7347,12 @@ function normalizeLeadershipMaterial(raw){
   };
 }
 function toLeadershipName(name){
-  return String(name || '').trim().toLocaleUpperCase('pt-BR');
+  // Normaliza ao salvar/carregar. Não usar no evento "input" (trim remove o espaço ao digitar).
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+function toLeadershipNameLive(name){
+  // Em tempo de digitação: só maiúsculas, preserva espaços (ex.: "JOÃO SILVA").
+  return String(name || '').toLocaleUpperCase('pt-BR');
 }
 function normalizeLeadershipRole(raw){
   const v = String(raw || '').trim().toLowerCase();
@@ -8358,11 +8363,16 @@ function bindCampanhaModuleEvents(){
     if(!btn) return;
     setLiderancaRoleToggle(btn.dataset.lidrole);
   });
+  // Nome da liderança: não dar trim no input (permite espaço entre palavras).
+  // Maiúsculas via CSS + live; normalização completa no blur/save.
   document.getElementById('lidNome')?.addEventListener('input', (e)=>{
     const start = e.target.selectionStart;
     const end = e.target.selectionEnd;
-    e.target.value = toLeadershipName(e.target.value);
+    e.target.value = toLeadershipNameLive(e.target.value);
     try{ e.target.setSelectionRange(start, end); }catch(_e){}
+  });
+  document.getElementById('lidNome')?.addEventListener('blur', (e)=>{
+    e.target.value = toLeadershipName(e.target.value);
   });
   document.getElementById('lidTelefone')?.addEventListener('input', (e)=>{
     e.target.value = formatPhoneBR(e.target.value);
@@ -14580,7 +14590,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-lideranca-mat-notes', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-lideranca-nome-espaco', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
