@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-mats-recolhido -->
+<!-- deploy-v20260803-cidade-liderancas -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -550,9 +550,41 @@
   .campanha-type-panel-empty{
     margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
   }
+  .campanha-city-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;
+  }
+  .campanha-city-card{
+    position:relative; overflow:hidden;
+    padding:12px 14px 12px 16px; border-radius:14px;
+    background:var(--card-raised); border:1px solid var(--card-border);
+  }
+  .campanha-city-card::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--ctp-accent, #059669);
+  }
+  .campanha-city-card .cc-title{
+    font-size:12.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+    color:var(--ink); margin:0 0 8px;
+  }
+  .campanha-city-card .cc-count{
+    font-size:11px; font-weight:700; color:var(--ink-soft); margin:0 0 8px;
+  }
+  .campanha-city-card ul{
+    list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;
+  }
+  .campanha-city-card li{
+    font-size:12.5px; font-weight:700; color:var(--ink);
+    padding:6px 8px; border-radius:10px; background:rgba(15,23,42,0.03);
+    border:1px solid var(--card-border);
+  }
+  .campanha-city-card li .cc-role{
+    display:block; margin-top:2px; font-size:10.5px; font-weight:800;
+    letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);
+  }
   @media (max-width:560px){
     .campanha-type-grid{ grid-template-columns:1fr 1fr; gap:8px; }
     .campanha-type-card .ctp-qty{ font-size:18px; }
+    .campanha-city-grid{ grid-template-columns:1fr; }
   }
   form.campanha-form{
     display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-items:end;
@@ -4410,9 +4442,9 @@
         <div class="campanha-type-panel" id="liderancaCidadePanel" aria-live="polite">
           <div class="campanha-type-panel-head">
             <h3>Por cidade</h3>
-            <span class="ctp-sub" id="liderancaCidadePanelSub">Quantidade e tipos por cidade</span>
+            <span class="ctp-sub" id="liderancaCidadePanelSub">Cidades e lideranças associadas</span>
           </div>
-          <div class="campanha-type-grid" id="liderancaCidadeGrid"></div>
+          <div class="campanha-city-grid" id="liderancaCidadeGrid"></div>
           <p class="campanha-type-panel-empty" id="liderancaCidadeEmpty" style="display:none;">Nenhuma cidade cadastrada nas lideranças.</p>
         </div>
       </div>
@@ -8115,48 +8147,67 @@ function collectLiderancasByDeputadoRows(){
     return { label: r.label, qty: r.qty, count: r.count, totalValue: 0, detail: typesTxt };
   }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
 }
-function collectLiderancasByCidadeRows(){
-  const map = new Map(); // city -> { label, qty, count, types: Map }
+/** Lista cidades com as lideranças associadas (sem contagem de material). */
+function collectLiderancasByCidadeGroups(){
+  const map = new Map(); // city -> { label, leaderships: [{id, name, role}] }
   const cityFilter = toCityName(liderancaFilterCidade || '');
-  const depFilter = toDeputadoName(liderancaFilterDeputado || '');
   leadershipsForBreakdown().forEach(l=>{
     let cities = leadershipCities(l);
     if(!cities.length) cities = ['SEM CIDADE'];
     if(cityFilter) cities = cities.filter(c=> c === cityFilter);
     if(!cities.length) return;
-    const matEntries = [];
-    (l.materials || []).forEach(m=>{
-      if(depFilter && toDeputadoName(m.deputadoEstadual) !== depFilter) return;
-      matEntries.push({
-        typeLabel: toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO',
-        qty: Number(m.qty) || 0
-      });
-    });
-    if(!depFilter){
-      getMaterialsLinkedToLeadership(l.id).forEach(m=>{
-        matEntries.push({
-          typeLabel: toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO',
-          qty: Number(m.qtyPrinted) || 0
-        });
-      });
-    }
     cities.forEach(city=>{
-      if(!map.has(city)) map.set(city, { label: city, qty: 0, count: 0, types: new Map() });
+      if(!map.has(city)) map.set(city, { label: city, leaderships: [] });
       const row = map.get(city);
-      matEntries.forEach(me=>{
-        row.qty += me.qty;
-        row.count += 1;
-        row.types.set(me.typeLabel, (row.types.get(me.typeLabel) || 0) + me.qty);
-      });
+      // evita duplicar a mesma liderança na cidade
+      if(!row.leaderships.some(x=> sameId(x.id, l.id))){
+        row.leaderships.push({
+          id: l.id,
+          name: l.name || '—',
+          role: leadershipRoleLabel(l.role)
+        });
+      }
     });
   });
   return Array.from(map.values()).map(r=>{
-    const typesTxt = Array.from(r.types.entries())
-      .sort((a,b)=> b[1]-a[1])
-      .map(([t,q])=> `${t}: ${q.toLocaleString('pt-BR')}`)
-      .join(' · ');
-    return { label: r.label, qty: r.qty, count: r.count, totalValue: 0, detail: typesTxt };
-  }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
+    r.leaderships.sort((a,b)=> String(a.name).localeCompare(String(b.name), 'pt-BR'));
+    return r;
+  }).sort((a,b)=> a.label.localeCompare(b.label, 'pt-BR'));
+}
+function renderLiderancaCidadePanel(){
+  const grid = document.getElementById('liderancaCidadeGrid');
+  const empty = document.getElementById('liderancaCidadeEmpty');
+  const sub = document.getElementById('liderancaCidadePanelSub');
+  if(!grid) return;
+  const groups = collectLiderancasByCidadeGroups();
+  const lidTotal = groups.reduce((s,g)=> s + (g.leaderships || []).length, 0);
+  if(sub){
+    sub.textContent = groups.length
+      ? `${groups.length} cidade(s) · ${lidTotal} associação(ões) com lideranças`
+      : 'Nenhuma cidade cadastrada';
+  }
+  if(!groups.length){
+    grid.innerHTML = '';
+    if(empty) empty.style.display = '';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  grid.innerHTML = groups.map((g, i)=>{
+    const accent = CAMPANHA_TYPE_COLORS[i % CAMPANHA_TYPE_COLORS.length];
+    const n = (g.leaderships || []).length;
+    const list = (g.leaderships || []).map(l=> `
+      <li>
+        ${escapeHtml(l.name)}
+        <span class="cc-role">${escapeHtml(l.role || 'LIDERANÇA')}</span>
+      </li>
+    `).join('');
+    return `
+    <article class="campanha-city-card" style="--ctp-accent:${accent};">
+      <h4 class="cc-title">${escapeHtml(g.label)}</h4>
+      <p class="cc-count">${n} liderança(s)</p>
+      <ul>${list || '<li>—</li>'}</ul>
+    </article>`;
+  }).join('');
 }
 function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
   const grid = document.getElementById(gridId);
@@ -8223,13 +8274,7 @@ function renderLiderancaTypeBreakdown(){
     collectLiderancasByDeputadoRows(),
     { showValue: false, emptySub: 'Nenhum material com deputado estadual' }
   );
-  renderMaterialTypePanel(
-    'liderancaCidadeGrid',
-    'liderancaCidadeEmpty',
-    'liderancaCidadePanelSub',
-    collectLiderancasByCidadeRows(),
-    { showValue: false, emptySub: 'Nenhuma cidade nas lideranças' }
-  );
+  renderLiderancaCidadePanel();
 }
 function renderCampanhaStats(){
   const list = campanhaMaterials || [];
@@ -15280,7 +15325,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-mats-recolhido', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-cidade-lids', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
