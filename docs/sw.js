@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-pdf-categorias';
+const CACHE_VERSION = 'financas-pwa-v20260803-pdf-cat-lids';
 const PRECACHE = [
   '/',
   '/index.html',

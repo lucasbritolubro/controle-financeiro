@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-pdf-categorias -->
+<!-- deploy-v20260803-pdf-cat-lids -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -633,13 +633,9 @@
   body.printing-campanha .campanha-type-card.collapsible .ctp-body{ display:block !important; }
   body.printing-campanha .campanha-type-card.collapsible .ctp-toggle,
   body.printing-campanha .campanha-panel-actions{ display:none !important; }
-  /* PDF só categorias: seções abertas, cards internos recolhidos, sem lista de lideranças */
+  /* PDF categorias + lideranças: categorias com cards internos recolhidos; lista de lideranças completa */
   body.printing-campanha.printing-campanha-categories #liderancaFormPanel,
-  body.printing-campanha.printing-campanha-categories #liderancaList,
-  body.printing-campanha.printing-campanha-categories #liderancaEmpty,
-  body.printing-campanha.printing-campanha-categories #liderancaFilters,
-  body.printing-campanha.printing-campanha-categories .lideranca-list,
-  body.printing-campanha.printing-campanha-categories .panel:has(#liderancaList){
+  body.printing-campanha.printing-campanha-categories #liderancaFilters{
     display:none !important;
   }
   body.printing-campanha.printing-campanha-categories .campanha-type-card.collapsible .ctp-body,
@@ -655,6 +651,27 @@
   }
   body.printing-campanha.printing-campanha-categories .campanha-type-card.collapsible{
     break-inside:avoid;
+  }
+  body.printing-campanha.printing-campanha-categories #liderancaList,
+  body.printing-campanha.printing-campanha-categories .lideranca-list,
+  body.printing-campanha.printing-campanha-categories .panel:has(#liderancaList){
+    display:block !important;
+  }
+  body.printing-campanha.printing-campanha-categories .lideranca-card{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  body.printing-campanha.printing-campanha-categories .lideranca-mats{
+    display:flex !important;
+  }
+  body.printing-campanha.printing-campanha-categories .lideranca-mats .lideranca-mats-body{
+    display:block !important;
+  }
+  body.printing-campanha.printing-campanha-categories .lideranca-mats:not(.is-open) .lideranca-mats-body{
+    display:block !important;
+  }
+  body.printing-campanha.printing-campanha-categories .lideranca-mat-form{
+    display:none !important;
   }
   .campanha-type-panel-empty{
     margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
@@ -4550,13 +4567,13 @@
       </nav>
       <div style="font-size:13px;font-weight:700;color:var(--ink-soft);">Campanha 2026 · Lideranças + Produção unificadas</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="Imprimir ou PDF só das categorias (sem expandir cards internos)">
+        <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="PDF: categorias (cards internos recolhidos) + todas as lideranças cadastradas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 9V3h12v6"/>
             <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
             <rect x="6" y="14" width="12" height="7"/>
           </svg>
-          PDF categorias
+          PDF categorias + lideranças
         </button>
         <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar PDF completo (tudo expandido)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -10193,8 +10210,9 @@ function printCampanhaModule(opts){
   if(campSearchEl) campSearchEl.value = '';
   if(lidSearchEl) lidSearchEl.value = '';
 
-  // full: expande cards internos; categories: não expande
-  liderancaMatsForceExpandAll = !categoriesOnly;
+  // categories: categorias com cards internos recolhidos, mas lideranças completas (materiais abertos)
+  // full: expande também cards internos das categorias
+  liderancaMatsForceExpandAll = true; // sempre mostra materiais das lideranças no PDF
   liderancaCidadeForceExpandAll = !categoriesOnly;
   liderancaTypeForceExpandAll = !categoriesOnly;
   liderancaDepForceExpandAll = !categoriesOnly;
@@ -10207,11 +10225,20 @@ function printCampanhaModule(opts){
     renderCampanhaStats();
     renderCampanhaList();
   }
+  // PDF categorias + lideranças: lista sem filtro de busca (todas as cadastradas)
+  const prevLidFilterDep = liderancaFilterDeputado;
+  const prevLidFilterLid = liderancaFilterLideranca;
+  const prevLidFilterCity = liderancaFilterCidade;
+  if(categoriesOnly){
+    liderancaFilterDeputado = '';
+    liderancaFilterLideranca = '';
+    liderancaFilterCidade = '';
+  }
   renderLiderancaStats();
   renderLiderancasList();
   applyLiderancaBreakSectionState();
 
-  // no modo categorias: força cards internos fechados no DOM
+  // no modo categorias: cards internos das CATEGORIAS fechados; materiais das lideranças abertos
   if(categoriesOnly){
     document.querySelectorAll(
       '#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible, #liderancaPorLidGrid .campanha-type-card.collapsible, #liderancaCidadeGrid .campanha-city-card'
@@ -10225,7 +10252,7 @@ function printCampanhaModule(opts){
       }
     });
     document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
-      el.classList.remove('is-open');
+      el.classList.add('is-open');
     });
   }
 
@@ -10236,12 +10263,12 @@ function printCampanhaModule(opts){
   });
   if(printHeaderTitle){
     printHeaderTitle.textContent = categoriesOnly
-      ? 'Campanha 2026 — Categorias (resumo)'
+      ? 'Campanha 2026 — Categorias + lideranças'
       : 'Campanha 2026 — Relatório completo';
   }
   if(metaEl){
     metaEl.textContent = categoriesOnly
-      ? `Gerado em ${when} · somente categorias · cards internos recolhidos · ${lidCount} liderança(s) · ${matCount} material(is)`
+      ? `Gerado em ${when} · categorias (resumo) + todas as lideranças · ${lidCount} liderança(s) · ${matCount} material(is)`
       : `Gerado em ${when} · relatório completo · ${lidCount} liderança(s) · ${matCount} material(is)`;
   }
 
@@ -10294,6 +10321,11 @@ function printCampanhaModule(opts){
     });
     campanhaSearchQuery = prevCampSearch;
     liderancaSearchQuery = prevLidSearch;
+    if(categoriesOnly){
+      liderancaFilterDeputado = prevLidFilterDep;
+      liderancaFilterLideranca = prevLidFilterLid;
+      liderancaFilterCidade = prevLidFilterCity;
+    }
     if(campSearchEl) campSearchEl.value = prevCampSearch;
     if(lidSearchEl) lidSearchEl.value = prevLidSearch;
     if(printHeaderTitle) printHeaderTitle.textContent = 'Campanha 2026 — Relatório completo';
@@ -17619,7 +17651,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-pdf-categorias', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-pdf-cat-lids', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
