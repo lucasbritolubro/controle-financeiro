@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-unitario-4dec -->
+<!-- deploy-v20260803-prod-identidade -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -745,6 +745,15 @@
   }
   .campanha-lideranca-tag.none{
     background:rgba(15,23,42,0.04); color:var(--ink-faint); border-color:var(--card-border);
+  }
+  .campanha-lideranca-tag.kind-lideranca{
+    background:rgba(99,102,241,0.12); color:#4338CA; border-color:rgba(99,102,241,0.2);
+  }
+  .campanha-lideranca-tag.kind-candidato{
+    background:rgba(8,145,178,0.12); color:#0e7490; border-color:rgba(8,145,178,0.22);
+  }
+  .campanha-lideranca-tag.kind-deputado{
+    background:rgba(5,150,105,0.12); color:#047857; border-color:rgba(5,150,105,0.22);
   }
   .campanha-toolbar{
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
@@ -4481,9 +4490,9 @@
             <input type="url" id="campArtLink" placeholder="https://drive.google.com/..." maxlength="500" autocomplete="off">
           </div>
           <div class="field span-2">
-            <label for="campLeadership">Associar à liderança <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+            <label for="campLeadership">Associar a liderança / candidato / deputado <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
             <select id="campLeadership">
-              <option value="">Nenhuma liderança</option>
+              <option value="">Nenhuma associação</option>
             </select>
           </div>
           <div class="campanha-form-actions">
@@ -7727,17 +7736,62 @@ function resolveLeadershipLabel(id, fallbackName){
   }
   return toLeadershipName(fallbackName || '');
 }
+/** Indica se o nome é (ou já foi) usado como deputado estadual. */
+function isDeputadoEstadualName(name){
+  const label = toDeputadoName(name);
+  if(!label) return false;
+  migrateCampanhaDeputadosInMemory();
+  if((campanhaDeputados || []).some(d=> d.name === label)) return true;
+  for(const l of (campanhaLeaderships || [])){
+    for(const m of (l.materials || [])){
+      if(toDeputadoName(m.deputadoEstadual) === label) return true;
+    }
+  }
+  return false;
+}
+/**
+ * Associação da produção: identifica corretamente liderança, candidato ou deputado.
+ * Retorna { name, kind, typeLabel, tagText } ou null se não houver vínculo.
+ */
+function resolveProductionAssociation(m){
+  if(!m) return null;
+  const lid = m.leadershipId ? getLeadershipById(m.leadershipId) : null;
+  const name = lid
+    ? toLeadershipName(lid.name)
+    : resolveLeadershipLabel(m.leadershipId, m.leadershipName);
+  if(!name) return null;
+  const role = lid ? normalizeLeadershipRole(lid.role) : 'lideranca';
+  const isDep = isDeputadoEstadualName(name);
+  let kind = 'lideranca';
+  let typeLabel = 'Liderança';
+  if(isDep){
+    kind = 'deputado';
+    typeLabel = 'Deputado estadual';
+  } else if(role === 'candidato'){
+    kind = 'candidato';
+    typeLabel = 'Candidato';
+  }
+  return {
+    name,
+    kind,
+    typeLabel,
+    role,
+    tagText: `${typeLabel}: ${name}`
+  };
+}
 function populateCampanhaLeadershipSelect(selectedId){
   const sel = document.getElementById('campLeadership');
   if(!sel) return;
   const prev = selectedId != null ? selectedId : sel.value;
   const list = (campanhaLeaderships || []).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'pt-BR'));
-  const opts = [`<option value="">Nenhuma liderança</option>`].concat(
+  const opts = [`<option value="">Nenhuma associação</option>`].concat(
     list.map(l=>{
+      const name = toLeadershipName(l.name);
       const role = leadershipRoleLabel(l.role);
+      const depLabel = isDeputadoEstadualName(name) ? ' · DEPUTADO ESTADUAL' : '';
       const cityLabel = leadershipCitiesLabel(l);
       const city = cityLabel ? ` · ${escapeHtml(cityLabel)}` : '';
-      return `<option value="${escapeHtml(String(l.id))}">${escapeHtml(l.name)} · ${escapeHtml(role)}${city}</option>`;
+      return `<option value="${escapeHtml(String(l.id))}">${escapeHtml(name)} · ${escapeHtml(role)}${escapeHtml(depLabel)}${city}</option>`;
     })
   );
   sel.innerHTML = opts.join('');
@@ -8972,10 +9026,11 @@ function renderCampanhaList(){
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Abrir arte</a>`
       : `<span class="campanha-art-missing">Sem link de arte</span>`;
-    const lidName = resolveLeadershipLabel(m.leadershipId, m.leadershipName);
-    const lidTag = lidName
-      ? `<span class="campanha-lideranca-tag">Liderança: ${escapeHtml(lidName)}</span>`
-      : `<span class="campanha-lideranca-tag none">Sem liderança</span>`;
+    const assoc = resolveProductionAssociation(m);
+    const lidName = assoc ? assoc.name : '';
+    const lidTag = assoc
+      ? `<span class="campanha-lideranca-tag kind-${escapeHtml(assoc.kind)}">${escapeHtml(assoc.tagText)}</span>`
+      : `<span class="campanha-lideranca-tag none">Sem associação</span>`;
     const qtyTotal = getMaterialQtyTotal(m);
     const qtyPrinted = getMaterialQtyPrinted(m);
     const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
@@ -9014,7 +9069,7 @@ function renderCampanhaList(){
         <div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue)||0)}</div>
         <div><b>Valor total</b>${fmtBRL(Number(m.totalValue)||0)}</div>
         <div><b>CNPJ</b>${escapeHtml(m.cnpj || '—')}</div>
-        <div><b>Liderança</b>${escapeHtml(lidName || '—')}</div>
+        <div><b>${escapeHtml(assoc ? assoc.typeLabel : 'Associação')}</b>${escapeHtml(lidName || '—')}</div>
       </div>
       <div class="campanha-print-progress">
         <div class="campanha-print-progress-head">
@@ -16258,7 +16313,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-unitario-4dec', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-identidade', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
