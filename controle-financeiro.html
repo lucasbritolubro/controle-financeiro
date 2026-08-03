@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-unitario-auto -->
+<!-- deploy-v20260803-unitario-4dec -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4469,8 +4469,8 @@
             <input type="text" id="campCnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric" autocomplete="off">
           </div>
           <div class="field">
-            <label for="campValorUn">Valor unidade (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-            <input type="text" inputmode="decimal" class="currency-input" id="campValorUn" placeholder="0,00">
+            <label for="campValorUn">Valor unidade (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional · até 4 decimais)</span></label>
+            <input type="text" inputmode="decimal" class="currency-input currency-input-4dec" id="campValorUn" placeholder="0,0000">
           </div>
           <div class="field">
             <label for="campValorTotal">Valor total (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
@@ -5246,17 +5246,35 @@ window.storage = {
   }
 };
 function fmtBRL(n){ return (n<0?'-':'') + 'R$ ' + Math.abs(n).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
-function toCurrencyDisplay(n){ return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+/** Valor unitário: até 4 casas decimais (mais exato). */
+function fmtBRLUnit(n){
+  const v = Number(n) || 0;
+  return (v<0?'-':'') + 'R$ ' + Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:4});
+}
+function currencyDecimalsForEl(el){
+  if(el && el.classList && el.classList.contains('currency-input-4dec')) return 4;
+  return 2;
+}
+function toCurrencyDisplay(n, decimals = 2){
+  const d = Number.isFinite(decimals) ? decimals : 2;
+  return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:d, maximumFractionDigits:d});
+}
 function parseCurrencyValue(el){
   if(!el) return NaN;
+  const decimals = currencyDecimalsForEl(el);
+  const div = Math.pow(10, decimals);
   const digits = el.value.replace(/\D/g,'');
-  return digits ? parseInt(digits,10)/100 : NaN;
+  return digits ? parseInt(digits,10)/div : NaN;
 }
-/* live-formats any .currency-input as the user types: 1250 -> 1.250,00 */
+/* live-formats any .currency-input as the user types: 1250 -> 1.250,00 (ou 4 decimais) */
 document.addEventListener('input', (e)=>{
   if(e.target && e.target.classList && e.target.classList.contains('currency-input')){
+    const decimals = currencyDecimalsForEl(e.target);
+    const div = Math.pow(10, decimals);
     const digits = e.target.value.replace(/\D/g,'');
-    e.target.value = digits ? (parseInt(digits,10)/100).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) : '';
+    e.target.value = digits
+      ? (parseInt(digits,10)/div).toLocaleString('pt-BR',{minimumFractionDigits:decimals, maximumFractionDigits:decimals})
+      : '';
   }
 });
 function todayISO(){
@@ -8211,19 +8229,19 @@ function calcCampanhaTotalSuggested(){
   if(!Number.isFinite(unit) || unit < 0 || base <= 0) return null;
   return Math.round(base * unit * 100) / 100;
 }
-/** Unitário = valor total ÷ quantidade (quando o total é a referência). */
+/** Unitário = valor total ÷ quantidade (até 4 casas decimais). */
 function calcCampanhaUnitSuggested(){
   const total = parseCurrencyValue(document.getElementById('campValorTotal'));
   const base = getCampanhaQtyBase();
   if(!Number.isFinite(total) || total < 0 || base <= 0) return null;
-  return Math.round((total / base) * 100) / 100;
+  return Math.round((total / base) * 10000) / 10000;
 }
 function maybeAutofillCampanhaUnit(){
   const unEl = document.getElementById('campValorUn');
   if(!unEl) return;
   const suggested = calcCampanhaUnitSuggested();
   if(suggested == null) return;
-  unEl.value = toCurrencyDisplay(suggested);
+  unEl.value = toCurrencyDisplay(suggested, 4);
 }
 function maybeAutofillCampanhaTotal(){
   // Se o total foi informado manualmente, recalcula o unitário a partir do total
@@ -8294,7 +8312,7 @@ function fillCampanhaForm(item){
   if(tir) tir.value = item.tiragem || '';
   if(graf) graf.value = item.printShop || '';
   if(cnpj) cnpj.value = formatCnpjInput(item.cnpj || '');
-  if(un) un.value = item.unitValue ? toCurrencyDisplay(item.unitValue) : '';
+  if(un) un.value = item.unitValue ? toCurrencyDisplay(item.unitValue, 4) : '';
   if(tot) tot.value = item.totalValue ? toCurrencyDisplay(item.totalValue) : '';
   if(link) link.value = item.artLink || '';
   if(obs) obs.value = item.notes || '';
@@ -8993,7 +9011,7 @@ function renderCampanhaList(){
         <div><b>Qtd. total</b>${qtyTotal.toLocaleString('pt-BR')}</div>
         <div><b>Já impresso</b>${qtyPrinted.toLocaleString('pt-BR')}</div>
         <div><b>Tiragem</b>${(Number(m.tiragem)||0).toLocaleString('pt-BR')}</div>
-        <div><b>Valor un.</b>${fmtBRL(Number(m.unitValue)||0)}</div>
+        <div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue)||0)}</div>
         <div><b>Valor total</b>${fmtBRL(Number(m.totalValue)||0)}</div>
         <div><b>CNPJ</b>${escapeHtml(m.cnpj || '—')}</div>
         <div><b>Liderança</b>${escapeHtml(lidName || '—')}</div>
@@ -16240,7 +16258,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-unitario-auto', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-unitario-4dec', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
