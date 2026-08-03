@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-section-collapse -->
+<!-- deploy-v20260803-sections-collapsed -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4659,15 +4659,15 @@
       </div>
 
       <div class="campanha-break-stack" id="liderancaBreakStack">
-        <div class="campanha-type-panel is-section-collapsible is-section-open" id="liderancaTypePanel" data-break-section="type" aria-live="polite">
+        <div class="campanha-type-panel is-section-collapsible" id="liderancaTypePanel" data-break-section="type" aria-live="polite">
           <div class="campanha-type-panel-head">
             <div>
               <h3>Por tipo de material</h3>
               <span class="ctp-sub" id="liderancaTypePanelSub">Só materiais da liderança com deputado</span>
             </div>
             <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="type" aria-expanded="true">
-                <span class="toggle-label">Recolher seção</span>
+              <button type="button" class="campanha-section-toggle" data-break-section-toggle="type" aria-expanded="false">
+                <span class="toggle-label">Expandir seção</span>
                 <span class="chev" aria-hidden="true">▾</span>
               </button>
               <button type="button" class="btn-mini ghost" id="lidTypeExpandAll">Expandir cards</button>
@@ -4679,15 +4679,15 @@
             <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material de liderança com deputado cadastrado.</p>
           </div>
         </div>
-        <div class="campanha-type-panel is-section-collapsible is-section-open" id="liderancaDepPanel" data-break-section="dep" aria-live="polite">
+        <div class="campanha-type-panel is-section-collapsible" id="liderancaDepPanel" data-break-section="dep" aria-live="polite">
           <div class="campanha-type-panel-head">
             <div>
               <h3>Por deputado estadual</h3>
               <span class="ctp-sub" id="liderancaDepPanelSub">Quantidade, tipos e lideranças por deputado</span>
             </div>
             <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="dep" aria-expanded="true">
-                <span class="toggle-label">Recolher seção</span>
+              <button type="button" class="campanha-section-toggle" data-break-section-toggle="dep" aria-expanded="false">
+                <span class="toggle-label">Expandir seção</span>
                 <span class="chev" aria-hidden="true">▾</span>
               </button>
               <button type="button" class="btn-mini ghost" id="lidDepExpandAll">Expandir cards</button>
@@ -4699,15 +4699,15 @@
             <p class="campanha-type-panel-empty" id="liderancaDepEmpty" style="display:none;">Nenhum material com deputado estadual informado.</p>
           </div>
         </div>
-        <div class="campanha-type-panel is-section-collapsible is-section-open" id="liderancaPorLidPanel" data-break-section="lid" aria-live="polite">
+        <div class="campanha-type-panel is-section-collapsible" id="liderancaPorLidPanel" data-break-section="lid" aria-live="polite">
           <div class="campanha-type-panel-head">
             <div>
               <h3>Por liderança</h3>
               <span class="ctp-sub" id="liderancaPorLidPanelSub">Quantidade de material por liderança</span>
             </div>
             <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="lid" aria-expanded="true">
-                <span class="toggle-label">Recolher seção</span>
+              <button type="button" class="campanha-section-toggle" data-break-section-toggle="lid" aria-expanded="false">
+                <span class="toggle-label">Expandir seção</span>
                 <span class="chev" aria-hidden="true">▾</span>
               </button>
               <button type="button" class="btn-mini ghost" id="lidPorLidExpandAll">Expandir cards</button>
@@ -4719,15 +4719,15 @@
             <p class="campanha-type-panel-empty" id="liderancaPorLidEmpty" style="display:none;">Nenhuma liderança com material cadastrado.</p>
           </div>
         </div>
-        <div class="campanha-type-panel is-section-collapsible is-section-open" id="liderancaCidadePanel" data-break-section="cidade" aria-live="polite">
+        <div class="campanha-type-panel is-section-collapsible" id="liderancaCidadePanel" data-break-section="cidade" aria-live="polite">
           <div class="campanha-type-panel-head">
             <div>
               <h3>Por cidade</h3>
               <span class="ctp-sub" id="liderancaCidadePanelSub">Cidades e lideranças associadas</span>
             </div>
             <div class="campanha-city-panel-actions campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="cidade" aria-expanded="true">
-                <span class="toggle-label">Recolher seção</span>
+              <button type="button" class="campanha-section-toggle" data-break-section-toggle="cidade" aria-expanded="false">
+                <span class="toggle-label">Expandir seção</span>
                 <span class="chev" aria-hidden="true">▾</span>
               </button>
               <button type="button" class="btn-mini ghost" id="lidCidadeExpandAll">Expandir cards</button>
@@ -7462,19 +7462,22 @@ let liderancaPorLidExpanded = new Set();
 let liderancaTypeForceExpandAll = false;
 let liderancaDepForceExpandAll = false;
 let liderancaPorLidForceExpandAll = false;
-/** Seções macro abertas (tipo / dep / lid / cidade). Default: todas abertas. */
+/** Seções macro abertas (tipo / dep / lid / cidade). Default: todas recolhidas. */
 let liderancaBreakSectionsOpen = {
-  type: true,
-  dep: true,
-  lid: true,
-  cidade: true
+  type: false,
+  dep: false,
+  lid: false,
+  cidade: false
 };
 const LIDERANCA_BREAK_SECTION_KEYS = ['type', 'dep', 'lid', 'cidade'];
+function defaultBreakSectionsOpenMap(open){
+  return { type: !!open, dep: !!open, lid: !!open, cidade: !!open };
+}
 function isBreakSectionOpen(key){
   if(liderancaBreakSectionsOpen == null || typeof liderancaBreakSectionsOpen !== 'object'){
-    liderancaBreakSectionsOpen = { type: true, dep: true, lid: true, cidade: true };
+    liderancaBreakSectionsOpen = defaultBreakSectionsOpenMap(false);
   }
-  return liderancaBreakSectionsOpen[key] !== false;
+  return liderancaBreakSectionsOpen[key] === true;
 }
 function applyLiderancaBreakSectionState(){
   LIDERANCA_BREAK_SECTION_KEYS.forEach(key=>{
@@ -7493,7 +7496,7 @@ function applyLiderancaBreakSectionState(){
 function setLiderancaBreakSectionOpen(key, open){
   if(!LIDERANCA_BREAK_SECTION_KEYS.includes(key)) return;
   if(liderancaBreakSectionsOpen == null || typeof liderancaBreakSectionsOpen !== 'object'){
-    liderancaBreakSectionsOpen = { type: true, dep: true, lid: true, cidade: true };
+    liderancaBreakSectionsOpen = defaultBreakSectionsOpenMap(false);
   }
   liderancaBreakSectionsOpen[key] = !!open;
   applyLiderancaBreakSectionState();
@@ -7502,12 +7505,7 @@ function toggleLiderancaBreakSection(key){
   setLiderancaBreakSectionOpen(key, !isBreakSectionOpen(key));
 }
 function setAllLiderancaBreakSectionsOpen(open){
-  LIDERANCA_BREAK_SECTION_KEYS.forEach(k=>{
-    if(liderancaBreakSectionsOpen == null || typeof liderancaBreakSectionsOpen !== 'object'){
-      liderancaBreakSectionsOpen = { type: true, dep: true, lid: true, cidade: true };
-    }
-    liderancaBreakSectionsOpen[k] = !!open;
-  });
+  liderancaBreakSectionsOpen = defaultBreakSectionsOpenMap(open);
   applyLiderancaBreakSectionState();
 }
 
@@ -9681,10 +9679,10 @@ function printCampanhaModule(){
     liderancaDepForceExpandAll = false;
     liderancaPorLidForceExpandAll = false;
     liderancaBreakSectionsOpen = {
-      type: prevBreakSections.type !== false,
-      dep: prevBreakSections.dep !== false,
-      lid: prevBreakSections.lid !== false,
-      cidade: prevBreakSections.cidade !== false
+      type: prevBreakSections.type === true,
+      dep: prevBreakSections.dep === true,
+      lid: prevBreakSections.lid === true,
+      cidade: prevBreakSections.cidade === true
     };
     document.body.classList.remove('printing-campanha');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
@@ -16862,7 +16860,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-section-collapse', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-sections-collapsed', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
