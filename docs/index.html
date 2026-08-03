@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-pdf-cat-lids -->
+<!-- deploy-v20260803-prod-hide-empty -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -10673,15 +10673,8 @@ function leadershipMatProductionBlockHtml(leadership, m){
         </div>`;
       }).join('')}</div>`
     : `<p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso registrado ainda.</p>`;
-  if(!hasProd && !lots.length){
-    return `<div class="campanha-print-progress" style="margin-top:10px;background:rgba(15,23,42,0.03);">
-      <div class="campanha-print-progress-head">
-        <strong>Produção</strong>
-        <span>não cadastrada</span>
-      </div>
-      <p style="margin:6px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Use o botão PRODUÇÃO para gráfica, totais e lotes.</p>
-    </div>`;
-  }
+  // Só mostra a área grande após o primeiro cadastro de produção
+  if(!hasProd && !lots.length) return '';
   return `
   <div class="campanha-print-progress" style="margin-top:10px;">
     <div class="campanha-print-progress-head">
@@ -17651,7 +17644,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-pdf-cat-lids', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-prod-hide-empty', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
