@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-filtro-lideranca -->
+<!-- deploy-v20260803-paineis-expandir -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -547,6 +547,31 @@
     background:var(--ctp-accent, #059669); width:var(--ctp-pct, 0%);
     min-width:0;
   }
+  .campanha-type-card.collapsible .ctp-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  }
+  .campanha-type-card.collapsible .ctp-head-main{ min-width:0; flex:1; }
+  .campanha-type-card.collapsible .ctp-toggle{
+    display:inline-flex; align-items:center; gap:5px; flex:0 0 auto;
+    font-family:var(--font); font-weight:800; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding:7px 10px; border-radius:999px; border:1.5px solid var(--card-border);
+    background:#fff; color:var(--ink); cursor:pointer;
+  }
+  .campanha-type-card.collapsible .ctp-toggle:hover{
+    border-color:rgba(5,150,105,0.35); color:#047857;
+  }
+  .campanha-type-card.collapsible .ctp-toggle .chev{
+    display:inline-block; transition:transform .2s var(--ease); line-height:1;
+  }
+  .campanha-type-card.collapsible.is-open .ctp-toggle .chev{ transform:rotate(180deg); }
+  .campanha-type-card.collapsible .ctp-body{ display:none; margin-top:8px; }
+  .campanha-type-card.collapsible.is-open .ctp-body{ display:block; }
+  .campanha-panel-actions{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+  body.printing-campanha .campanha-type-card.collapsible .ctp-body{ display:block !important; }
+  body.printing-campanha .campanha-type-card.collapsible .ctp-toggle,
+  body.printing-campanha .campanha-panel-actions{ display:none !important; }
   .campanha-type-panel-empty{
     margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
   }
@@ -4457,16 +4482,28 @@
       <div class="campanha-break-stack" id="liderancaBreakStack">
         <div class="campanha-type-panel" id="liderancaTypePanel" aria-live="polite">
           <div class="campanha-type-panel-head">
-            <h3>Por tipo de material</h3>
-            <span class="ctp-sub" id="liderancaTypePanelSub">Só materiais da liderança com deputado</span>
+            <div>
+              <h3>Por tipo de material</h3>
+              <span class="ctp-sub" id="liderancaTypePanelSub">Só materiais da liderança com deputado</span>
+            </div>
+            <div class="campanha-panel-actions no-print">
+              <button type="button" class="btn-mini ghost" id="lidTypeExpandAll">Expandir todas</button>
+              <button type="button" class="btn-mini ghost" id="lidTypeCollapseAll">Recolher todas</button>
+            </div>
           </div>
           <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
           <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material de liderança com deputado cadastrado.</p>
         </div>
         <div class="campanha-type-panel" id="liderancaDepPanel" aria-live="polite">
           <div class="campanha-type-panel-head">
-            <h3>Por deputado estadual</h3>
-            <span class="ctp-sub" id="liderancaDepPanelSub">Quantidade, tipos e lideranças por deputado</span>
+            <div>
+              <h3>Por deputado estadual</h3>
+              <span class="ctp-sub" id="liderancaDepPanelSub">Quantidade, tipos e lideranças por deputado</span>
+            </div>
+            <div class="campanha-panel-actions no-print">
+              <button type="button" class="btn-mini ghost" id="lidDepExpandAll">Expandir todas</button>
+              <button type="button" class="btn-mini ghost" id="lidDepCollapseAll">Recolher todas</button>
+            </div>
           </div>
           <div class="campanha-type-grid" id="liderancaDepGrid"></div>
           <p class="campanha-type-panel-empty" id="liderancaDepEmpty" style="display:none;">Nenhum material com deputado estadual informado.</p>
@@ -7159,6 +7196,11 @@ let liderancaMatsForceExpandAll = false; // usado na impressão
 /** Cidades expandidas no painel Por cidade */
 let liderancaCidadeExpanded = new Set();
 let liderancaCidadeForceExpandAll = false;
+/** Cards expandidos nos painéis Por tipo / Por deputado */
+let liderancaTypeExpanded = new Set();
+let liderancaDepExpanded = new Set();
+let liderancaTypeForceExpandAll = false;
+let liderancaDepForceExpandAll = false;
 
 /* ===== Notas (estilo Apple Notes) ===== */
 let notes = [];
@@ -8354,10 +8396,12 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
   const sub = document.getElementById(subId);
   if(!grid) return;
   const showValue = !!(opts && opts.showValue);
+  const collapsible = !!(opts && opts.collapsible);
+  const expandGroup = String((opts && opts.expandGroup) || ''); // 'type' | 'dep' | ''
   const totalQty = rows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
   const totalCount = rows.reduce((s,r)=> s + (Number(r.count)||0), 0);
   const maxQty = rows.reduce((m,r)=> Math.max(m, Number(r.qty)||0), 0) || 1;
-  if(sub){
+  if(sub && !(opts && opts.skipSubText)){
     sub.textContent = rows.length
       ? `${rows.length} tipo(s) · ${totalCount.toLocaleString('pt-BR')} registro(s) · ${totalQty.toLocaleString('pt-BR')} un.`
       : (opts && opts.emptySub) || 'Sem dados';
@@ -8368,6 +8412,19 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
     return;
   }
   if(empty) empty.style.display = 'none';
+
+  let expandedSet = null;
+  let forceAll = false;
+  if(expandGroup === 'type'){
+    if(!liderancaTypeExpanded) liderancaTypeExpanded = new Set();
+    expandedSet = liderancaTypeExpanded;
+    forceAll = !!liderancaTypeForceExpandAll;
+  } else if(expandGroup === 'dep'){
+    if(!liderancaDepExpanded) liderancaDepExpanded = new Set();
+    expandedSet = liderancaDepExpanded;
+    forceAll = !!liderancaDepForceExpandAll;
+  }
+
   grid.innerHTML = rows.map((r, i)=>{
     const accent = CAMPANHA_TYPE_COLORS[i % CAMPANHA_TYPE_COLORS.length];
     const pct = Math.max(0, Math.min(100, Math.round(((Number(r.qty)||0) / maxQty) * 100)));
@@ -8377,6 +8434,28 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
     const detail = r.detail
       ? `<div class="ctp-meta" style="margin-top:2px; line-height:1.35;">${escapeHtml(r.detail)}</div>`
       : '';
+    const cardKey = String(r.label || `item-${i}`);
+    const isOpen = !collapsible || forceAll || (expandedSet && expandedSet.has(cardKey));
+    if(collapsible){
+      return `
+    <article class="campanha-type-card collapsible${isOpen ? ' is-open' : ''}" data-ctp-card="${escapeHtml(cardKey)}" data-ctp-group="${escapeHtml(expandGroup)}" style="--ctp-accent:${accent}; --ctp-pct:${pct}%;">
+      <div class="ctp-head">
+        <div class="ctp-head-main">
+          <div class="ctp-label">${escapeHtml(r.label)}</div>
+          <div class="ctp-qty">${(Number(r.qty)||0).toLocaleString('pt-BR')}</div>
+          <div class="ctp-meta">${(Number(r.count)||0).toLocaleString('pt-BR')} reg.${valueLine}</div>
+        </div>
+        <button type="button" class="ctp-toggle no-print" data-ctp-toggle="${escapeHtml(cardKey)}" data-ctp-group="${escapeHtml(expandGroup)}" aria-expanded="${isOpen ? 'true' : 'false'}">
+          <span class="toggle-label">${isOpen ? 'Recolher' : 'Expandir'}</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+      </div>
+      <div class="ctp-body">
+        ${detail}
+        <div class="ctp-bar" aria-hidden="true"><i></i></div>
+      </div>
+    </article>`;
+    }
     return `
     <article class="campanha-type-card" style="--ctp-accent:${accent}; --ctp-pct:${pct}%;">
       <div class="ctp-label">${escapeHtml(r.label)}</div>
@@ -8386,6 +8465,28 @@ function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
       <div class="ctp-bar" aria-hidden="true"><i></i></div>
     </article>`;
   }).join('');
+}
+function setAllTypeCardsExpanded(open){
+  if(!liderancaTypeExpanded) liderancaTypeExpanded = new Set();
+  if(open){
+    aggregateMaterialTypes(collectLiderancasTypeItems()).forEach(r=>{
+      if(r.label) liderancaTypeExpanded.add(String(r.label));
+    });
+  } else {
+    liderancaTypeExpanded.clear();
+  }
+  renderLiderancaTypeBreakdown();
+}
+function setAllDepCardsExpanded(open){
+  if(!liderancaDepExpanded) liderancaDepExpanded = new Set();
+  if(open){
+    collectLiderancasByDeputadoRows().forEach(r=>{
+      if(r.label) liderancaDepExpanded.add(String(r.label));
+    });
+  } else {
+    liderancaDepExpanded.clear();
+  }
+  renderLiderancaTypeBreakdown();
 }
 function renderCampanhaTypeBreakdown(){
   const rows = aggregateMaterialTypes(collectMateriaisTypeItems());
@@ -8406,14 +8507,14 @@ function renderLiderancaTypeBreakdown(){
     'liderancaTypeEmpty',
     'liderancaTypePanelSub',
     typeRows,
-    { showValue: false, emptySub: 'Nenhum material de liderança com deputado' }
+    { showValue: false, emptySub: 'Nenhum material de liderança com deputado', collapsible: true, expandGroup: 'type', skipSubText: true }
   );
   renderMaterialTypePanel(
     'liderancaDepGrid',
     'liderancaDepEmpty',
     'liderancaDepPanelSub',
     depRows,
-    { showValue: false, emptySub: 'Nenhum material com deputado estadual' }
+    { showValue: false, emptySub: 'Nenhum material com deputado estadual', collapsible: true, expandGroup: 'dep', skipSubText: true }
   );
   renderMaterialTypePanel(
     'liderancaPorLidGrid',
@@ -8424,16 +8525,24 @@ function renderLiderancaTypeBreakdown(){
   );
   // Ajusta subtítulos com totais
   const depSub = document.getElementById('liderancaDepPanelSub');
-  if(depSub && depRows.length){
-    const q = depRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-    const c = depRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-    depSub.textContent = `${depRows.length} deputado(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
+  if(depSub){
+    if(depRows.length){
+      const q = depRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
+      const c = depRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
+      depSub.textContent = `${depRows.length} deputado(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
+    } else {
+      depSub.textContent = 'Quantidade, tipos e lideranças por deputado';
+    }
   }
   const typeSub = document.getElementById('liderancaTypePanelSub');
-  if(typeSub && typeRows.length){
-    const q = typeRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-    const c = typeRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-    typeSub.textContent = `${typeRows.length} tipo(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un. (com deputado)`;
+  if(typeSub){
+    if(typeRows.length){
+      const q = typeRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
+      const c = typeRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
+      typeSub.textContent = `${typeRows.length} tipo(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un. (com deputado)`;
+    } else {
+      typeSub.textContent = 'Só materiais da liderança com deputado';
+    }
   }
   const lidSub = document.getElementById('liderancaPorLidPanelSub');
   if(lidSub && lidRows.length){
@@ -8534,6 +8643,8 @@ function printCampanhaModule(){
   if(lidSearchEl) lidSearchEl.value = '';
   liderancaMatsForceExpandAll = true;
   liderancaCidadeForceExpandAll = true;
+  liderancaTypeForceExpandAll = true;
+  liderancaDepForceExpandAll = true;
   renderCampanhaStats();
   renderCampanhaList();
   renderLiderancaStats();
@@ -8560,6 +8671,9 @@ function printCampanhaModule(){
   document.querySelectorAll('#liderancaCidadeGrid .campanha-city-card').forEach(el=>{
     el.classList.add('is-open');
   });
+  document.querySelectorAll('#liderancaTypeGrid .campanha-type-card.collapsible, #liderancaDepGrid .campanha-type-card.collapsible').forEach(el=>{
+    el.classList.add('is-open');
+  });
 
   let cleaned = false;
   const cleanup = ()=>{
@@ -8567,6 +8681,8 @@ function printCampanhaModule(){
     cleaned = true;
     liderancaMatsForceExpandAll = false;
     liderancaCidadeForceExpandAll = false;
+    liderancaTypeForceExpandAll = false;
+    liderancaDepForceExpandAll = false;
     document.body.classList.remove('printing-campanha');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
       sec.style.display = '';
@@ -9282,6 +9398,10 @@ function bindCampanhaModuleEvents(){
   });
   document.getElementById('lidCidadeExpandAll')?.addEventListener('click', ()=> setAllCidadeCardsExpanded(true));
   document.getElementById('lidCidadeCollapseAll')?.addEventListener('click', ()=> setAllCidadeCardsExpanded(false));
+  document.getElementById('lidTypeExpandAll')?.addEventListener('click', ()=> setAllTypeCardsExpanded(true));
+  document.getElementById('lidTypeCollapseAll')?.addEventListener('click', ()=> setAllTypeCardsExpanded(false));
+  document.getElementById('lidDepExpandAll')?.addEventListener('click', ()=> setAllDepCardsExpanded(true));
+  document.getElementById('lidDepCollapseAll')?.addEventListener('click', ()=> setAllDepCardsExpanded(false));
   document.getElementById('liderancaCidadeGrid')?.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-city-toggle]');
     if(!btn) return;
@@ -9300,6 +9420,32 @@ function bindCampanhaModuleEvents(){
       if(lab) lab.textContent = willOpen ? 'Recolher' : 'Expandir';
     }
   });
+  const toggleCtpCard = (e)=>{
+    const btn = e.target.closest('[data-ctp-toggle]');
+    if(!btn) return;
+    e.preventDefault();
+    const key = String(btn.dataset.ctpToggle || '');
+    const group = String(btn.dataset.ctpGroup || '');
+    if(!key || !group) return;
+    const set = group === 'type'
+      ? (liderancaTypeExpanded || (liderancaTypeExpanded = new Set()))
+      : group === 'dep'
+        ? (liderancaDepExpanded || (liderancaDepExpanded = new Set()))
+        : null;
+    if(!set) return;
+    const card = btn.closest('.campanha-type-card');
+    const willOpen = !(card && card.classList.contains('is-open'));
+    if(willOpen) set.add(key);
+    else set.delete(key);
+    if(card){
+      card.classList.toggle('is-open', willOpen);
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      const lab = btn.querySelector('.toggle-label');
+      if(lab) lab.textContent = willOpen ? 'Recolher' : 'Expandir';
+    }
+  };
+  document.getElementById('liderancaTypeGrid')?.addEventListener('click', toggleCtpCard);
+  document.getElementById('liderancaDepGrid')?.addEventListener('click', toggleCtpCard);
   document.getElementById('liderancaList')?.addEventListener('change', (e)=>{
     const depSel = e.target.closest('[data-lid-mat-dep-sel]');
     if(depSel){
@@ -15557,7 +15703,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-filtro-lideranca', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-paineis-expand', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
