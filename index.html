@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-all-mats-count -->
+<!-- deploy-v20260803-candidato-principal -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -867,6 +867,9 @@
   .campanha-lideranca-tag.kind-candidato{
     background:rgba(8,145,178,0.12); color:#0e7490; border-color:rgba(8,145,178,0.22);
   }
+  .campanha-lideranca-tag.kind-candidato_principal{
+    background:rgba(217,119,6,0.14); color:#B45309; border-color:rgba(217,119,6,0.28);
+  }
   .campanha-lideranca-tag.kind-deputado{
     background:rgba(5,150,105,0.12); color:#047857; border-color:rgba(5,150,105,0.22);
   }
@@ -1048,6 +1051,11 @@
   .lideranca-role-tag.role-candidato{
     background:rgba(99,102,241,0.14); color:#4338CA; border:1px solid rgba(99,102,241,0.22);
   }
+  .lideranca-role-tag.role-candidato_principal{
+    background:linear-gradient(135deg, rgba(217,119,6,0.18) 0%, rgba(245,158,11,0.16) 100%);
+    color:#B45309; border:1px solid rgba(217,119,6,0.35);
+    box-shadow:0 0 0 1px rgba(245,158,11,0.12);
+  }
   .lideranca-city{
     display:inline-flex; margin-top:6px; padding:4px 10px; border-radius:999px;
     font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
@@ -1077,11 +1085,17 @@
     background:rgba(79,70,229,0.12); color:#4338CA; border:1px solid rgba(79,70,229,0.2);
   }
   .campanha-break-stack{ display:flex; flex-direction:column; gap:12px; margin:0 0 16px; }
+  #lidRoleToggle{
+    display:flex; flex-wrap:wrap; gap:6px;
+  }
   #lidRoleToggle button.active[data-lidrole="lideranca"]{
     background:linear-gradient(135deg, #059669 0%, #047857 100%); color:#fff;
   }
   #lidRoleToggle button.active[data-lidrole="candidato"]{
     background:linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color:#fff;
+  }
+  #lidRoleToggle button.active[data-lidrole="candidato_principal"]{
+    background:linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color:#fff;
   }
   .lideranca-obs{
     margin:0; font-size:13px; font-weight:600; color:var(--ink-soft); white-space:pre-wrap;
@@ -4781,6 +4795,7 @@
             <div class="type-toggle" id="lidRoleToggle" style="max-width:100%;">
               <button type="button" class="active" data-lidrole="lideranca">LIDERANÇA</button>
               <button type="button" data-lidrole="candidato">CANDIDATO</button>
+              <button type="button" data-lidrole="candidato_principal">CANDIDATO PRINCIPAL</button>
             </div>
           </div>
           <div class="field" id="lidNumeroUrnaWrap" style="display:none;">
@@ -8069,6 +8084,9 @@ function resolveProductionAssociation(m){
   if(isDep){
     kind = 'deputado';
     typeLabel = 'Deputado estadual';
+  } else if(role === 'candidato_principal'){
+    kind = 'candidato_principal';
+    typeLabel = 'Candidato principal';
   } else if(role === 'candidato'){
     kind = 'candidato';
     typeLabel = 'Candidato';
@@ -8282,12 +8300,12 @@ function getDeputadoUrna(name, leadership){
         return normalizeNumeroUrna(m.deputadoNumeroUrna);
       }
     }
-    if(toLeadershipName(l.name) === label && normalizeLeadershipRole(l.role) === 'candidato' && l.numeroUrna){
+    if(toLeadershipName(l.name) === label && isCandidateRole(l.role) && l.numeroUrna){
       return normalizeNumeroUrna(l.numeroUrna);
     }
   }
   // Se o deputado é o mesmo que a liderança candidata aberta no formulário
-  if(leadership && toLeadershipName(leadership.name) === label && normalizeLeadershipRole(leadership.role) === 'candidato'){
+  if(leadership && toLeadershipName(leadership.name) === label && isCandidateRole(leadership.role)){
     return normalizeNumeroUrna(leadership.numeroUrna || '');
   }
   return '';
@@ -8320,7 +8338,7 @@ function resolveDeputadoFromFields(selEl, otherEl, urnaEl, leadership){
     label = toDeputadoName(value);
   }
   // Se for o mesmo nome do candidato, puxa urna do candidato se o campo estiver vazio
-  if(!urna && leadership && toLeadershipName(leadership.name) === label && normalizeLeadershipRole(leadership.role) === 'candidato'){
+  if(!urna && leadership && toLeadershipName(leadership.name) === label && isCandidateRole(leadership.role)){
     urna = normalizeNumeroUrna(leadership.numeroUrna || '');
   }
   if(!urna) urna = getDeputadoUrna(label, leadership);
@@ -8329,12 +8347,27 @@ function resolveDeputadoFromFields(selEl, otherEl, urnaEl, leadership){
   return { name: label, numeroUrna: urna };
 }
 function normalizeLeadershipRole(raw){
-  const v = String(raw || '').trim().toLowerCase();
+  const v = String(raw || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if(
+    v === 'candidato_principal' ||
+    v === 'candidatoprincipal' ||
+    v === 'principal' ||
+    v === 'cand_principal' ||
+    v === 'candidato_main'
+  ) return 'candidato_principal';
   if(v === 'candidato' || v === 'cand' || v === 'candidate') return 'candidato';
   return 'lideranca';
 }
 function leadershipRoleLabel(role){
-  return normalizeLeadershipRole(role) === 'candidato' ? 'CANDIDATO' : 'LIDERANÇA';
+  const r = normalizeLeadershipRole(role);
+  if(r === 'candidato_principal') return 'CANDIDATO PRINCIPAL';
+  if(r === 'candidato') return 'CANDIDATO';
+  return 'LIDERANÇA';
+}
+/** Candidato ou candidato principal (ambos usam urna e regras de candidato). */
+function isCandidateRole(role){
+  const r = normalizeLeadershipRole(role);
+  return r === 'candidato' || r === 'candidato_principal';
 }
 function getLiderancaRoleFromToggle(){
   const active = document.querySelector('#lidRoleToggle button.active[data-lidrole]');
@@ -8350,13 +8383,9 @@ function setLiderancaRoleToggle(role){
 function updateLiderancaUrnaFieldVisibility(){
   const wrap = document.getElementById('lidNumeroUrnaWrap');
   if(!wrap) return;
-  const isCand = getLiderancaRoleFromToggle() === 'candidato';
+  const isCand = isCandidateRole(getLiderancaRoleFromToggle());
   wrap.style.display = isCand ? '' : 'none';
-  if(!isCand){
-    const el = document.getElementById('lidNumeroUrna');
-    // não limpa ao só alternar visual se estiver editando? limpa só se não for candidato
-    // mantém valor no DOM mas esconde; no read ignora se não for candidato
-  }
+  // mantém valor no DOM ao esconder; no read ignora se não for candidato
 }
 function normalizeLeadership(raw){
   if(!raw || typeof raw !== 'object') return null;
@@ -8377,7 +8406,7 @@ function normalizeLeadership(raw){
     role,
     cities,
     city: cities[0] || '', // legado (primeira cidade)
-    numeroUrna: role === 'candidato'
+    numeroUrna: isCandidateRole(role)
       ? normalizeNumeroUrna(raw.numeroUrna || raw.urna || raw.numeroCandidato || '')
       : '',
     phone: String(raw.phone || raw.telefone || '').trim(),
@@ -9812,7 +9841,7 @@ function readLiderancaForm(){
   }
   const cities = parseCitiesList(document.getElementById('lidCidades')?.value || '');
   const role = getLiderancaRoleFromToggle();
-  const numeroUrna = role === 'candidato'
+  const numeroUrna = isCandidateRole(role)
     ? normalizeNumeroUrna(document.getElementById('lidNumeroUrna')?.value || '')
     : '';
   return {
@@ -9847,11 +9876,11 @@ async function submitLiderancaForm(e){
   // Não permite cadastrar/renomear para um nome que já existe
   const duplicado = findLeadershipByName(data.name, liderancaEditingId || null);
   if(duplicado){
-    const tipo = normalizeLeadershipRole(duplicado.role) === 'candidato' ? 'candidato' : 'liderança';
+    const tipoLabel = leadershipRoleLabel(duplicado.role);
     try{
       alert(
-        `Já existe ${tipo === 'candidato' ? 'um candidato' : 'uma liderança'} cadastrado(a) com o nome “${data.name}”.\n\n` +
-        `Tipo atual: ${tipo === 'candidato' ? 'CANDIDATO' : 'LIDERANÇA'}` +
+        `Já existe um cadastro com o nome “${data.name}”.\n\n` +
+        `Tipo atual: ${tipoLabel}` +
         (duplicado.city || (duplicado.cities && duplicado.cities[0]) ? ` · cidade: ${leadershipCitiesLabel(duplicado) || duplicado.city}` : '') +
         `\n\nNão é possível cadastrar duplicado. Use a busca ou edite o registro existente.`
       );
@@ -9885,10 +9914,11 @@ async function submitLiderancaForm(e){
   await saveCampanha();
   resetLiderancaForm();
   renderLiderancasUI();
-  const urnaHint = data.role === 'candidato' && data.numeroUrna ? ` · urna ${data.numeroUrna}` : '';
+  const urnaHint = isCandidateRole(data.role) && data.numeroUrna ? ` · urna ${data.numeroUrna}` : '';
+  const roleHint = leadershipRoleLabel(data.role);
   showSuccessFeedback(
-    wasEdit ? 'Liderança atualizada!' : 'Liderança adicionada!',
-    `${data.name || 'Liderança'} salva com sucesso${urnaHint}.`
+    wasEdit ? 'Cadastro atualizado!' : 'Cadastro adicionado!',
+    `${data.name || 'Registro'} · ${roleHint}${urnaHint}`
   );
 }
 async function deleteLideranca(id){
@@ -9924,8 +9954,11 @@ function filteredLeaderships(){
   const dep = toDeputadoName(liderancaFilterDeputado || '');
   const cidade = toCityName(liderancaFilterCidade || '');
   const lidId = String(liderancaFilterLideranca || '').trim();
-  // SEM MATERIAL DEFINIDO sempre no topo; depois ordem alfabética
+  // CANDIDATO PRINCIPAL no topo; em seguida SEM MATERIAL DEFINIDO; depois alfabética
   let list = (campanhaLeaderships || []).slice().sort((a,b)=>{
+    const aPrincipal = normalizeLeadershipRole(a.role) === 'candidato_principal' ? 0 : 1;
+    const bPrincipal = normalizeLeadershipRole(b.role) === 'candidato_principal' ? 0 : 1;
+    if(aPrincipal !== bPrincipal) return aPrincipal - bPrincipal;
     const aHas = leadershipHasDefinedMaterial(a);
     const bHas = leadershipHasDefinedMaterial(b);
     if(aHas !== bHas) return aHas ? 1 : -1; // sem material primeiro
@@ -10126,7 +10159,7 @@ function leadershipMaterialFormHtml(leadership){
   let depUrnaVal = editing ? normalizeNumeroUrna(editing.deputadoNumeroUrna || '') : '';
   if(!depUrnaVal && depVal) depUrnaVal = getDeputadoUrna(depVal, leadership);
   // Se o deputado for o mesmo nome do candidato, puxa urna do candidato
-  if(!depUrnaVal && depVal && toLeadershipName(leadership.name) === depVal && normalizeLeadershipRole(leadership.role) === 'candidato'){
+  if(!depUrnaVal && depVal && toLeadershipName(leadership.name) === depVal && isCandidateRole(leadership.role)){
     depUrnaVal = normalizeNumeroUrna(leadership.numeroUrna || '');
   }
   const formId = escapeHtml(String(leadership.id));
@@ -10229,7 +10262,7 @@ function renderLiderancasList(){
       </div>
       <div class="campanha-meta">
         <div><b>Cidades</b>${escapeHtml(cities.length ? cities.join(', ') : '—')}</div>
-        ${normalizeLeadershipRole(l.role) === 'candidato'
+        ${isCandidateRole(l.role)
           ? `<div><b>Nº urna</b>${escapeHtml(normalizeNumeroUrna(l.numeroUrna) || '—')}</div>`
           : ''}
         <div><b>Telefone</b>${escapeHtml(l.phone || '—')}</div>
@@ -10324,7 +10357,7 @@ async function submitLeadershipMaterialForm(form){
   const deputadoEstadual = depResolved && typeof depResolved === 'object' ? (depResolved.name || '') : '';
   let deputadoNumeroUrna = depResolved && typeof depResolved === 'object' ? normalizeNumeroUrna(depResolved.numeroUrna || '') : '';
   // Se for o mesmo nome do candidato, sincroniza urna nos dois lados
-  if(deputadoEstadual && toLeadershipName(leadership.name) === deputadoEstadual && normalizeLeadershipRole(leadership.role) === 'candidato'){
+  if(deputadoEstadual && toLeadershipName(leadership.name) === deputadoEstadual && isCandidateRole(leadership.role)){
     if(!deputadoNumeroUrna && leadership.numeroUrna){
       deputadoNumeroUrna = normalizeNumeroUrna(leadership.numeroUrna);
     }
@@ -10632,7 +10665,7 @@ function bindCampanhaModuleEvents(){
     const lidRole = normalizeLeadershipRole(form.dataset.lidRole || '');
     const lidUrna = normalizeNumeroUrna(form.dataset.lidUrna || '');
     let urna = getDeputadoUrna(depName);
-    if(!urna && lidRole === 'candidato' && lidName === depName) urna = lidUrna;
+    if(!urna && isCandidateRole(lidRole) && lidName === depName) urna = lidUrna;
     if(urna) urnaEl.value = urna;
   }
   document.getElementById('liderancaList')?.addEventListener('change', (e)=>{
@@ -16916,7 +16949,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-all-mats-count', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-candidato-principal', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
