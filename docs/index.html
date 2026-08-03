@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-painel-por-lideranca -->
+<!-- deploy-v20260803-tag-sem-material -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -973,6 +973,14 @@
     font-size:11.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
     color:#B91C1C; background:rgba(239,68,68,0.12);
     border:1px solid rgba(239,68,68,0.35);
+  }
+  .lideranca-sem-material-tag{
+    display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px;
+    font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    white-space:nowrap;
+    color:#fff; background:linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+    border:1px solid rgba(185,28,28,0.45);
+    box-shadow:0 4px 12px rgba(185,28,28,0.28);
   }
 
   nav.tabs{
@@ -8937,6 +8945,11 @@ function renderLiderancasList(){
     const matCount = ownMats.length + (depFilter ? 0 : linked.length);
     const matQty = ownMats.reduce((s,m)=> s + (Number(m.qty)||0), 0)
       + (depFilter ? 0 : linked.reduce((s,m)=> s + (Number(m.qtyPrinted)||0), 0));
+    // Tag vermelha: nenhum material próprio nem vinculado (independente do filtro)
+    const hasAnyMaterial = ((l.materials || []).length + linked.length) > 0;
+    const semMaterialTag = hasAnyMaterial
+      ? ''
+      : `<span class="lideranca-sem-material-tag">SEM MATERIAL DEFINIDO</span>`;
     const cities = leadershipCities(l);
     const cityTags = cities.length
       ? `<div class="lideranca-cities">${cities.map(c=> `<span class="lideranca-city">${escapeHtml(c)}</span>`).join('')}</div>`
@@ -8948,6 +8961,7 @@ function renderLiderancasList(){
           <div class="lideranca-name-row">
             <h3 class="lideranca-name">${escapeHtml(l.name)}</h3>
             <span class="lideranca-role-tag role-${escapeHtml(normalizeLeadershipRole(l.role))}">${escapeHtml(leadershipRoleLabel(l.role))}</span>
+            ${semMaterialTag}
           </div>
           ${cityTags}
         </div>
@@ -15498,7 +15512,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-por-lideranca', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-sem-material-tag', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
