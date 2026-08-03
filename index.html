@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-tipo-sem-dep -->
+<!-- deploy-v20260803-all-mats-count -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -9060,32 +9060,54 @@ function leadershipsForBreakdown(){
   });
 }
 /**
- * Materiais próprios da liderança para painéis da aba Lideranças.
- * opts.requireDeputado (default true): só materiais com deputado estadual.
- * Por tipo de material usa requireDeputado:false (inclui santinhos sem deputado).
+ * Itera materiais próprios da liderança (qualquer tipo: santinho, adesivo, etc.).
+ * opts.requireDeputado (default false): se true, só materiais COM deputado estadual
+ *   (usado no painel "Por deputado"). Demais painéis contam todos.
+ * opts.includeLinked (default false): também inclui materiais da Produção vinculados.
  */
 function eachLeadershipOwnMaterial(cb, opts){
-  const requireDep = !(opts && opts.requireDeputado === false);
+  opts = opts || {};
+  const requireDep = opts.requireDeputado === true;
+  const includeLinked = opts.includeLinked === true;
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
   leadershipsForBreakdown().forEach(l=>{
     (l.materials || []).forEach(m=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
       if(depFilter){
-        // filtro ativo: só materiais daquele deputado
+        // filtro ativo: só materiais daquele deputado (sem deputado fica de fora)
         if(dep !== depFilter) return;
       } else if(requireDep && !dep){
-        // painéis de deputado: ignora sem deputado
         return;
       }
       cb(l, m, dep);
     });
+    // Materiais da Produção associados à liderança (não têm campo deputado)
+    if(includeLinked && !requireDep && !depFilter){
+      getMaterialsLinkedToLeadership(l.id).forEach(pm=>{
+        const pseudo = {
+          materialType: pm.materialType,
+          materialLabel: pm.materialLabel || pm.materialType,
+          qty: getMaterialQtyTotal(pm),
+          deputadoEstadual: '',
+          _fromProducao: true,
+          id: pm.id
+        };
+        if((Number(pseudo.qty) || 0) <= 0 && !(pm.printLots || []).length){
+          // ainda conta se qty total for 0? sim, se existir o cadastro com qtyTotal 0 skip
+        }
+        cb(l, pseudo, '');
+      });
+    }
   });
 }
-/** Por tipo de material: totais de TODOS os materiais (com ou sem deputado). */
+function materialTypeLabelOf(m){
+  return toCampanhaTypeLabel(m?.materialLabel || m?.materialType || 'SEM TIPO') || 'SEM TIPO';
+}
+/** Por tipo de material: TODOS os tipos e quantidades (com ou sem deputado). */
 function collectLiderancasByTipoRows(){
   const map = new Map(); // type -> { label, qty, count, deps: Map, noDepQty, lids: Map }
   eachLeadershipOwnMaterial((l, m, dep)=>{
-    const typeLabel = toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO';
+    const typeLabel = materialTypeLabelOf(m);
     const qty = Number(m.qty) || 0;
     if(!map.has(typeLabel)){
       map.set(typeLabel, { label: typeLabel, qty: 0, count: 0, deps: new Map(), noDepQty: 0, lids: new Map() });
@@ -9099,7 +9121,7 @@ function collectLiderancasByTipoRows(){
       const lidName = toLeadershipName(l.name);
       row.lids.set(lidName, (row.lids.get(lidName) || 0) + qty);
     }
-  }, { requireDeputado: false });
+  }, { requireDeputado: false, includeLinked: true });
   return Array.from(map.values()).map(r=>{
     const depsLines = Array.from(r.deps.entries())
       .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0], 'pt-BR'))
@@ -9116,7 +9138,6 @@ function collectLiderancasByTipoRows(){
     if(!detailBlocks.length){
       detailBlocks.push({ title: 'Detalhe', lines: ['Sem registros neste recorte.'] });
     }
-    // texto plano (busca/print) + blocos estruturados (UI)
     const detail = detailBlocks.map(b=> `${b.title}: ${b.lines.join(' · ')}`).join(' · ');
     return {
       label: r.label,
@@ -9129,7 +9150,6 @@ function collectLiderancasByTipoRows(){
   }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
 }
 function collectLiderancasTypeItems(){
-  // compat: itens simples (sem detalhe) — preferir collectLiderancasByTipoRows
   return collectLiderancasByTipoRows().map(r=>({
     label: r.label,
     qty: r.qty,
@@ -9137,18 +9157,20 @@ function collectLiderancasTypeItems(){
     totalValue: 0
   }));
 }
+/** Por deputado: apenas materiais COM deputado (qualquer tipo). */
 function collectLiderancasByDeputadoRows(){
   const map = new Map(); // dep -> { label, qty, count, types: Map, lids: Set }
   eachLeadershipOwnMaterial((l, m, dep)=>{
+    if(!dep) return;
     const qty = Number(m.qty) || 0;
-    const typeLabel = toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO';
+    const typeLabel = materialTypeLabelOf(m);
     if(!map.has(dep)) map.set(dep, { label: dep, qty: 0, count: 0, types: new Map(), lids: new Set() });
     const row = map.get(dep);
     row.qty += qty;
     row.count += 1;
     row.types.set(typeLabel, (row.types.get(typeLabel) || 0) + qty);
     if(l && l.name) row.lids.add(toLeadershipName(l.name));
-  });
+  }, { requireDeputado: true, includeLinked: false });
   return Array.from(map.values()).map(r=>{
     const typesTxt = Array.from(r.types.entries())
       .sort((a,b)=> b[1]-a[1])
@@ -9159,63 +9181,68 @@ function collectLiderancasByDeputadoRows(){
     return { label: r.label, qty: r.qty, count: r.count, totalValue: 0, detail };
   }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
 }
-/** Materiais da liderança ainda sem deputado (para diagnóstico; não entra no painel de deputados). */
+/** Materiais da liderança ainda sem deputado (qualquer tipo). */
 function listMaterialsSemDeputado(){
   const out = [];
-  (campanhaLeaderships || []).forEach(l=>{
-    (l.materials || []).forEach(m=>{
-      if(toDeputadoName(m.deputadoEstadual || '')) return;
-      out.push({
-        leadershipId: l.id,
-        leadershipName: l.name || '—',
-        materialId: m.id,
-        materialLabel: m.materialLabel || m.materialType || '—',
-        qty: Number(m.qty) || 0
-      });
+  eachLeadershipOwnMaterial((l, m, dep)=>{
+    if(dep) return;
+    out.push({
+      leadershipId: l.id,
+      leadershipName: l.name || '—',
+      materialId: m.id,
+      materialLabel: materialTypeLabelOf(m),
+      qty: Number(m.qty) || 0,
+      fromProducao: !!m._fromProducao
     });
-  });
+  }, { requireDeputado: false, includeLinked: true });
   return out;
 }
-/** Quantidade de material por liderança (materiais próprios; respeita filtro de deputado). */
+/** Quantidade de material por liderança: TODOS os tipos (com ou sem deputado). */
 function collectLiderancasByLiderancaRows(){
-  const depFilter = toDeputadoName(liderancaFilterDeputado || '');
-  const rows = [];
-  leadershipsForBreakdown().forEach(l=>{
-    const types = new Map();
-    const deps = new Set();
-    let qty = 0;
-    let count = 0;
-    (l.materials || []).forEach(m=>{
-      const dep = toDeputadoName(m.deputadoEstadual || '');
-      if(depFilter && dep !== depFilter) return;
-      const q = Number(m.qty) || 0;
-      qty += q;
-      count += 1;
-      const typeLabel = toCampanhaTypeLabel(m.materialLabel || m.materialType || 'SEM TIPO') || 'SEM TIPO';
-      types.set(typeLabel, (types.get(typeLabel) || 0) + q);
-      if(dep) deps.add(dep);
-    });
-    if(count === 0) return;
-    const typesTxt = Array.from(types.entries())
+  const map = new Map(); // lidId -> row
+  eachLeadershipOwnMaterial((l, m, dep)=>{
+    const id = String(l.id);
+    if(!map.has(id)){
+      map.set(id, {
+        label: toLeadershipName(l.name || '—'),
+        role: leadershipRoleLabel(l.role),
+        cities: leadershipCitiesLabel(l),
+        qty: 0,
+        count: 0,
+        noDepQty: 0,
+        types: new Map(),
+        deps: new Set()
+      });
+    }
+    const row = map.get(id);
+    const q = Number(m.qty) || 0;
+    const typeLabel = materialTypeLabelOf(m);
+    row.qty += q;
+    row.count += 1;
+    row.types.set(typeLabel, (row.types.get(typeLabel) || 0) + q);
+    if(dep) row.deps.add(dep);
+    else row.noDepQty += q;
+  }, { requireDeputado: false, includeLinked: true });
+  return Array.from(map.values()).map(r=>{
+    const typesTxt = Array.from(r.types.entries())
       .sort((a,b)=> b[1]-a[1])
       .map(([t,q])=> `${t}: ${q.toLocaleString('pt-BR')}`)
       .join(' · ');
-    const depTxt = Array.from(deps).sort((a,b)=> a.localeCompare(b, 'pt-BR')).join(', ');
-    const cities = leadershipCitiesLabel(l);
+    const depTxt = Array.from(r.deps).sort((a,b)=> a.localeCompare(b, 'pt-BR')).join(', ');
     const metaBits = [
-      leadershipRoleLabel(l.role),
-      cities ? `Cidades: ${cities}` : '',
-      depTxt ? `Dep.: ${depTxt}` : ''
+      r.role,
+      r.cities ? `Cidades: ${r.cities}` : '',
+      depTxt ? `Dep.: ${depTxt}` : '',
+      r.noDepQty > 0 ? `Sem dep.: ${r.noDepQty.toLocaleString('pt-BR')} un.` : ''
     ].filter(Boolean).join(' · ');
-    rows.push({
-      label: toLeadershipName(l.name || '—'),
-      qty,
-      count,
+    return {
+      label: r.label,
+      qty: r.qty,
+      count: r.count,
       totalValue: 0,
       detail: [typesTxt, metaBits].filter(Boolean).join(' · ')
-    });
-  });
-  return rows.sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
+    };
+  }).sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
 }
 /** Lista cidades com as lideranças associadas (sem contagem de material). */
 function collectLiderancasByCidadeGroups(){
@@ -9979,22 +10006,29 @@ function populateLiderancaFilterSelects(){
   }
 }
 function renderLiderancaStats(){
-  // Stats no hero: todos os materiais próprios (com ou sem deputado; respeita filtro de deputado)
+  // Stats no hero: todos os materiais (próprios + produção vinculada; com/sem deputado; filtro de dep)
   const filtered = filteredLeaderships();
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
   const mats = filtered.reduce((s,l)=>{
-    return s + (l.materials || []).filter(m=>{
+    let n = (l.materials || []).filter(m=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
       if(depFilter && dep !== depFilter) return false;
       return true;
     }).length;
+    // produção vinculada só entra quando não há filtro de deputado (não tem campo dep)
+    if(!depFilter) n += getMaterialsLinkedToLeadership(l.id).length;
+    return s + n;
   }, 0);
   const qty = filtered.reduce((s,l)=>{
-    return s + (l.materials || []).reduce((ss,m)=>{
+    let q = (l.materials || []).reduce((ss,m)=>{
       const dep = toDeputadoName(m.deputadoEstadual || '');
       if(depFilter && dep !== depFilter) return ss;
       return ss + (Number(m.qty)||0);
     }, 0);
+    if(!depFilter){
+      q += getMaterialsLinkedToLeadership(l.id).reduce((ss,m)=> ss + getMaterialQtyTotal(m), 0);
+    }
+    return s + q;
   }, 0);
   const c = document.getElementById('liderancaStatCount');
   const m = document.getElementById('liderancaStatMats');
@@ -16882,7 +16916,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-tipo-sem-dep', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-all-mats-count', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){

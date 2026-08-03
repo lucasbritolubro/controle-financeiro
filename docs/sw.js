@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-tipo-sem-dep';
+const CACHE_VERSION = 'financas-pwa-v20260803-all-mats-count';
 const PRECACHE = [
   '/',
   '/index.html',
