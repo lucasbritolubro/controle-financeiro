@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-cidade-liderancas -->
+<!-- deploy-v20260803-cidade-expandir -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -551,7 +551,7 @@
     margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
   }
   .campanha-city-grid{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;
   }
   .campanha-city-card{
     position:relative; overflow:hidden;
@@ -562,13 +562,31 @@
     content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
     background:var(--ctp-accent, #059669);
   }
+  .campanha-city-card .cc-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+  }
   .campanha-city-card .cc-title{
     font-size:12.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
-    color:var(--ink); margin:0 0 8px;
+    color:var(--ink); margin:0 0 4px;
   }
   .campanha-city-card .cc-count{
-    font-size:11px; font-weight:700; color:var(--ink-soft); margin:0 0 8px;
+    font-size:11px; font-weight:700; color:var(--ink-soft); margin:0;
   }
+  .campanha-city-card .cc-toggle{
+    display:inline-flex; align-items:center; gap:5px; flex:0 0 auto;
+    font-family:var(--font); font-weight:800; font-size:10.5px; letter-spacing:.04em; text-transform:uppercase;
+    padding:7px 10px; border-radius:999px; border:1.5px solid var(--card-border);
+    background:#fff; color:var(--ink); cursor:pointer;
+  }
+  .campanha-city-card .cc-toggle:hover{
+    border-color:rgba(5,150,105,0.35); color:#047857;
+  }
+  .campanha-city-card .cc-toggle .chev{
+    display:inline-block; transition:transform .2s var(--ease); line-height:1;
+  }
+  .campanha-city-card.is-open .cc-toggle .chev{ transform:rotate(180deg); }
+  .campanha-city-card .cc-body{ display:none; margin-top:10px; }
+  .campanha-city-card.is-open .cc-body{ display:block; }
   .campanha-city-card ul{
     list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px;
   }
@@ -581,6 +599,12 @@
     display:block; margin-top:2px; font-size:10.5px; font-weight:800;
     letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint);
   }
+  .campanha-city-panel-actions{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+  body.printing-campanha .campanha-city-card .cc-body{ display:block !important; }
+  body.printing-campanha .campanha-city-card .cc-toggle,
+  body.printing-campanha .campanha-city-panel-actions{ display:none !important; }
   @media (max-width:560px){
     .campanha-type-grid{ grid-template-columns:1fr 1fr; gap:8px; }
     .campanha-type-card .ctp-qty{ font-size:18px; }
@@ -4441,8 +4465,14 @@
         </div>
         <div class="campanha-type-panel" id="liderancaCidadePanel" aria-live="polite">
           <div class="campanha-type-panel-head">
-            <h3>Por cidade</h3>
-            <span class="ctp-sub" id="liderancaCidadePanelSub">Cidades e lideranças associadas</span>
+            <div>
+              <h3>Por cidade</h3>
+              <span class="ctp-sub" id="liderancaCidadePanelSub">Cidades e lideranças associadas</span>
+            </div>
+            <div class="campanha-city-panel-actions no-print">
+              <button type="button" class="btn-mini ghost" id="lidCidadeExpandAll">Expandir todas</button>
+              <button type="button" class="btn-mini ghost" id="lidCidadeCollapseAll">Recolher todas</button>
+            </div>
           </div>
           <div class="campanha-city-grid" id="liderancaCidadeGrid"></div>
           <p class="campanha-type-panel-empty" id="liderancaCidadeEmpty" style="display:none;">Nenhuma cidade cadastrada nas lideranças.</p>
@@ -7103,6 +7133,9 @@ let liderancaMatEditing = null; // { leadershipId, materialId }
 /** IDs de lideranças com bloco de materiais expandido na UI */
 let liderancaMatsExpanded = new Set();
 let liderancaMatsForceExpandAll = false; // usado na impressão
+/** Cidades expandidas no painel Por cidade */
+let liderancaCidadeExpanded = new Set();
+let liderancaCidadeForceExpandAll = false;
 
 /* ===== Notas (estilo Apple Notes) ===== */
 let notes = [];
@@ -8192,9 +8225,12 @@ function renderLiderancaCidadePanel(){
     return;
   }
   if(empty) empty.style.display = 'none';
+  if(!liderancaCidadeExpanded) liderancaCidadeExpanded = new Set();
   grid.innerHTML = groups.map((g, i)=>{
     const accent = CAMPANHA_TYPE_COLORS[i % CAMPANHA_TYPE_COLORS.length];
     const n = (g.leaderships || []).length;
+    const cityKey = String(g.label || '');
+    const isOpen = liderancaCidadeForceExpandAll || liderancaCidadeExpanded.has(cityKey);
     const list = (g.leaderships || []).map(l=> `
       <li>
         ${escapeHtml(l.name)}
@@ -8202,12 +8238,33 @@ function renderLiderancaCidadePanel(){
       </li>
     `).join('');
     return `
-    <article class="campanha-city-card" style="--ctp-accent:${accent};">
-      <h4 class="cc-title">${escapeHtml(g.label)}</h4>
-      <p class="cc-count">${n} liderança(s)</p>
-      <ul>${list || '<li>—</li>'}</ul>
+    <article class="campanha-city-card${isOpen ? ' is-open' : ''}" data-city-card="${escapeHtml(cityKey)}" style="--ctp-accent:${accent};">
+      <div class="cc-head">
+        <div>
+          <h4 class="cc-title">${escapeHtml(g.label)}</h4>
+          <p class="cc-count">${n} liderança(s)</p>
+        </div>
+        <button type="button" class="cc-toggle no-print" data-city-toggle="${escapeHtml(cityKey)}" aria-expanded="${isOpen ? 'true' : 'false'}">
+          <span class="toggle-label">${isOpen ? 'Recolher' : 'Expandir'}</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
+      </div>
+      <div class="cc-body">
+        <ul>${list || '<li>—</li>'}</ul>
+      </div>
     </article>`;
   }).join('');
+}
+function setAllCidadeCardsExpanded(open){
+  if(!liderancaCidadeExpanded) liderancaCidadeExpanded = new Set();
+  if(open){
+    collectLiderancasByCidadeGroups().forEach(g=>{
+      if(g.label) liderancaCidadeExpanded.add(String(g.label));
+    });
+  } else {
+    liderancaCidadeExpanded.clear();
+  }
+  renderLiderancaCidadePanel();
 }
 function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
   const grid = document.getElementById(gridId);
@@ -8366,6 +8423,7 @@ function printCampanhaModule(){
   if(campSearchEl) campSearchEl.value = '';
   if(lidSearchEl) lidSearchEl.value = '';
   liderancaMatsForceExpandAll = true;
+  liderancaCidadeForceExpandAll = true;
   renderCampanhaStats();
   renderCampanhaList();
   renderLiderancaStats();
@@ -8389,12 +8447,16 @@ function printCampanhaModule(){
   document.querySelectorAll('#liderancaList .lideranca-mats').forEach(el=>{
     el.classList.add('is-open');
   });
+  document.querySelectorAll('#liderancaCidadeGrid .campanha-city-card').forEach(el=>{
+    el.classList.add('is-open');
+  });
 
   let cleaned = false;
   const cleanup = ()=>{
     if(cleaned) return;
     cleaned = true;
     liderancaMatsForceExpandAll = false;
+    liderancaCidadeForceExpandAll = false;
     document.body.classList.remove('printing-campanha');
     document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
       sec.style.display = '';
@@ -8403,7 +8465,7 @@ function printCampanhaModule(){
     liderancaSearchQuery = prevLidSearch;
     if(campSearchEl) campSearchEl.value = prevCampSearch;
     if(lidSearchEl) lidSearchEl.value = prevLidSearch;
-    // Restaura abas e listas com os filtros anteriores (materiais recolhidos de novo)
+    // Restaura abas e listas com os filtros anteriores (materiais/cidades recolhidos de novo)
     switchCampanhaSub(prevSub);
     renderCampanhaList();
     renderLiderancasList();
@@ -9067,6 +9129,26 @@ function bindCampanhaModuleEvents(){
     const s = document.getElementById('liderancaSearch');
     if(s) s.value = '';
     renderLiderancasUI();
+  });
+  document.getElementById('lidCidadeExpandAll')?.addEventListener('click', ()=> setAllCidadeCardsExpanded(true));
+  document.getElementById('lidCidadeCollapseAll')?.addEventListener('click', ()=> setAllCidadeCardsExpanded(false));
+  document.getElementById('liderancaCidadeGrid')?.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-city-toggle]');
+    if(!btn) return;
+    e.preventDefault();
+    const cityKey = String(btn.dataset.cityToggle || '');
+    if(!cityKey) return;
+    if(!liderancaCidadeExpanded) liderancaCidadeExpanded = new Set();
+    const card = btn.closest('.campanha-city-card');
+    const willOpen = !(card && card.classList.contains('is-open'));
+    if(willOpen) liderancaCidadeExpanded.add(cityKey);
+    else liderancaCidadeExpanded.delete(cityKey);
+    if(card){
+      card.classList.toggle('is-open', willOpen);
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      const lab = btn.querySelector('.toggle-label');
+      if(lab) lab.textContent = willOpen ? 'Recolher' : 'Expandir';
+    }
   });
   document.getElementById('liderancaList')?.addEventListener('change', (e)=>{
     const depSel = e.target.closest('[data-lid-mat-dep-sel]');
@@ -15325,7 +15407,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-cidade-lids', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-cidade-expand', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
