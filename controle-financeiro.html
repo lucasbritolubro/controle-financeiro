@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-lote-edit-modal -->
+<!-- deploy-v20260803-lote-code -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -744,8 +744,17 @@
   .campanha-print-lot-main{ min-width:0; flex:1 1 180px; display:flex; flex-direction:column; gap:4px; }
   .campanha-print-lot-title{
     font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-.01em;
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:6px;
   }
   .campanha-print-lot-title b{ font-weight:900; }
+  .campanha-print-lot-code{
+    display:inline-flex; align-items:center;
+    font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size:13px; font-weight:900; letter-spacing:.06em;
+    padding:3px 8px; border-radius:8px;
+    background:rgba(15,23,42,0.06); color:var(--ink);
+    border:1px solid var(--card-border);
+  }
   .campanha-print-lot-meta{
     display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center;
     font-size:11.5px; font-weight:700; color:var(--ink-soft);
@@ -7748,16 +7757,103 @@ async function openNotesModule(){
 }
 
 /* ===== Campanha 2026 ===== */
+/** Código público do lote: # + 7 caracteres (A-Z e 0-9), ex.: #IMP0012 */
+const PRINT_LOT_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+function normalizePrintLotCode(raw){
+  const body = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  if(body.length !== 7) return '';
+  return '#' + body;
+}
+function formatPrintLotCode(code){
+  return normalizePrintLotCode(code) || '—';
+}
+function collectUsedPrintLotCodes(excludeLotId){
+  const used = new Set();
+  (campanhaMaterials || []).forEach(m=>{
+    (m.printLots || []).forEach(lot=>{
+      if(excludeLotId && sameId(lot.id, excludeLotId)) return;
+      const c = normalizePrintLotCode(lot.lotCode || lot.code || '');
+      if(c) used.add(c);
+    });
+  });
+  return used;
+}
+function randomPrintLotBody(){
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const chars = PRINT_LOT_CODE_CHARS;
+  const rnd = new Uint32Array(10);
+  if(typeof crypto !== 'undefined' && crypto.getRandomValues){
+    crypto.getRandomValues(rnd);
+  } else {
+    for(let i = 0; i < rnd.length; i++) rnd[i] = Math.floor(Math.random() * 0xffffffff);
+  }
+  let body = '';
+  for(let i = 0; i < 7; i++) body += chars[rnd[i] % chars.length];
+  // garante mistura de letra e número (como no exemplo #IMP0012)
+  if(!/[A-Z]/.test(body) || !/[0-9]/.test(body)){
+    const arr = body.split('');
+    const letterPos = rnd[7] % 7;
+    let digitPos = rnd[8] % 7;
+    if(digitPos === letterPos) digitPos = (digitPos + 1) % 7;
+    arr[letterPos] = letters[rnd[7] % 26];
+    arr[digitPos] = digits[rnd[8] % 10];
+    body = arr.join('');
+  }
+  return body;
+}
+/** Gera código único #XXXXXXX que nunca se repete entre lotes. */
+function generateUniquePrintLotCode(usedSet){
+  const used = usedSet || collectUsedPrintLotCodes();
+  for(let attempt = 0; attempt < 120; attempt++){
+    const code = '#' + randomPrintLotBody();
+    if(!used.has(code)){
+      used.add(code);
+      return code;
+    }
+  }
+  // fallback extremamente raro
+  const fallback = ('#' + Date.now().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '') + 'XXXXXXX').slice(0, 8);
+  used.add(fallback);
+  return fallback.length === 8 ? fallback : ('#' + randomPrintLotBody());
+}
+/** Atribui código a lotes sem ID ou com duplicata. Retorna true se algo mudou. */
+function ensureAllPrintLotCodes(){
+  const used = new Set();
+  let changed = false;
+  (campanhaMaterials || []).forEach(m=>{
+    if(!Array.isArray(m.printLots) || !m.printLots.length) return;
+    m.printLots = m.printLots.map(lot=>{
+      let code = normalizePrintLotCode(lot.lotCode || lot.code || '');
+      if(code && used.has(code)) code = ''; // duplicado → regera
+      if(!code){
+        code = generateUniquePrintLotCode(used);
+        changed = true;
+        return { ...lot, lotCode: code };
+      }
+      used.add(code);
+      if(lot.lotCode !== code){
+        changed = true;
+        return { ...lot, lotCode: code };
+      }
+      return lot;
+    });
+  });
+  return changed;
+}
 function normalizePrintLot(raw){
   if(!raw || typeof raw !== 'object') return null;
   const qty = Number(raw.qty ?? raw.qtyPrinted ?? raw.quantidade ?? raw.qtd);
   if(!Number.isFinite(qty) || qty <= 0) return null;
   const sendDate = String(raw.sendDate || raw.dataEnvio || raw.date || '').trim().slice(0, 10);
+  const lotCode = normalizePrintLotCode(raw.lotCode || raw.code || raw.codigo || '');
   return {
     id: raw.id || uid(),
+    lotCode: lotCode || '',
     qty: Math.round(qty),
     sendDate: /^\d{4}-\d{2}-\d{2}$/.test(sendDate) ? sendDate : '',
-    createdAt: raw.createdAt || new Date().toISOString()
+    createdAt: raw.createdAt || new Date().toISOString(),
+    updatedAt: raw.updatedAt || ''
   };
 }
 function getMaterialQtyTotal(m){
@@ -8249,6 +8345,19 @@ async function loadCampanha(){
     });
     // limpa lista de deputados: só quem aparece em materiais
     getDeputadoOptions();
+    // códigos únicos de lote (#XXXXXXX) para impressões antigas
+    if(ensureAllPrintLotCodes()){
+      try{
+        if(window.storage && typeof window.storage.set === 'function'){
+          await window.storage.set(CAMPANHA_KEY, JSON.stringify({
+            materials: campanhaMaterials,
+            customTypes: campanhaCustomTypes,
+            deputados: campanhaDeputados,
+            leaderships: campanhaLeaderships
+          }), false);
+        }
+      }catch(_e){}
+    }
     campanhaStorageReady = true;
   }catch(e){
     console.error('Falha ao carregar campanha 2026', e);
@@ -8266,6 +8375,7 @@ async function saveCampanha(){
     // normaliza lista de deputados (objetos com urna)
     migrateCampanhaDeputadosInMemory();
     getDeputadoOptions().forEach(n=> ensureDeputadoName(n));
+    ensureAllPrintLotCodes();
     await window.storage.set(CAMPANHA_KEY, JSON.stringify({
       materials: campanhaMaterials,
       customTypes: campanhaCustomTypes,
@@ -8609,9 +8719,11 @@ function filteredCampanhaMaterials(){
   if(!q) return list;
   return list.filter(m=>{
     const lidName = resolveLeadershipLabel(m.leadershipId, m.leadershipName);
+    const lotCodes = (m.printLots || []).map(l=> l.lotCode || '').join(' ');
     const hay = [
       m.materialLabel, m.materialType, m.printShop, m.cnpj, m.artLink, m.notes,
-      lidName, m.leadershipName, String(getMaterialQtyTotal(m)), String(getMaterialQtyPrinted(m)), String(m.tiragem)
+      lidName, m.leadershipName, String(getMaterialQtyTotal(m)), String(getMaterialQtyPrinted(m)), String(m.tiragem),
+      lotCodes
     ].join('\n').toLowerCase();
     return hay.includes(q);
   });
@@ -8646,8 +8758,10 @@ async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
     return;
   }
   const item = campanhaMaterials[idx];
+  const lotCode = generateUniquePrintLotCode();
   const lot = {
     id: uid(),
+    lotCode,
     qty: Math.round(qty),
     sendDate,
     createdAt: new Date().toISOString()
@@ -8658,7 +8772,7 @@ async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
   renderCampanhaMaterialsUI();
   showSuccessFeedback(
     'Lote registrado!',
-    `${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
+    `${lotCode} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
   );
 }
 function openPrintLotEditModal(materialId, lotId){
@@ -8683,7 +8797,9 @@ function openPrintLotEditModal(materialId, lotId){
   if(hintEl){
     const total = getMaterialQtyTotal(item);
     const printed = getMaterialQtyPrinted(item);
+    const code = formatPrintLotCode(lot.lotCode);
     hintEl.innerHTML =
+      `<strong style="color:var(--ink);">ID do lote:</strong> <span style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;letter-spacing:.04em;">${escapeHtml(code)}</span><br>` +
       `<strong style="color:var(--ink);">Situação atual:</strong> ` +
       `${printed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} un. impressas · ` +
       `este lote: <strong style="color:var(--ink);">${(Number(lot.qty)||0).toLocaleString('pt-BR')} un.</strong>` +
@@ -8738,9 +8854,10 @@ async function savePrintLotEditFromModal(e){
   await saveCampanha();
   closePrintLotEditModal();
   renderCampanhaMaterialsUI();
+  const code = formatPrintLotCode(found.lot.lotCode);
   showSuccessFeedback(
     'Lote atualizado!',
-    `${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
+    `${code} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
   );
 }
 function askDeleteCampanhaPrintLot(materialId, lotId){
@@ -8749,6 +8866,7 @@ function askDeleteCampanhaPrintLot(materialId, lotId){
   const { item, lot } = found;
   const qtyTxt = (Number(lot.qty) || 0).toLocaleString('pt-BR');
   const dateTxt = lot.sendDate ? formatCampanhaDateBR(lot.sendDate) : '—';
+  const code = formatPrintLotCode(lot.lotCode);
   const matLabel = escapeHtml(item.materialLabel || item.materialType || 'Material');
   const shop = item.printShop ? escapeHtml(item.printShop) : 'Gráfica não informada';
   openConfirmModal(
@@ -8763,7 +8881,8 @@ function askDeleteCampanhaPrintLot(materialId, lotId){
       icon: '⌫',
       cancelLabel: 'Manter lote',
       detail:
-        `<span class="md-label">Material</span>${matLabel}` +
+        `<span class="md-label">ID do lote</span><strong style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;">${escapeHtml(code)}</strong>` +
+        `<span class="md-label" style="margin-top:10px;">Material</span>${matLabel}` +
         `<span class="md-label" style="margin-top:10px;">Gráfica</span>${shop}` +
         `<span class="md-label" style="margin-top:10px;">Lote</span>` +
         `<strong>${qtyTxt} un.</strong> · envio <strong>${escapeHtml(dateTxt)}</strong>`
@@ -8780,13 +8899,14 @@ async function deleteCampanhaPrintLot(materialId, lotId, skipConfirm){
   }
   const qtyTxt = (Number(lot.qty) || 0).toLocaleString('pt-BR');
   const dateTxt = lot.sendDate ? formatCampanhaDateBR(lot.sendDate) : '';
+  const code = formatPrintLotCode(lot.lotCode);
   const printLots = (item.printLots || []).filter(l=> !sameId(l.id, lotId));
   campanhaMaterials[idx] = syncMaterialPrintLotsQty(item, printLots);
   await saveCampanha();
   renderCampanhaMaterialsUI();
   showSuccessFeedback(
     'Lote removido',
-    `${qtyTxt} un.` + (dateTxt ? ` · envio ${dateTxt}` : '') + ' excluído do histórico.'
+    `${code} · ${qtyTxt} un.` + (dateTxt ? ` · envio ${dateTxt}` : '') + ' excluído do histórico.'
   );
 }
 const CAMPANHA_TYPE_COLORS = [
@@ -9309,10 +9429,14 @@ function renderCampanhaList(){
       ? `<div class="campanha-print-lots">${lots.map((lot, lotIndex)=>{
           const lotQty = (Number(lot.qty)||0).toLocaleString('pt-BR');
           const lotDate = formatCampanhaDateBR(lot.sendDate);
+          const lotCode = formatPrintLotCode(lot.lotCode);
           return `
           <div class="campanha-print-lot">
             <div class="campanha-print-lot-main">
-              <div class="campanha-print-lot-title">Lote ${lots.length - lotIndex} · <b>${lotQty}</b> un.</div>
+              <div class="campanha-print-lot-title">
+                <span class="campanha-print-lot-code">${escapeHtml(lotCode)}</span>
+                · <b>${lotQty}</b> un.
+              </div>
               <div class="campanha-print-lot-meta">
                 <span class="campanha-print-lot-chip">Envio ${escapeHtml(lotDate)}</span>
                 ${lot.updatedAt ? `<span>editado</span>` : ''}
@@ -16607,7 +16731,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-lote-edit-modal', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-lote-code', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
