@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-paineis-expandir -->
+<!-- deploy-v20260803-numero-urna -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4574,6 +4574,10 @@
               <button type="button" data-lidrole="candidato">CANDIDATO</button>
             </div>
           </div>
+          <div class="field" id="lidNumeroUrnaWrap" style="display:none;">
+            <label for="lidNumeroUrna">Número de urna do candidato <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+            <input type="text" id="lidNumeroUrna" placeholder="Ex: 12345" maxlength="6" inputmode="numeric" autocomplete="off">
+          </div>
           <div class="field span-all">
             <label for="lidCidades">Cidades <span style="font-weight:600;color:var(--ink-faint);">(pode ser mais de uma, separadas por vírgula)</span></label>
             <input type="text" id="lidCidades" placeholder="Ex: Salvador, Feira de Santana, Camaçari" maxlength="300" autocomplete="address-level2" style="text-transform:uppercase;">
@@ -7634,12 +7638,16 @@ function slugCampanhaType(label){
     .replace(/^-+|-+$/g, '')
     .slice(0, 48) || ('custom-' + uid());
 }
+function normalizeNumeroUrna(raw){
+  return String(raw || '').replace(/\D/g, '').slice(0, 6);
+}
 function normalizeLeadershipMaterial(raw){
   if(!raw || typeof raw !== 'object') return null;
   const materialType = String(raw.materialType || raw.type || '').trim();
   const materialLabel = toCampanhaTypeLabel(raw.materialLabel || raw.label || materialType || '');
   if(!materialType && !materialLabel) return null;
   const qty = Number(raw.qty ?? raw.quantidade ?? raw.qtyPrinted);
+  const depName = toDeputadoName(raw.deputadoEstadual || raw.deputado || raw.depEstadual || '');
   return {
     id: raw.id || uid(),
     materialType: materialType || materialLabel,
@@ -7647,7 +7655,8 @@ function normalizeLeadershipMaterial(raw){
     qty: Number.isFinite(qty) && qty >= 0 ? qty : 0,
     artLink: String(raw.artLink || raw.link || '').trim(),
     notes: String(raw.notes || raw.observacao || raw.obs || '').trim(),
-    deputadoEstadual: toDeputadoName(raw.deputadoEstadual || raw.deputado || raw.depEstadual || ''),
+    deputadoEstadual: depName,
+    deputadoNumeroUrna: normalizeNumeroUrna(raw.deputadoNumeroUrna || raw.depNumeroUrna || raw.numeroUrnaDeputado || ''),
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || raw.createdAt || new Date().toISOString()
   };
@@ -7688,27 +7697,86 @@ function toDeputadoName(name){
 function toDeputadoNameLive(name){
   return String(name || '').toLocaleUpperCase('pt-BR');
 }
-function ensureDeputadoName(name){
+function normalizeDeputadoEntry(raw){
+  if(raw == null) return null;
+  if(typeof raw === 'string'){
+    const name = toDeputadoName(raw);
+    return name ? { name, numeroUrna: '' } : null;
+  }
+  if(typeof raw === 'object'){
+    const name = toDeputadoName(raw.name || raw.nome || raw.label || '');
+    if(!name) return null;
+    return {
+      name,
+      numeroUrna: normalizeNumeroUrna(raw.numeroUrna || raw.urna || raw.numero || '')
+    };
+  }
+  return null;
+}
+function migrateCampanhaDeputadosInMemory(){
+  campanhaDeputados = (campanhaDeputados || [])
+    .map(normalizeDeputadoEntry)
+    .filter(Boolean);
+  // dedupe by name, keep urna if present
+  const map = new Map();
+  campanhaDeputados.forEach(d=>{
+    const prev = map.get(d.name);
+    if(!prev) map.set(d.name, { name: d.name, numeroUrna: d.numeroUrna || '' });
+    else if(d.numeroUrna && !prev.numeroUrna) prev.numeroUrna = d.numeroUrna;
+  });
+  campanhaDeputados = Array.from(map.values()).sort((a,b)=> a.name.localeCompare(b.name, 'pt-BR'));
+}
+function ensureDeputadoName(name, numeroUrna){
   const label = toDeputadoName(name);
   if(!label) return '';
-  if(!(campanhaDeputados || []).some(d=> toDeputadoName(d) === label)){
-    campanhaDeputados = (campanhaDeputados || []).concat([label]);
+  migrateCampanhaDeputadosInMemory();
+  const urna = normalizeNumeroUrna(numeroUrna);
+  let ent = (campanhaDeputados || []).find(d=> d.name === label);
+  if(!ent){
+    campanhaDeputados.push({ name: label, numeroUrna: urna });
+  } else if(urna){
+    ent.numeroUrna = urna;
   }
+  campanhaDeputados.sort((a,b)=> a.name.localeCompare(b.name, 'pt-BR'));
   return label;
 }
 function getDeputadoOptions(){
-  const set = new Set();
-  (campanhaDeputados || []).forEach(d=>{
-    const n = toDeputadoName(d);
-    if(n) set.add(n);
-  });
+  migrateCampanhaDeputadosInMemory();
+  const set = new Set((campanhaDeputados || []).map(d=> d.name).filter(Boolean));
   (campanhaLeaderships || []).forEach(l=>{
     (l.materials || []).forEach(m=>{
       const n = toDeputadoName(m.deputadoEstadual);
       if(n) set.add(n);
     });
+    // Candidato também pode ser usado como deputado (mesmo nome)
+    if(normalizeLeadershipRole(l.role) === 'candidato' && l.name){
+      set.add(toLeadershipName(l.name));
+    }
   });
   return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+}
+/** Resolve número de urna do deputado: registro global, materiais, ou candidato com mesmo nome. */
+function getDeputadoUrna(name, leadership){
+  const label = toDeputadoName(name);
+  if(!label) return '';
+  migrateCampanhaDeputadosInMemory();
+  const ent = (campanhaDeputados || []).find(d=> d.name === label);
+  if(ent && ent.numeroUrna) return normalizeNumeroUrna(ent.numeroUrna);
+  for(const l of (campanhaLeaderships || [])){
+    for(const m of (l.materials || [])){
+      if(toDeputadoName(m.deputadoEstadual) === label && m.deputadoNumeroUrna){
+        return normalizeNumeroUrna(m.deputadoNumeroUrna);
+      }
+    }
+    if(toLeadershipName(l.name) === label && normalizeLeadershipRole(l.role) === 'candidato' && l.numeroUrna){
+      return normalizeNumeroUrna(l.numeroUrna);
+    }
+  }
+  // Se o deputado é o mesmo que a liderança candidata aberta no formulário
+  if(leadership && toLeadershipName(leadership.name) === label && normalizeLeadershipRole(leadership.role) === 'candidato'){
+    return normalizeNumeroUrna(leadership.numeroUrna || '');
+  }
+  return '';
 }
 function deputadoOptionsHtml(selected){
   const opts = getDeputadoOptions();
@@ -7717,21 +7785,34 @@ function deputadoOptionsHtml(selected){
   const selectedValue = !sel ? '' : (known ? sel : '__outros__');
   const parts = [
     `<option value=""${!sel ? ' selected' : ''}>Nenhum</option>`,
-    ...opts.map(d=> `<option value="${escapeHtml(d)}"${selectedValue === d ? ' selected' : ''}>${escapeHtml(d)}</option>`),
+    ...opts.map(d=>{
+      const urna = getDeputadoUrna(d);
+      const label = urna ? `${d} · urna ${urna}` : d;
+      return `<option value="${escapeHtml(d)}"${selectedValue === d ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+    }),
     `<option value="__outros__"${selectedValue === '__outros__' ? ' selected' : ''}>OUTRO (adicionar novo)</option>`
   ];
   return parts.join('');
 }
-function resolveDeputadoFromFields(selEl, otherEl){
+function resolveDeputadoFromFields(selEl, otherEl, urnaEl, leadership){
   const value = selEl ? String(selEl.value || '') : '';
-  if(!value) return '';
+  let urna = normalizeNumeroUrna(urnaEl ? urnaEl.value : '');
+  if(!value) return { name: '', numeroUrna: '' };
+  let label = '';
   if(value === '__outros__'){
-    const label = toDeputadoName(otherEl ? otherEl.value : '');
+    label = toDeputadoName(otherEl ? otherEl.value : '');
     if(!label) return { error: 'Informe o nome do deputado estadual em OUTRO.' };
-    ensureDeputadoName(label);
-    return label;
+  } else {
+    label = toDeputadoName(value);
   }
-  return ensureDeputadoName(value);
+  // Se for o mesmo nome do candidato, puxa urna do candidato se o campo estiver vazio
+  if(!urna && leadership && toLeadershipName(leadership.name) === label && normalizeLeadershipRole(leadership.role) === 'candidato'){
+    urna = normalizeNumeroUrna(leadership.numeroUrna || '');
+  }
+  if(!urna) urna = getDeputadoUrna(label, leadership);
+  ensureDeputadoName(label, urna);
+  // Se for o mesmo que o candidato e o candidato não tem urna, devolve para o caller preencher no cadastro
+  return { name: label, numeroUrna: urna };
 }
 function normalizeLeadershipRole(raw){
   const v = String(raw || '').trim().toLowerCase();
@@ -7750,6 +7831,18 @@ function setLiderancaRoleToggle(role){
   document.querySelectorAll('#lidRoleToggle button[data-lidrole]').forEach(btn=>{
     btn.classList.toggle('active', btn.dataset.lidrole === r);
   });
+  updateLiderancaUrnaFieldVisibility();
+}
+function updateLiderancaUrnaFieldVisibility(){
+  const wrap = document.getElementById('lidNumeroUrnaWrap');
+  if(!wrap) return;
+  const isCand = getLiderancaRoleFromToggle() === 'candidato';
+  wrap.style.display = isCand ? '' : 'none';
+  if(!isCand){
+    const el = document.getElementById('lidNumeroUrna');
+    // não limpa ao só alternar visual se estiver editando? limpa só se não for candidato
+    // mantém valor no DOM mas esconde; no read ignora se não for candidato
+  }
 }
 function normalizeLeadership(raw){
   if(!raw || typeof raw !== 'object') return null;
@@ -7763,12 +7856,16 @@ function normalizeLeadership(raw){
       ? raw.cities
       : (raw.city || raw.cidade || raw.cidades || '')
   );
+  const role = normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca');
   return {
     id: raw.id || uid(),
     name,
-    role: normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca'),
+    role,
     cities,
     city: cities[0] || '', // legado (primeira cidade)
+    numeroUrna: role === 'candidato'
+      ? normalizeNumeroUrna(raw.numeroUrna || raw.urna || raw.numeroCandidato || '')
+      : '',
     phone: String(raw.phone || raw.telefone || '').trim(),
     assessoriaName: String(raw.assessoriaName || raw.assessoriaNome || raw.nomeAssessoria || '').trim(),
     assessoriaPhone: String(raw.assessoriaPhone || raw.assessoriaTel || raw.telefoneAssessoria || '').trim(),
@@ -7826,14 +7923,20 @@ async function loadCampanha(){
     }
     campanhaMaterials = list.map(normalizeCampanhaMaterial).filter(Boolean);
     campanhaCustomTypes = customs.map(normalizeCampanhaCustomType).filter(Boolean);
-    campanhaDeputados = deputados.map(toDeputadoName).filter(Boolean);
+    campanhaDeputados = (deputados || []).map(normalizeDeputadoEntry).filter(Boolean);
     campanhaLeaderships = leaderships.map(normalizeLeadership).filter(Boolean);
+    migrateCampanhaDeputadosInMemory();
     // recupera tipos custom e deputados usados em materiais existentes
     campanhaMaterials.forEach(ensureCampanhaCustomTypeFromMaterial);
-    campanhaLeaderships.forEach(l=> (l.materials || []).forEach(m=>{
-      ensureCampanhaCustomTypeFromMaterial(m);
-      if(m.deputadoEstadual) ensureDeputadoName(m.deputadoEstadual);
-    }));
+    campanhaLeaderships.forEach(l=>{
+      if(normalizeLeadershipRole(l.role) === 'candidato' && l.numeroUrna){
+        ensureDeputadoName(l.name, l.numeroUrna);
+      }
+      (l.materials || []).forEach(m=>{
+        ensureCampanhaCustomTypeFromMaterial(m);
+        if(m.deputadoEstadual) ensureDeputadoName(m.deputadoEstadual, m.deputadoNumeroUrna);
+      });
+    });
     campanhaStorageReady = true;
   }catch(e){
     console.error('Falha ao carregar campanha 2026', e);
@@ -7848,8 +7951,9 @@ async function saveCampanha(){
   if(campanhaStorageError) return;
   try{
     if(!window.storage || typeof window.storage.set !== 'function') return;
-    // normaliza lista de deputados (únicos + ordenados)
-    campanhaDeputados = getDeputadoOptions();
+    // normaliza lista de deputados (objetos com urna)
+    migrateCampanhaDeputadosInMemory();
+    getDeputadoOptions().forEach(n=> ensureDeputadoName(n));
     await window.storage.set(CAMPANHA_KEY, JSON.stringify({
       materials: campanhaMaterials,
       customTypes: campanhaCustomTypes,
@@ -8724,6 +8828,9 @@ function resetLiderancaForm(){
   const form = document.getElementById('liderancaForm');
   if(form) form.reset();
   setLiderancaRoleToggle('lideranca');
+  const urna = document.getElementById('lidNumeroUrna');
+  if(urna) urna.value = '';
+  updateLiderancaUrnaFieldVisibility();
   const title = document.getElementById('liderancaFormTitle');
   const submit = document.getElementById('liderancaSubmitLabel');
   const cancel = document.getElementById('liderancaFormCancel');
@@ -8736,6 +8843,7 @@ function fillLiderancaForm(item){
   liderancaEditingId = item.id;
   const nome = document.getElementById('lidNome');
   const cidades = document.getElementById('lidCidades');
+  const urna = document.getElementById('lidNumeroUrna');
   const tel = document.getElementById('lidTelefone');
   const assNome = document.getElementById('lidAssessoriaNome');
   const assTel = document.getElementById('lidAssessoriaTel');
@@ -8744,6 +8852,7 @@ function fillLiderancaForm(item){
   if(nome) nome.value = toLeadershipName(item.name || '');
   setLiderancaRoleToggle(item.role || 'lideranca');
   if(cidades) cidades.value = leadershipCitiesLabel(item);
+  if(urna) urna.value = normalizeNumeroUrna(item.numeroUrna || '');
   if(tel) tel.value = formatPhoneBR(item.phone || '');
   if(assNome) assNome.value = item.assessoriaName || '';
   if(assTel) assTel.value = formatPhoneBR(item.assessoriaPhone || '');
@@ -8765,11 +8874,16 @@ function readLiderancaForm(){
     return { error: 'O link da pasta com a foto deve começar com http:// ou https://' };
   }
   const cities = parseCitiesList(document.getElementById('lidCidades')?.value || '');
+  const role = getLiderancaRoleFromToggle();
+  const numeroUrna = role === 'candidato'
+    ? normalizeNumeroUrna(document.getElementById('lidNumeroUrna')?.value || '')
+    : '';
   return {
     name,
-    role: getLiderancaRoleFromToggle(),
+    role,
     cities,
     city: cities[0] || '',
+    numeroUrna,
     phone: formatPhoneBR(document.getElementById('lidTelefone')?.value || ''),
     assessoriaName: String(document.getElementById('lidAssessoriaNome')?.value || '').trim(),
     assessoriaPhone: formatPhoneBR(document.getElementById('lidAssessoriaTel')?.value || ''),
@@ -8807,12 +8921,17 @@ async function submitLiderancaForm(e){
       updatedAt: now
     });
   }
+  // Se for candidato com urna, registra também no cadastro de deputados (mesmo nome)
+  if(data.role === 'candidato' && data.name){
+    ensureDeputadoName(data.name, data.numeroUrna);
+  }
   await saveCampanha();
   resetLiderancaForm();
   renderLiderancasUI();
+  const urnaHint = data.role === 'candidato' && data.numeroUrna ? ` · urna ${data.numeroUrna}` : '';
   showSuccessFeedback(
     wasEdit ? 'Liderança atualizada!' : 'Liderança adicionada!',
-    `${data.name || 'Liderança'} salva com sucesso.`
+    `${data.name || 'Liderança'} salva com sucesso${urnaHint}.`
   );
 }
 async function deleteLideranca(id){
@@ -8961,8 +9080,9 @@ function leadershipMaterialRowsHtml(leadership){
       : `<span class="campanha-art-missing">Sem arte</span>`;
     const notesTxt = String(m.notes || '').trim();
     const depTxt = toDeputadoName(m.deputadoEstadual);
+    const depUrna = normalizeNumeroUrna(m.deputadoNumeroUrna || getDeputadoUrna(depTxt));
     const depTag = depTxt
-      ? `<span class="lideranca-dep-tag">Dep. Est.: ${escapeHtml(depTxt)}</span>`
+      ? `<span class="lideranca-dep-tag">Dep. Est.: ${escapeHtml(depTxt)}${depUrna ? ` · urna ${escapeHtml(depUrna)}` : ''}</span>`
       : '';
     const obs = notesTxt
       ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
@@ -9029,9 +9149,15 @@ function leadershipMaterialFormHtml(leadership){
   const depOpts = getDeputadoOptions();
   const depKnown = !depVal || depOpts.includes(depVal);
   const showDepOther = depVal && !depKnown;
+  let depUrnaVal = editing ? normalizeNumeroUrna(editing.deputadoNumeroUrna || '') : '';
+  if(!depUrnaVal && depVal) depUrnaVal = getDeputadoUrna(depVal, leadership);
+  // Se o deputado for o mesmo nome do candidato, puxa urna do candidato
+  if(!depUrnaVal && depVal && toLeadershipName(leadership.name) === depVal && normalizeLeadershipRole(leadership.role) === 'candidato'){
+    depUrnaVal = normalizeNumeroUrna(leadership.numeroUrna || '');
+  }
   const formId = escapeHtml(String(leadership.id));
   return `
-  <form class="lideranca-mat-form" data-lid-mat-form="${formId}" autocomplete="off">
+  <form class="lideranca-mat-form" data-lid-mat-form="${formId}" data-lid-name="${escapeHtml(toLeadershipName(leadership.name || ''))}" data-lid-role="${escapeHtml(normalizeLeadershipRole(leadership.role))}" data-lid-urna="${escapeHtml(normalizeNumeroUrna(leadership.numeroUrna || ''))}" autocomplete="off">
     <div class="field">
       <label>Tipo de material</label>
       <select name="lidMatType" data-lid-mat-type style="text-transform:uppercase;">${campanhaTypeOptionsHtml(selectedType)}</select>
@@ -9061,6 +9187,10 @@ function leadershipMaterialFormHtml(leadership){
         <label>Nome do deputado (OUTRO)</label>
         <input type="text" name="lidMatDepOther" data-lid-mat-dep-other placeholder="Ex: NOME DO DEPUTADO" maxlength="120" autocomplete="off" spellcheck="false" style="text-transform:uppercase;" value="${escapeHtml(showDepOther ? depVal : '')}">
       </div>
+    </div>
+    <div class="field span-all">
+      <label for="lidMatDepUrna-${formId}">Nº de urna do deputado estadual <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+      <input type="text" id="lidMatDepUrna-${formId}" name="lidMatDepUrna" data-lid-mat-dep-urna placeholder="Ex: 12345" maxlength="6" inputmode="numeric" autocomplete="off" value="${escapeHtml(depUrnaVal)}">
     </div>
     <div class="field span-all">
       <label for="lidMatNotes-${formId}">Observação do material <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
@@ -9125,6 +9255,9 @@ function renderLiderancasList(){
       </div>
       <div class="campanha-meta">
         <div><b>Cidades</b>${escapeHtml(cities.length ? cities.join(', ') : '—')}</div>
+        ${normalizeLeadershipRole(l.role) === 'candidato'
+          ? `<div><b>Nº urna</b>${escapeHtml(normalizeNumeroUrna(l.numeroUrna) || '—')}</div>`
+          : ''}
         <div><b>Telefone</b>${escapeHtml(l.phone || '—')}</div>
         <div><b>Assessoria</b>${escapeHtml(l.assessoriaName || '—')}</div>
         <div><b>Tel. assessoria</b>${escapeHtml(l.assessoriaPhone || '—')}</div>
@@ -9180,6 +9313,7 @@ async function submitLeadershipMaterialForm(form){
   const notesEl = form.querySelector('[data-lid-mat-notes], [name="lidMatNotes"], textarea[name="lidMatNotes"]');
   const depSel = form.querySelector('[data-lid-mat-dep-sel], [name="lidMatDep"]');
   const depOther = form.querySelector('[data-lid-mat-dep-other], [name="lidMatDepOther"]');
+  const depUrnaEl = form.querySelector('[data-lid-mat-dep-urna], [name="lidMatDepUrna"]');
   const type = resolveCampanhaTypeFromFields(sel, other);
   if(!type){
     try{ alert('Informe o tipo de material (ou digite o nome em OUTROS).'); }catch(_e){}
@@ -9207,12 +9341,23 @@ async function submitLeadershipMaterialForm(form){
     }catch(_e){ notes = ''; }
   }
   notes = String(notes || '').trim();
-  const depResolved = resolveDeputadoFromFields(depSel, depOther);
+  const depResolved = resolveDeputadoFromFields(depSel, depOther, depUrnaEl, leadership);
   if(depResolved && typeof depResolved === 'object' && depResolved.error){
     try{ alert(depResolved.error); }catch(_e){}
     return;
   }
-  const deputadoEstadual = typeof depResolved === 'string' ? depResolved : '';
+  const deputadoEstadual = depResolved && typeof depResolved === 'object' ? (depResolved.name || '') : '';
+  let deputadoNumeroUrna = depResolved && typeof depResolved === 'object' ? normalizeNumeroUrna(depResolved.numeroUrna || '') : '';
+  // Se for o mesmo nome do candidato, sincroniza urna nos dois lados
+  if(deputadoEstadual && toLeadershipName(leadership.name) === deputadoEstadual && normalizeLeadershipRole(leadership.role) === 'candidato'){
+    if(!deputadoNumeroUrna && leadership.numeroUrna){
+      deputadoNumeroUrna = normalizeNumeroUrna(leadership.numeroUrna);
+    }
+    if(deputadoNumeroUrna && !leadership.numeroUrna){
+      leadership.numeroUrna = deputadoNumeroUrna;
+    }
+    ensureDeputadoName(deputadoEstadual, deputadoNumeroUrna || leadership.numeroUrna);
+  }
   const now = new Date().toISOString();
   if(!Array.isArray(leadership.materials)) leadership.materials = [];
   const editingMatId = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadershipId)
@@ -9226,6 +9371,7 @@ async function submitLeadershipMaterialForm(form){
     artLink,
     notes,
     deputadoEstadual,
+    deputadoNumeroUrna,
     updatedAt: now
   };
   if(editingMatId){
@@ -9245,11 +9391,12 @@ async function submitLeadershipMaterialForm(form){
       id: uid(), ...materialPayload, createdAt: now
     });
   }
-  // Garante notes/deputado no objeto em memória
+  // Garante notes/deputado/urna no objeto em memória
   const ensureFields = (mat)=>{
     if(!mat) return;
     mat.notes = notes;
     mat.deputadoEstadual = deputadoEstadual;
+    mat.deputadoNumeroUrna = deputadoNumeroUrna;
   };
   if(editingMatId){
     ensureFields(leadership.materials.find(m=> sameId(m.id, editingMatId)));
@@ -9264,7 +9411,9 @@ async function submitLeadershipMaterialForm(form){
   await saveCampanha();
   renderLiderancasUI();
   const notesHint = notes ? ` · obs: ${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}` : '';
-  const depHint = deputadoEstadual ? ` · dep.: ${deputadoEstadual}` : '';
+  const depHint = deputadoEstadual
+    ? ` · dep.: ${deputadoEstadual}${deputadoNumeroUrna ? ` (${deputadoNumeroUrna})` : ''}`
+    : '';
   showSuccessFeedback(
     wasEdit ? 'Material atualizado!' : 'Material adicionado!',
     `${type.label} · ${leadership.name} · qtd ${(Number(qty)||0).toLocaleString('pt-BR')}${depHint}${notesHint}`
@@ -9345,6 +9494,10 @@ function bindCampanhaModuleEvents(){
     if(!btn) return;
     setLiderancaRoleToggle(btn.dataset.lidrole);
   });
+  document.getElementById('lidNumeroUrna')?.addEventListener('input', (e)=>{
+    e.target.value = normalizeNumeroUrna(e.target.value);
+  });
+  updateLiderancaUrnaFieldVisibility();
   // Nome da liderança: não dar trim no input (permite espaço entre palavras).
   // Maiúsculas via CSS + live; normalização completa no blur/save.
   document.getElementById('lidNome')?.addEventListener('input', (e)=>{
@@ -9446,6 +9599,29 @@ function bindCampanhaModuleEvents(){
   };
   document.getElementById('liderancaTypeGrid')?.addEventListener('click', toggleCtpCard);
   document.getElementById('liderancaDepGrid')?.addEventListener('click', toggleCtpCard);
+  function autofillDepUrnaFromForm(form){
+    if(!form) return;
+    const depSel = form.querySelector('[data-lid-mat-dep-sel]');
+    const depOther = form.querySelector('[data-lid-mat-dep-other]');
+    const urnaEl = form.querySelector('[data-lid-mat-dep-urna]');
+    if(!urnaEl) return;
+    let depName = '';
+    if(depSel && depSel.value === '__outros__'){
+      depName = toDeputadoName(depOther?.value || '');
+    } else if(depSel){
+      depName = toDeputadoName(depSel.value || '');
+    }
+    if(!depName){
+      // não limpa urna se usuário digitou manualmente sem deputado
+      return;
+    }
+    const lidName = toLeadershipName(form.dataset.lidName || '');
+    const lidRole = normalizeLeadershipRole(form.dataset.lidRole || '');
+    const lidUrna = normalizeNumeroUrna(form.dataset.lidUrna || '');
+    let urna = getDeputadoUrna(depName);
+    if(!urna && lidRole === 'candidato' && lidName === depName) urna = lidUrna;
+    if(urna) urnaEl.value = urna;
+  }
   document.getElementById('liderancaList')?.addEventListener('change', (e)=>{
     const depSel = e.target.closest('[data-lid-mat-dep-sel]');
     if(depSel){
@@ -9456,6 +9632,7 @@ function bindCampanhaModuleEvents(){
       if(depSel.value !== '__outros__'){
         const other = form.querySelector('[data-lid-mat-dep-other]');
         if(other) other.value = '';
+        autofillDepUrnaFromForm(form);
       } else {
         form.querySelector('[data-lid-mat-dep-other]')?.focus();
       }
@@ -9464,15 +9641,26 @@ function bindCampanhaModuleEvents(){
   });
   document.getElementById('liderancaList')?.addEventListener('input', (e)=>{
     const depOther = e.target.closest('[data-lid-mat-dep-other]');
-    if(!depOther) return;
-    const start = depOther.selectionStart;
-    const end = depOther.selectionEnd;
-    depOther.value = toDeputadoNameLive(depOther.value);
-    try{ depOther.setSelectionRange(start, end); }catch(_e){}
+    if(depOther){
+      const start = depOther.selectionStart;
+      const end = depOther.selectionEnd;
+      depOther.value = toDeputadoNameLive(depOther.value);
+      try{ depOther.setSelectionRange(start, end); }catch(_e){}
+      const form = depOther.closest('[data-lid-mat-form]');
+      autofillDepUrnaFromForm(form);
+      return;
+    }
+    const depUrna = e.target.closest('[data-lid-mat-dep-urna]');
+    if(depUrna){
+      depUrna.value = normalizeNumeroUrna(depUrna.value);
+    }
   });
   document.getElementById('liderancaList')?.addEventListener('blur', (e)=>{
     const depOther = e.target.closest('[data-lid-mat-dep-other]');
-    if(depOther) depOther.value = toDeputadoName(depOther.value);
+    if(depOther){
+      depOther.value = toDeputadoName(depOther.value);
+      autofillDepUrnaFromForm(depOther.closest('[data-lid-mat-form]'));
+    }
   }, true);
   document.getElementById('liderancaList')?.addEventListener('click', (e)=>{
     const matsToggle = e.target.closest('[data-lid-mats-toggle]');
@@ -15703,7 +15891,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-paineis-expand', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-numero-urna', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
