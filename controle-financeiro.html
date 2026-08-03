@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-dep-cidades-filtros -->
+<!-- deploy-v20260803-dep-lista-outro -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -859,8 +859,10 @@
   .lideranca-mat-form .lideranca-mat-form-actions{
     grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
   }
-  .lideranca-mat-other-wrap{ display:none; grid-column:1/-1; }
-  .lideranca-mat-other-wrap.show{ display:block; }
+  .lideranca-mat-other-wrap,
+  .lideranca-mat-dep-other-wrap{ display:none; grid-column:1/-1; }
+  .lideranca-mat-other-wrap.show,
+  .lideranca-mat-dep-other-wrap.show{ display:block; }
   .lideranca-mat-obs{
     margin:4px 0 0; font-size:12px; font-weight:600; color:var(--ink-soft); white-space:pre-wrap;
     background:rgba(5,150,105,0.06); border:1px dashed rgba(5,150,105,0.25);
@@ -7028,6 +7030,7 @@ let currentAppModule = 'agenda';
 /* ===== Campanha 2026 (materiais e artes + lideranças) ===== */
 let campanhaMaterials = [];
 let campanhaCustomTypes = [];
+let campanhaDeputados = []; // nomes cadastrados de deputados estaduais
 let campanhaLeaderships = [];
 let campanhaStorageReady = false;
 let campanhaStorageError = false;
@@ -7527,6 +7530,51 @@ function toDeputadoName(name){
 function toDeputadoNameLive(name){
   return String(name || '').toLocaleUpperCase('pt-BR');
 }
+function ensureDeputadoName(name){
+  const label = toDeputadoName(name);
+  if(!label) return '';
+  if(!(campanhaDeputados || []).some(d=> toDeputadoName(d) === label)){
+    campanhaDeputados = (campanhaDeputados || []).concat([label]);
+  }
+  return label;
+}
+function getDeputadoOptions(){
+  const set = new Set();
+  (campanhaDeputados || []).forEach(d=>{
+    const n = toDeputadoName(d);
+    if(n) set.add(n);
+  });
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(m=>{
+      const n = toDeputadoName(m.deputadoEstadual);
+      if(n) set.add(n);
+    });
+  });
+  return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+}
+function deputadoOptionsHtml(selected){
+  const opts = getDeputadoOptions();
+  const sel = toDeputadoName(selected || '');
+  const known = !sel || opts.includes(sel);
+  const selectedValue = !sel ? '' : (known ? sel : '__outros__');
+  const parts = [
+    `<option value=""${!sel ? ' selected' : ''}>Nenhum</option>`,
+    ...opts.map(d=> `<option value="${escapeHtml(d)}"${selectedValue === d ? ' selected' : ''}>${escapeHtml(d)}</option>`),
+    `<option value="__outros__"${selectedValue === '__outros__' ? ' selected' : ''}>OUTRO (adicionar novo)</option>`
+  ];
+  return parts.join('');
+}
+function resolveDeputadoFromFields(selEl, otherEl){
+  const value = selEl ? String(selEl.value || '') : '';
+  if(!value) return '';
+  if(value === '__outros__'){
+    const label = toDeputadoName(otherEl ? otherEl.value : '');
+    if(!label) return { error: 'Informe o nome do deputado estadual em OUTRO.' };
+    ensureDeputadoName(label);
+    return label;
+  }
+  return ensureDeputadoName(value);
+}
 function normalizeLeadershipRole(raw){
   const v = String(raw || '').trim().toLowerCase();
   if(v === 'candidato' || v === 'cand' || v === 'candidate') return 'candidato';
@@ -7591,12 +7639,14 @@ async function loadCampanha(){
       campanhaStorageError = true;
       campanhaMaterials = campanhaMaterials || [];
       campanhaCustomTypes = campanhaCustomTypes || [];
+      campanhaDeputados = campanhaDeputados || [];
       campanhaLeaderships = campanhaLeaderships || [];
       return;
     }
     if(res.missing){
       campanhaMaterials = [];
       campanhaCustomTypes = [];
+      campanhaDeputados = [];
       campanhaLeaderships = [];
       campanhaStorageReady = true;
       return;
@@ -7604,27 +7654,35 @@ async function loadCampanha(){
     const parsed = parseStoredJson(res.value, null);
     let list = [];
     let customs = [];
+    let deputados = [];
     let leaderships = [];
     if(Array.isArray(parsed)) list = parsed;
     else if(parsed && typeof parsed === 'object'){
       if(Array.isArray(parsed.materials)) list = parsed.materials;
       else if(Array.isArray(parsed.items)) list = parsed.items;
       if(Array.isArray(parsed.customTypes)) customs = parsed.customTypes;
+      if(Array.isArray(parsed.deputados)) deputados = parsed.deputados;
+      else if(Array.isArray(parsed.deputadosEstaduais)) deputados = parsed.deputadosEstaduais;
       if(Array.isArray(parsed.leaderships)) leaderships = parsed.leaderships;
       else if(Array.isArray(parsed.liderancas)) leaderships = parsed.liderancas;
     }
     campanhaMaterials = list.map(normalizeCampanhaMaterial).filter(Boolean);
     campanhaCustomTypes = customs.map(normalizeCampanhaCustomType).filter(Boolean);
+    campanhaDeputados = deputados.map(toDeputadoName).filter(Boolean);
     campanhaLeaderships = leaderships.map(normalizeLeadership).filter(Boolean);
-    // recupera tipos custom usados em materiais existentes
+    // recupera tipos custom e deputados usados em materiais existentes
     campanhaMaterials.forEach(ensureCampanhaCustomTypeFromMaterial);
-    campanhaLeaderships.forEach(l=> (l.materials || []).forEach(ensureCampanhaCustomTypeFromMaterial));
+    campanhaLeaderships.forEach(l=> (l.materials || []).forEach(m=>{
+      ensureCampanhaCustomTypeFromMaterial(m);
+      if(m.deputadoEstadual) ensureDeputadoName(m.deputadoEstadual);
+    }));
     campanhaStorageReady = true;
   }catch(e){
     console.error('Falha ao carregar campanha 2026', e);
     campanhaStorageError = true;
     campanhaMaterials = campanhaMaterials || [];
     campanhaCustomTypes = campanhaCustomTypes || [];
+    campanhaDeputados = campanhaDeputados || [];
     campanhaLeaderships = campanhaLeaderships || [];
   }
 }
@@ -7632,9 +7690,12 @@ async function saveCampanha(){
   if(campanhaStorageError) return;
   try{
     if(!window.storage || typeof window.storage.set !== 'function') return;
+    // normaliza lista de deputados (únicos + ordenados)
+    campanhaDeputados = getDeputadoOptions();
     await window.storage.set(CAMPANHA_KEY, JSON.stringify({
       materials: campanhaMaterials,
       customTypes: campanhaCustomTypes,
+      deputados: campanhaDeputados,
       leaderships: campanhaLeaderships
     }), false);
     campanhaStorageReady = true;
@@ -8426,14 +8487,7 @@ function filteredLeaderships(){
   });
 }
 function listAllDeputadosEstaduais(){
-  const set = new Set();
-  (campanhaLeaderships || []).forEach(l=>{
-    (l.materials || []).forEach(m=>{
-      const d = toDeputadoName(m.deputadoEstadual);
-      if(d) set.add(d);
-    });
-  });
-  return Array.from(set).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+  return getDeputadoOptions();
 }
 function listAllLeadershipCities(){
   const set = new Set();
@@ -8582,6 +8636,9 @@ function leadershipMaterialFormHtml(leadership){
   if(selectedType === '__outros__') showOther = true;
   const notesVal = editing ? String(editing.notes || '') : '';
   const depVal = editing ? toDeputadoName(editing.deputadoEstadual || '') : '';
+  const depOpts = getDeputadoOptions();
+  const depKnown = !depVal || depOpts.includes(depVal);
+  const showDepOther = depVal && !depKnown;
   const formId = escapeHtml(String(leadership.id));
   return `
   <form class="lideranca-mat-form" data-lid-mat-form="${formId}" autocomplete="off">
@@ -8605,7 +8662,15 @@ function leadershipMaterialFormHtml(leadership){
     </div>
     <div class="field span-all">
       <label for="lidMatDep-${formId}">Deputado estadual <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-      <input type="text" id="lidMatDep-${formId}" name="lidMatDep" data-lid-mat-dep placeholder="Ex: NOME DO DEPUTADO" maxlength="120" autocomplete="off" spellcheck="false" style="text-transform:uppercase;" value="${escapeHtml(depVal)}">
+      <select id="lidMatDep-${formId}" name="lidMatDep" data-lid-mat-dep-sel style="text-transform:uppercase;">
+        ${deputadoOptionsHtml(depVal)}
+      </select>
+    </div>
+    <div class="lideranca-mat-dep-other-wrap${showDepOther ? ' show' : ''}" data-lid-mat-dep-other-wrap>
+      <div class="field">
+        <label>Nome do deputado (OUTRO)</label>
+        <input type="text" name="lidMatDepOther" data-lid-mat-dep-other placeholder="Ex: NOME DO DEPUTADO" maxlength="120" autocomplete="off" spellcheck="false" style="text-transform:uppercase;" value="${escapeHtml(showDepOther ? depVal : '')}">
+      </div>
     </div>
     <div class="field span-all">
       <label for="lidMatNotes-${formId}">Observação do material <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
@@ -8699,7 +8764,8 @@ async function submitLeadershipMaterialForm(form){
   const qtyEl = form.querySelector('[data-lid-mat-qty], [name="lidMatQty"]');
   const linkEl = form.querySelector('[data-lid-mat-link], [name="lidMatLink"]');
   const notesEl = form.querySelector('[data-lid-mat-notes], [name="lidMatNotes"], textarea[name="lidMatNotes"]');
-  const depEl = form.querySelector('[data-lid-mat-dep], [name="lidMatDep"]');
+  const depSel = form.querySelector('[data-lid-mat-dep-sel], [name="lidMatDep"]');
+  const depOther = form.querySelector('[data-lid-mat-dep-other], [name="lidMatDepOther"]');
   const type = resolveCampanhaTypeFromFields(sel, other);
   if(!type){
     try{ alert('Informe o tipo de material (ou digite o nome em OUTROS).'); }catch(_e){}
@@ -8727,16 +8793,12 @@ async function submitLeadershipMaterialForm(form){
     }catch(_e){ notes = ''; }
   }
   notes = String(notes || '').trim();
-  let deputadoEstadual = '';
-  if(depEl && typeof depEl.value === 'string') deputadoEstadual = depEl.value;
-  else if(form.elements && form.elements.lidMatDep) deputadoEstadual = form.elements.lidMatDep.value || '';
-  else {
-    try{
-      const fd = new FormData(form);
-      deputadoEstadual = String(fd.get('lidMatDep') || '');
-    }catch(_e){ deputadoEstadual = ''; }
+  const depResolved = resolveDeputadoFromFields(depSel, depOther);
+  if(depResolved && typeof depResolved === 'object' && depResolved.error){
+    try{ alert(depResolved.error); }catch(_e){}
+    return;
   }
-  deputadoEstadual = toDeputadoName(deputadoEstadual);
+  const deputadoEstadual = typeof depResolved === 'string' ? depResolved : '';
   const now = new Date().toISOString();
   if(!Array.isArray(leadership.materials)) leadership.materials = [];
   const editingMatId = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadershipId)
@@ -8907,17 +8969,33 @@ function bindCampanhaModuleEvents(){
     if(s) s.value = '';
     renderLiderancasUI();
   });
+  document.getElementById('liderancaList')?.addEventListener('change', (e)=>{
+    const depSel = e.target.closest('[data-lid-mat-dep-sel]');
+    if(depSel){
+      const form = depSel.closest('[data-lid-mat-form]');
+      if(!form) return;
+      const wrap = form.querySelector('[data-lid-mat-dep-other-wrap]');
+      if(wrap) wrap.classList.toggle('show', depSel.value === '__outros__');
+      if(depSel.value !== '__outros__'){
+        const other = form.querySelector('[data-lid-mat-dep-other]');
+        if(other) other.value = '';
+      } else {
+        form.querySelector('[data-lid-mat-dep-other]')?.focus();
+      }
+      return;
+    }
+  });
   document.getElementById('liderancaList')?.addEventListener('input', (e)=>{
-    const dep = e.target.closest('[data-lid-mat-dep]');
-    if(!dep) return;
-    const start = dep.selectionStart;
-    const end = dep.selectionEnd;
-    dep.value = toDeputadoNameLive(dep.value);
-    try{ dep.setSelectionRange(start, end); }catch(_e){}
+    const depOther = e.target.closest('[data-lid-mat-dep-other]');
+    if(!depOther) return;
+    const start = depOther.selectionStart;
+    const end = depOther.selectionEnd;
+    depOther.value = toDeputadoNameLive(depOther.value);
+    try{ depOther.setSelectionRange(start, end); }catch(_e){}
   });
   document.getElementById('liderancaList')?.addEventListener('blur', (e)=>{
-    const dep = e.target.closest('[data-lid-mat-dep]');
-    if(dep) dep.value = toDeputadoName(dep.value);
+    const depOther = e.target.closest('[data-lid-mat-dep-other]');
+    if(depOther) depOther.value = toDeputadoName(depOther.value);
   }, true);
   document.getElementById('liderancaList')?.addEventListener('click', (e)=>{
     const editBtn = e.target.closest('[data-lid-edit]');
@@ -15125,7 +15203,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-dep-cidades', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-dep-lista', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
