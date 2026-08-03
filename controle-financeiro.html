@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-prod-modal-compact -->
+<!-- deploy-v20260803-lid-form-btn -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1067,6 +1067,14 @@
   .lideranca-form .lideranca-form-actions{
     grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:4px;
   }
+  .lideranca-form-collapsed{
+    display:flex; align-items:center; justify-content:flex-start;
+  }
+  .lideranca-new-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:14.5px; padding:12px 18px;
+  }
+  .lideranca-form-expanded[hidden]{ display:none !important; }
   .lideranca-form textarea{
     width:100%; min-height:84px; resize:vertical; padding:12px 14px; border:1.5px solid var(--card-border);
     border-radius:14px; font-family:var(--font); font-weight:600; font-size:13.5px;
@@ -4912,53 +4920,60 @@
       </div>
 
       <div class="panel" id="liderancaFormPanel">
-        <h2 class="panel-title" id="liderancaFormTitle">Nova liderança</h2>
-        <form class="lideranca-form" id="liderancaForm">
-          <div class="field">
-            <label for="lidNome">Nome</label>
-            <input type="text" id="lidNome" placeholder="Ex: JOÃO SILVA" maxlength="120" required autocomplete="name" style="text-transform:uppercase;">
-          </div>
-          <div class="field">
-            <label>Tipo</label>
-            <div class="type-toggle" id="lidRoleToggle" style="max-width:100%;">
-              <button type="button" class="active" data-lidrole="lideranca">LIDERANÇA</button>
-              <button type="button" data-lidrole="candidato">CANDIDATO</button>
-              <button type="button" data-lidrole="candidato_principal">CANDIDATO PRINCIPAL</button>
+        <div class="lideranca-form-collapsed no-print" id="liderancaFormCollapsed">
+          <button type="button" class="btn-add lideranca-new-btn" id="liderancaNewBtn" title="Cadastrar nova liderança ou candidato">
+            👤 + Nova liderança
+          </button>
+        </div>
+        <div class="lideranca-form-expanded" id="liderancaFormExpanded" style="display:none;" hidden>
+          <h2 class="panel-title" id="liderancaFormTitle">Nova liderança</h2>
+          <form class="lideranca-form" id="liderancaForm">
+            <div class="field">
+              <label for="lidNome">Nome</label>
+              <input type="text" id="lidNome" placeholder="Ex: JOÃO SILVA" maxlength="120" required autocomplete="name" style="text-transform:uppercase;">
             </div>
-          </div>
-          <div class="field" id="lidNumeroUrnaWrap" style="display:none;">
-            <label for="lidNumeroUrna">Número de urna do candidato <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-            <input type="text" id="lidNumeroUrna" placeholder="Ex: 12345" maxlength="6" inputmode="numeric" autocomplete="off">
-          </div>
-          <div class="field span-all">
-            <label for="lidCidades">Cidades <span style="font-weight:600;color:var(--ink-faint);">(pode ser mais de uma, separadas por vírgula)</span></label>
-            <input type="text" id="lidCidades" placeholder="Ex: Salvador, Feira de Santana, Camaçari" maxlength="300" autocomplete="address-level2" style="text-transform:uppercase;">
-          </div>
-          <div class="field">
-            <label for="lidTelefone">Telefone</label>
-            <input type="tel" id="lidTelefone" placeholder="(71) 99999-9999" maxlength="16" inputmode="tel" autocomplete="tel">
-          </div>
-          <div class="field">
-            <label for="lidAssessoriaNome">Nome da assessoria <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-            <input type="text" id="lidAssessoriaNome" placeholder="Ex: Assessoria Política XYZ" maxlength="120" autocomplete="organization">
-          </div>
-          <div class="field">
-            <label for="lidAssessoriaTel">Telefone da assessoria <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-            <input type="tel" id="lidAssessoriaTel" placeholder="(71) 98888-8888" maxlength="16" inputmode="tel" autocomplete="tel">
-          </div>
-          <div class="field span-all">
-            <label for="lidFotoLink">Link da pasta com a foto da liderança <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-            <input type="url" id="lidFotoLink" placeholder="https://drive.google.com/drive/folders/..." maxlength="500" autocomplete="off">
-          </div>
-          <div class="field span-all">
-            <label for="lidObs">Observações</label>
-            <textarea id="lidObs" placeholder="Anotações sobre a liderança, região, contatos..." maxlength="2000"></textarea>
-          </div>
-          <div class="lideranca-form-actions">
-            <button type="submit" class="btn-add" id="liderancaSubmitLabel">+ Adicionar liderança</button>
-            <button type="button" class="btn-mini ghost" id="liderancaFormCancel" style="display:none;">Cancelar edição</button>
-          </div>
-        </form>
+            <div class="field">
+              <label>Tipo</label>
+              <div class="type-toggle" id="lidRoleToggle" style="max-width:100%;">
+                <button type="button" class="active" data-lidrole="lideranca">LIDERANÇA</button>
+                <button type="button" data-lidrole="candidato">CANDIDATO</button>
+                <button type="button" data-lidrole="candidato_principal">CANDIDATO PRINCIPAL</button>
+              </div>
+            </div>
+            <div class="field" id="lidNumeroUrnaWrap" style="display:none;">
+              <label for="lidNumeroUrna">Número de urna do candidato <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+              <input type="text" id="lidNumeroUrna" placeholder="Ex: 12345" maxlength="6" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="field span-all">
+              <label for="lidCidades">Cidades <span style="font-weight:600;color:var(--ink-faint);">(pode ser mais de uma, separadas por vírgula)</span></label>
+              <input type="text" id="lidCidades" placeholder="Ex: Salvador, Feira de Santana, Camaçari" maxlength="300" autocomplete="address-level2" style="text-transform:uppercase;">
+            </div>
+            <div class="field">
+              <label for="lidTelefone">Telefone</label>
+              <input type="tel" id="lidTelefone" placeholder="(71) 99999-9999" maxlength="16" inputmode="tel" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label for="lidAssessoriaNome">Nome da assessoria <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+              <input type="text" id="lidAssessoriaNome" placeholder="Ex: Assessoria Política XYZ" maxlength="120" autocomplete="organization">
+            </div>
+            <div class="field">
+              <label for="lidAssessoriaTel">Telefone da assessoria <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+              <input type="tel" id="lidAssessoriaTel" placeholder="(71) 98888-8888" maxlength="16" inputmode="tel" autocomplete="tel">
+            </div>
+            <div class="field span-all">
+              <label for="lidFotoLink">Link da pasta com a foto da liderança <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+              <input type="url" id="lidFotoLink" placeholder="https://drive.google.com/drive/folders/..." maxlength="500" autocomplete="off">
+            </div>
+            <div class="field span-all">
+              <label for="lidObs">Observações</label>
+              <textarea id="lidObs" placeholder="Anotações sobre a liderança, região, contatos..." maxlength="2000"></textarea>
+            </div>
+            <div class="lideranca-form-actions">
+              <button type="submit" class="btn-add" id="liderancaSubmitLabel">+ Adicionar liderança</button>
+              <button type="button" class="btn-mini ghost" id="liderancaFormCancel">Cancelar</button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <div class="panel" style="margin-top:16px;">
@@ -10451,7 +10466,27 @@ function printCampanhaCategoriesOnly(){
 function getLeadershipById(id){
   return (campanhaLeaderships || []).find(l=> sameId(l.id, id)) || null;
 }
-function resetLiderancaForm(){
+function setLiderancaFormOpen(open){
+  const collapsed = document.getElementById('liderancaFormCollapsed');
+  const expanded = document.getElementById('liderancaFormExpanded');
+  if(collapsed) collapsed.style.display = open ? 'none' : '';
+  if(expanded){
+    if(open){
+      expanded.hidden = false;
+      expanded.style.display = '';
+    } else {
+      expanded.hidden = true;
+      expanded.style.display = 'none';
+    }
+  }
+}
+function openLiderancaFormNew(){
+  resetLiderancaForm(false);
+  setLiderancaFormOpen(true);
+  document.getElementById('liderancaFormPanel')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  setTimeout(()=>{ try{ document.getElementById('lidNome')?.focus(); }catch(_e){} }, 50);
+}
+function resetLiderancaForm(collapse = true){
   liderancaEditingId = null;
   const form = document.getElementById('liderancaForm');
   if(form) form.reset();
@@ -10464,11 +10499,13 @@ function resetLiderancaForm(){
   const cancel = document.getElementById('liderancaFormCancel');
   if(title) title.textContent = 'Nova liderança';
   if(submit) submit.textContent = '+ Adicionar liderança';
-  if(cancel) cancel.style.display = 'none';
+  if(cancel) cancel.textContent = 'Cancelar';
+  if(collapse !== false) setLiderancaFormOpen(false);
 }
 function fillLiderancaForm(item){
   if(!item) return;
   liderancaEditingId = item.id;
+  setLiderancaFormOpen(true);
   const nome = document.getElementById('lidNome');
   const cidades = document.getElementById('lidCidades');
   const urna = document.getElementById('lidNumeroUrna');
@@ -10491,7 +10528,7 @@ function fillLiderancaForm(item){
   const cancel = document.getElementById('liderancaFormCancel');
   if(title) title.textContent = 'Editar liderança';
   if(submit) submit.textContent = 'Salvar alterações';
-  if(cancel) cancel.style.display = '';
+  if(cancel) cancel.textContent = 'Cancelar edição';
   document.getElementById('liderancaFormPanel')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 function readLiderancaForm(){
@@ -11239,7 +11276,9 @@ function bindCampanhaModuleEvents(){
 
   // Lideranças
   document.getElementById('liderancaForm')?.addEventListener('submit', submitLiderancaForm);
-  document.getElementById('liderancaFormCancel')?.addEventListener('click', ()=> resetLiderancaForm());
+  document.getElementById('liderancaFormCancel')?.addEventListener('click', ()=> resetLiderancaForm(true));
+  document.getElementById('liderancaNewBtn')?.addEventListener('click', ()=> openLiderancaFormNew());
+  setLiderancaFormOpen(false);
   document.getElementById('lidRoleToggle')?.addEventListener('click', (e)=>{
     const btn = e.target.closest('button[data-lidrole]');
     if(!btn) return;
@@ -17739,7 +17778,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-prod-modal-compact', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-lid-form-btn', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
