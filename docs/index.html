@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-por-lid-expand-dep-clean -->
+<!-- deploy-v20260803-dup-lideranca -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -8945,11 +8945,34 @@ function readLiderancaForm(){
     notes: String(document.getElementById('lidObs')?.value || '').trim()
   };
 }
+/** Retorna liderança/candidato já cadastrado com o mesmo nome (ignora o id em edição). */
+function findLeadershipByName(name, excludeId){
+  const target = toLeadershipName(name);
+  if(!target) return null;
+  return (campanhaLeaderships || []).find(l=>{
+    if(excludeId && sameId(l.id, excludeId)) return false;
+    return toLeadershipName(l.name) === target;
+  }) || null;
+}
 async function submitLiderancaForm(e){
   e?.preventDefault?.();
   const data = readLiderancaForm();
   if(data.error){
     try{ alert(data.error); }catch(_e){}
+    return;
+  }
+  // Não permite cadastrar/renomear para um nome que já existe
+  const duplicado = findLeadershipByName(data.name, liderancaEditingId || null);
+  if(duplicado){
+    const tipo = normalizeLeadershipRole(duplicado.role) === 'candidato' ? 'candidato' : 'liderança';
+    try{
+      alert(
+        `Já existe ${tipo === 'candidato' ? 'um candidato' : 'uma liderança'} cadastrado(a) com o nome “${data.name}”.\n\n` +
+        `Tipo atual: ${tipo === 'candidato' ? 'CANDIDATO' : 'LIDERANÇA'}` +
+        (duplicado.city || (duplicado.cities && duplicado.cities[0]) ? ` · cidade: ${leadershipCitiesLabel(duplicado) || duplicado.city}` : '') +
+        `\n\nNão é possível cadastrar duplicado. Use a busca ou edite o registro existente.`
+      );
+    }catch(_e){}
     return;
   }
   const wasEdit = !!liderancaEditingId;
@@ -15947,7 +15970,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-por-lid-dep-clean', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-dup-lideranca', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
