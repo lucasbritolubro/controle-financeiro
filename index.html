@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-sections-collapsed -->
+<!-- deploy-v20260803-sem-mat-top -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -9874,12 +9874,24 @@ function leadershipHasCidade(l, cidade){
   const target = toCityName(cidade);
   return leadershipCities(l).some(c=> c === target);
 }
+/** True se a liderança/candidato tem material próprio ou vinculado (produção). */
+function leadershipHasDefinedMaterial(l){
+  if(!l) return false;
+  if((l.materials || []).length > 0) return true;
+  return getMaterialsLinkedToLeadership(l.id).length > 0;
+}
 function filteredLeaderships(){
   const q = String(liderancaSearchQuery || '').trim().toLowerCase();
   const dep = toDeputadoName(liderancaFilterDeputado || '');
   const cidade = toCityName(liderancaFilterCidade || '');
   const lidId = String(liderancaFilterLideranca || '').trim();
-  let list = (campanhaLeaderships || []).slice().sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), 'pt-BR'));
+  // SEM MATERIAL DEFINIDO sempre no topo; depois ordem alfabética
+  let list = (campanhaLeaderships || []).slice().sort((a,b)=>{
+    const aHas = leadershipHasDefinedMaterial(a);
+    const bHas = leadershipHasDefinedMaterial(b);
+    if(aHas !== bHas) return aHas ? 1 : -1; // sem material primeiro
+    return String(a.name||'').localeCompare(String(b.name||''), 'pt-BR');
+  });
   return list.filter(l=>{
     // Liderança isolada OU combinada com deputado/cidade (AND)
     if(lidId && !sameId(l.id, lidId)) return false;
@@ -10144,7 +10156,7 @@ function renderLiderancasList(){
     const matQty = ownMats.reduce((s,m)=> s + (Number(m.qty)||0), 0)
       + (depFilter ? 0 : linked.reduce((s,m)=> s + getMaterialQtyTotal(m), 0));
     // Tag vermelha: nenhum material próprio nem vinculado (independente do filtro)
-    const hasAnyMaterial = ((l.materials || []).length + linked.length) > 0;
+    const hasAnyMaterial = leadershipHasDefinedMaterial(l);
     const semMaterialTag = hasAnyMaterial
       ? ''
       : `<span class="lideranca-sem-material-tag">SEM MATERIAL DEFINIDO</span>`;
@@ -16860,7 +16872,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-sections-collapsed', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-sem-mat-top', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
