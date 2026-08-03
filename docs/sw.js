@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-lideranca-nome-espaco';
+const CACHE_VERSION = 'financas-pwa-v20260803-painel-tipos';
 const PRECACHE = [
   '/',
   '/index.html',

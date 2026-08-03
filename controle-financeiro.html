@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-lideranca-nome-espaco -->
+<!-- deploy-v20260803-painel-tipos-material -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -500,6 +500,60 @@
   }
   .campanha-stat .cs-label{ font-size:10.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); }
   .campanha-stat .cs-value{ margin-top:4px; font-family:var(--font); font-weight:800; font-size:16px; color:var(--ink); letter-spacing:-.02em; }
+  .campanha-type-panel{
+    margin:0 0 16px; padding:16px 18px; border-radius:var(--radius);
+    background:var(--card); border:1px solid var(--card-border); box-shadow:var(--shadow-sm);
+  }
+  .campanha-type-panel-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    margin:0 0 14px;
+  }
+  .campanha-type-panel-head h3{
+    margin:0; font-family:var(--font); font-weight:800; font-size:14px; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--ink);
+  }
+  .campanha-type-panel-head .ctp-sub{
+    font-size:12px; font-weight:600; color:var(--ink-soft);
+  }
+  .campanha-type-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:10px;
+  }
+  .campanha-type-card{
+    position:relative; overflow:hidden;
+    padding:12px 14px 12px 16px; border-radius:14px;
+    background:var(--card-raised); border:1px solid var(--card-border);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .campanha-type-card::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--ctp-accent, #059669);
+  }
+  .campanha-type-card .ctp-label{
+    font-size:11.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+    color:var(--ink); line-height:1.25;
+  }
+  .campanha-type-card .ctp-qty{
+    font-family:var(--font); font-weight:800; font-size:22px; letter-spacing:-.03em;
+    color:var(--ink); line-height:1.1;
+  }
+  .campanha-type-card .ctp-meta{
+    font-size:11.5px; font-weight:600; color:var(--ink-soft);
+  }
+  .campanha-type-card .ctp-bar{
+    margin-top:4px; height:6px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
+  }
+  .campanha-type-card .ctp-bar > i{
+    display:block; height:100%; border-radius:999px;
+    background:var(--ctp-accent, #059669); width:var(--ctp-pct, 0%);
+    min-width:0;
+  }
+  .campanha-type-panel-empty{
+    margin:0; font-size:13px; font-weight:600; color:var(--ink-faint);
+  }
+  @media (max-width:560px){
+    .campanha-type-grid{ grid-template-columns:1fr 1fr; gap:8px; }
+    .campanha-type-card .ctp-qty{ font-size:18px; }
+  }
   form.campanha-form{
     display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-items:end;
   }
@@ -664,11 +718,16 @@
     }
     body.printing-campanha .campanha-hero,
     body.printing-campanha .campanha-stat,
+    body.printing-campanha .campanha-type-panel,
+    body.printing-campanha .campanha-type-card,
     body.printing-campanha .campanha-card,
     body.printing-campanha .lideranca-card,
     body.printing-campanha .lideranca-mat-row{
       box-shadow:none !important;
       background:#fff !important;
+    }
+    body.printing-campanha .campanha-type-card .ctp-bar{
+      border:1px solid #e2e8f0;
     }
     body.printing-campanha .campanha-card,
     body.printing-campanha .lideranca-card{
@@ -4176,6 +4235,15 @@
         </div>
       </div>
 
+      <div class="campanha-type-panel" id="campanhaTypePanel" aria-live="polite">
+        <div class="campanha-type-panel-head">
+          <h3>Por tipo de material</h3>
+          <span class="ctp-sub" id="campanhaTypePanelSub">Quantitativo consolidado</span>
+        </div>
+        <div class="campanha-type-grid" id="campanhaTypeGrid"></div>
+        <p class="campanha-type-panel-empty" id="campanhaTypeEmpty" style="display:none;">Nenhum material cadastrado para consolidar por tipo.</p>
+      </div>
+
       <div class="panel" id="campanhaFormPanel">
         <h2 class="panel-title" id="campanhaFormTitle">Novo material</h2>
         <form class="campanha-form" id="campanhaForm">
@@ -4269,6 +4337,15 @@
             <div class="cs-value" id="liderancaStatQty">0</div>
           </div>
         </div>
+      </div>
+
+      <div class="campanha-type-panel" id="liderancaTypePanel" aria-live="polite">
+        <div class="campanha-type-panel-head">
+          <h3>Por tipo de material</h3>
+          <span class="ctp-sub" id="liderancaTypePanelSub">Quantitativo nas lideranças</span>
+        </div>
+        <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
+        <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material vinculado às lideranças ainda.</p>
       </div>
 
       <div class="panel" id="liderancaFormPanel">
@@ -7756,6 +7833,114 @@ function filteredCampanhaMaterials(){
     return hay.includes(q);
   });
 }
+const CAMPANHA_TYPE_COLORS = [
+  '#059669', '#4F46E5', '#D97706', '#DC2626', '#0891B2',
+  '#7C3AED', '#DB2777', '#0D9488', '#2563EB', '#CA8A04'
+];
+/** Agrupa itens {label, qty, count, totalValue?} por tipo de material. */
+function aggregateMaterialTypes(items){
+  const map = new Map();
+  (items || []).forEach(it=>{
+    const label = toCampanhaTypeLabel(it.label || it.materialLabel || it.materialType || 'SEM TIPO') || 'SEM TIPO';
+    const qty = Number(it.qty) || 0;
+    const count = Number(it.count) || 1;
+    const totalValue = Number(it.totalValue) || 0;
+    const prev = map.get(label) || { label, qty: 0, count: 0, totalValue: 0 };
+    prev.qty += qty;
+    prev.count += count;
+    prev.totalValue += totalValue;
+    map.set(label, prev);
+  });
+  return Array.from(map.values()).sort((a,b)=>{
+    if(b.qty !== a.qty) return b.qty - a.qty;
+    return String(a.label).localeCompare(String(b.label), 'pt-BR');
+  });
+}
+function collectMateriaisTypeItems(){
+  return (campanhaMaterials || []).map(m=>({
+    label: m.materialLabel || m.materialType,
+    qty: Number(m.qtyPrinted) || 0,
+    count: 1,
+    totalValue: Number(m.totalValue) || 0
+  }));
+}
+function collectLiderancasTypeItems(){
+  const items = [];
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(m=>{
+      items.push({
+        label: m.materialLabel || m.materialType,
+        qty: Number(m.qty) || 0,
+        count: 1,
+        totalValue: 0
+      });
+    });
+    getMaterialsLinkedToLeadership(l.id).forEach(m=>{
+      items.push({
+        label: m.materialLabel || m.materialType,
+        qty: Number(m.qtyPrinted) || 0,
+        count: 1,
+        totalValue: Number(m.totalValue) || 0
+      });
+    });
+  });
+  return items;
+}
+function renderMaterialTypePanel(gridId, emptyId, subId, rows, opts){
+  const grid = document.getElementById(gridId);
+  const empty = document.getElementById(emptyId);
+  const sub = document.getElementById(subId);
+  if(!grid) return;
+  const showValue = !!(opts && opts.showValue);
+  const totalQty = rows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
+  const totalCount = rows.reduce((s,r)=> s + (Number(r.count)||0), 0);
+  const maxQty = rows.reduce((m,r)=> Math.max(m, Number(r.qty)||0), 0) || 1;
+  if(sub){
+    sub.textContent = rows.length
+      ? `${rows.length} tipo(s) · ${totalCount.toLocaleString('pt-BR')} registro(s) · ${totalQty.toLocaleString('pt-BR')} un.`
+      : (opts && opts.emptySub) || 'Sem dados';
+  }
+  if(!rows.length){
+    grid.innerHTML = '';
+    if(empty) empty.style.display = '';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  grid.innerHTML = rows.map((r, i)=>{
+    const accent = CAMPANHA_TYPE_COLORS[i % CAMPANHA_TYPE_COLORS.length];
+    const pct = Math.max(0, Math.min(100, Math.round(((Number(r.qty)||0) / maxQty) * 100)));
+    const valueLine = showValue && r.totalValue > 0
+      ? ` · ${fmtBRL(r.totalValue)}`
+      : '';
+    return `
+    <article class="campanha-type-card" style="--ctp-accent:${accent}; --ctp-pct:${pct}%;">
+      <div class="ctp-label">${escapeHtml(r.label)}</div>
+      <div class="ctp-qty">${(Number(r.qty)||0).toLocaleString('pt-BR')}</div>
+      <div class="ctp-meta">${(Number(r.count)||0).toLocaleString('pt-BR')} reg.${valueLine}</div>
+      <div class="ctp-bar" aria-hidden="true"><i></i></div>
+    </article>`;
+  }).join('');
+}
+function renderCampanhaTypeBreakdown(){
+  const rows = aggregateMaterialTypes(collectMateriaisTypeItems());
+  renderMaterialTypePanel(
+    'campanhaTypeGrid',
+    'campanhaTypeEmpty',
+    'campanhaTypePanelSub',
+    rows,
+    { showValue: true, emptySub: 'Nenhum material cadastrado' }
+  );
+}
+function renderLiderancaTypeBreakdown(){
+  const rows = aggregateMaterialTypes(collectLiderancasTypeItems());
+  renderMaterialTypePanel(
+    'liderancaTypeGrid',
+    'liderancaTypeEmpty',
+    'liderancaTypePanelSub',
+    rows,
+    { showValue: false, emptySub: 'Nenhum material nas lideranças' }
+  );
+}
 function renderCampanhaStats(){
   const list = campanhaMaterials || [];
   const countEl = document.getElementById('campanhaStatCount');
@@ -7766,6 +7951,7 @@ function renderCampanhaStats(){
   if(countEl) countEl.textContent = String(list.length);
   if(qtyEl) qtyEl.textContent = qty.toLocaleString('pt-BR');
   if(totalEl) totalEl.textContent = fmtBRL(total);
+  renderCampanhaTypeBreakdown();
 }
 function renderCampanhaList(){
   const box = document.getElementById('campanhaList');
@@ -8038,6 +8224,7 @@ function renderLiderancaStats(){
   if(c) c.textContent = String(list.length);
   if(m) m.textContent = String(mats);
   if(q) q.textContent = qty.toLocaleString('pt-BR');
+  renderLiderancaTypeBreakdown();
 }
 function leadershipMaterialRowsHtml(leadership){
   const mats = leadership.materials || [];
@@ -14590,7 +14777,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-lideranca-nome-espaco', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-painel-tipos', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
