@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-campanha-obs-espaco -->
+<!-- deploy-v20260803-lideranca-mat-notes-fix -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -758,12 +758,35 @@
     margin:0; font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft);
   }
   .lideranca-mat-form{
-    display:grid; grid-template-columns:1.2fr 1fr .8fr 1.4fr auto; gap:8px; align-items:end;
+    display:grid; grid-template-columns:1.2fr 1fr 1.6fr; gap:10px; align-items:end;
   }
   @media (max-width:900px){ .lideranca-mat-form{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:560px){ .lideranca-mat-form{ grid-template-columns:1fr; } }
   .lideranca-mat-form .field label{ margin-bottom:5px; }
+  .lideranca-mat-form .field.span-all{ grid-column:1/-1; }
+  .lideranca-mat-form textarea[data-lid-mat-notes]{
+    width:100%; min-height:72px; resize:vertical; padding:10px 12px;
+    border:1.5px solid var(--card-border); border-radius:12px;
+    font:inherit; font-weight:600; font-size:13px;
+    background:var(--card-raised); color:var(--ink);
+  }
+  .lideranca-mat-form textarea[data-lid-mat-notes]:focus{
+    outline:none; border-color:var(--primary); background:#fff; box-shadow:0 0 0 3px var(--primary-soft);
+  }
+  .lideranca-mat-form .lideranca-mat-form-actions{
+    grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
   .lideranca-mat-other-wrap{ display:none; grid-column:1/-1; }
   .lideranca-mat-other-wrap.show{ display:block; }
+  .lideranca-mat-obs{
+    margin:4px 0 0; font-size:12px; font-weight:600; color:var(--ink-soft); white-space:pre-wrap;
+    background:rgba(5,150,105,0.06); border:1px dashed rgba(5,150,105,0.25);
+    border-radius:10px; padding:8px 10px;
+  }
+  .lideranca-mat-obs b{
+    display:block; font-size:10.5px; font-weight:800; letter-spacing:.04em;
+    text-transform:uppercase; color:#047857; margin-bottom:3px;
+  }
   .lideranca-mat-list{ display:flex; flex-direction:column; gap:8px; }
   .lideranca-mat-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
@@ -8021,12 +8044,13 @@ function leadershipMaterialRowsHtml(leadership){
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
       : `<span class="campanha-art-missing">Sem arte</span>`;
-    const obs = m.notes
-      ? `<div class="lm-meta" style="margin-top:4px; white-space:pre-wrap;">Obs: ${escapeHtml(m.notes)}</div>`
+    const notesTxt = String(m.notes || '').trim();
+    const obs = notesTxt
+      ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
     return `
     <div class="lideranca-mat-row" data-lid-mat-id="${escapeHtml(String(m.id))}">
-      <div>
+      <div style="flex:1; min-width:0;">
         <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
         <div class="lm-meta">Qtd: ${(Number(m.qty)||0).toLocaleString('pt-BR')}</div>
         ${obs}
@@ -8042,12 +8066,13 @@ function leadershipMaterialRowsHtml(leadership){
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
       : `<span class="campanha-art-missing">Sem arte</span>`;
-    const obs = m.notes
-      ? `<div class="lm-meta" style="margin-top:4px; white-space:pre-wrap;">Obs: ${escapeHtml(m.notes)}</div>`
+    const notesTxt = String(m.notes || '').trim();
+    const obs = notesTxt
+      ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
     return `
     <div class="lideranca-mat-row" data-linked-mat-id="${escapeHtml(String(m.id))}">
-      <div>
+      <div style="flex:1; min-width:0;">
         <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
         <div class="lm-meta">Qtd: ${(Number(m.qtyPrinted)||0).toLocaleString('pt-BR')} · via Materiais</div>
         ${obs}
@@ -8076,35 +8101,35 @@ function leadershipMaterialFormHtml(leadership){
     }
   }
   if(selectedType === '__outros__') showOther = true;
+  const notesVal = editing ? String(editing.notes || '') : '';
   return `
-  <form class="lideranca-mat-form" data-lid-mat-form="${escapeHtml(String(leadership.id))}">
+  <form class="lideranca-mat-form" data-lid-mat-form="${escapeHtml(String(leadership.id))}" autocomplete="off">
     <div class="field">
       <label>Tipo de material</label>
-      <select data-lid-mat-type style="text-transform:uppercase;">${campanhaTypeOptionsHtml(selectedType)}</select>
+      <select name="lidMatType" data-lid-mat-type style="text-transform:uppercase;">${campanhaTypeOptionsHtml(selectedType)}</select>
     </div>
     <div class="field">
       <label>Quantidade</label>
-      <input type="number" data-lid-mat-qty min="0" step="1" placeholder="Ex: 200" inputmode="numeric" value="${editing ? escapeHtml(String(editing.qty || '')) : ''}">
-    </div>
-    <div class="field" style="grid-column:span 2;">
-      <label>Link da arte</label>
-      <input type="url" data-lid-mat-link placeholder="https://..." maxlength="500" value="${editing ? escapeHtml(editing.artLink || '') : ''}">
+      <input type="number" name="lidMatQty" data-lid-mat-qty min="0" step="1" placeholder="Ex: 200" inputmode="numeric" value="${editing ? escapeHtml(String(editing.qty ?? '')) : ''}">
     </div>
     <div class="field">
-      <label>&nbsp;</label>
-      <button type="submit" class="btn-mini">${editing ? 'Salvar material' : '+ Material'}</button>
+      <label>Link da arte</label>
+      <input type="url" name="lidMatLink" data-lid-mat-link placeholder="https://..." maxlength="500" value="${editing ? escapeHtml(editing.artLink || '') : ''}">
     </div>
     <div class="lideranca-mat-other-wrap${showOther ? ' show' : ''}" data-lid-mat-other-wrap>
       <div class="field">
         <label>Nome do material (OUTROS)</label>
-        <input type="text" data-lid-mat-other placeholder="Ex: BANNER, FAIXA..." maxlength="80" style="text-transform:uppercase;" value="${escapeHtml(otherVal)}">
+        <input type="text" name="lidMatOther" data-lid-mat-other placeholder="Ex: BANNER 1X1, FAIXA..." maxlength="80" autocomplete="off" spellcheck="false" style="text-transform:uppercase;" value="${escapeHtml(otherVal)}">
       </div>
     </div>
-    <div class="field" style="grid-column:1/-1;">
-      <label>Observação <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
-      <textarea data-lid-mat-notes placeholder="Anotações sobre o material..." maxlength="2000" style="min-height:64px; width:100%; resize:vertical; padding:10px 12px; border:1.5px solid var(--card-border); border-radius:12px; font:inherit; font-weight:600; font-size:13px; background:var(--card-raised); color:var(--ink);">${editing ? escapeHtml(editing.notes || '') : ''}</textarea>
+    <div class="field span-all">
+      <label for="lidMatNotes-${escapeHtml(String(leadership.id))}">Observação do material <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+      <textarea id="lidMatNotes-${escapeHtml(String(leadership.id))}" name="lidMatNotes" data-lid-mat-notes placeholder="Anotações sobre o material, entrega, cores, tamanhos..." maxlength="2000" rows="3">${escapeHtml(notesVal)}</textarea>
     </div>
-    ${editing ? `<div style="grid-column:1/-1;"><button type="button" class="btn-mini ghost" data-lid-mat-cancel="${escapeHtml(String(leadership.id))}">Cancelar edição do material</button></div>` : ''}
+    <div class="lideranca-mat-form-actions">
+      <button type="submit" class="btn-mini">${editing ? 'Salvar material' : '+ Adicionar material'}</button>
+      ${editing ? `<button type="button" class="btn-mini ghost" data-lid-mat-cancel="${escapeHtml(String(leadership.id))}">Cancelar edição</button>` : ''}
+    </div>
   </form>`;
 }
 function renderLiderancasList(){
@@ -8169,14 +8194,18 @@ function renderLiderancasUI(){
   renderLiderancasList();
 }
 async function submitLeadershipMaterialForm(form){
+  if(!form) return;
   const leadershipId = form.dataset.lidMatForm;
   const leadership = getLeadershipById(leadershipId);
-  if(!leadership) return;
-  const sel = form.querySelector('[data-lid-mat-type]');
-  const other = form.querySelector('[data-lid-mat-other]');
-  const qtyEl = form.querySelector('[data-lid-mat-qty]');
-  const linkEl = form.querySelector('[data-lid-mat-link]');
-  const notesEl = form.querySelector('[data-lid-mat-notes]');
+  if(!leadership){
+    try{ alert('Liderança não encontrada. Recarregue a página e tente de novo.'); }catch(_e){}
+    return;
+  }
+  const sel = form.querySelector('[data-lid-mat-type], [name="lidMatType"]');
+  const other = form.querySelector('[data-lid-mat-other], [name="lidMatOther"]');
+  const qtyEl = form.querySelector('[data-lid-mat-qty], [name="lidMatQty"]');
+  const linkEl = form.querySelector('[data-lid-mat-link], [name="lidMatLink"]');
+  const notesEl = form.querySelector('[data-lid-mat-notes], [name="lidMatNotes"], textarea[name="lidMatNotes"]');
   const type = resolveCampanhaTypeFromFields(sel, other);
   if(!type){
     try{ alert('Informe o tipo de material (ou digite o nome em OUTROS).'); }catch(_e){}
@@ -8193,43 +8222,65 @@ async function submitLeadershipMaterialForm(form){
     try{ alert('O link da arte deve começar com http:// ou https://'); }catch(_e){}
     return;
   }
-  const notes = String(notesEl?.value || '').trim();
+  // Lê observação por vários caminhos (evita perder o campo em re-render/layout)
+  let notes = '';
+  if(notesEl && typeof notesEl.value === 'string') notes = notesEl.value;
+  else if(form.elements && form.elements.lidMatNotes) notes = form.elements.lidMatNotes.value || '';
+  else {
+    try{
+      const fd = new FormData(form);
+      notes = String(fd.get('lidMatNotes') || '');
+    }catch(_e){ notes = ''; }
+  }
+  notes = String(notes || '').trim();
   const now = new Date().toISOString();
   if(!Array.isArray(leadership.materials)) leadership.materials = [];
   const editingMatId = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadershipId)
     ? liderancaMatEditing.materialId
     : null;
   const wasEdit = !!editingMatId;
+  const materialPayload = {
+    materialType: type.id,
+    materialLabel: type.label,
+    qty,
+    artLink,
+    notes,
+    updatedAt: now
+  };
   if(editingMatId){
     const idx = leadership.materials.findIndex(m=> sameId(m.id, editingMatId));
     if(idx >= 0){
       leadership.materials[idx] = {
         ...leadership.materials[idx],
-        materialType: type.id,
-        materialLabel: type.label,
-        qty,
-        artLink,
-        notes,
-        updatedAt: now
+        ...materialPayload
       };
     } else {
       leadership.materials.unshift({
-        id: uid(), materialType: type.id, materialLabel: type.label, qty, artLink, notes, createdAt: now, updatedAt: now
+        id: uid(), ...materialPayload, createdAt: now
       });
     }
   } else {
     leadership.materials.unshift({
-      id: uid(), materialType: type.id, materialLabel: type.label, qty, artLink, notes, createdAt: now, updatedAt: now
+      id: uid(), ...materialPayload, createdAt: now
     });
+  }
+  // Garante que o objeto em campanhaLeaderships recebeu notes
+  const savedMat = leadership.materials[0];
+  if(editingMatId){
+    const check = leadership.materials.find(m=> sameId(m.id, editingMatId));
+    if(check) check.notes = notes;
+  } else if(savedMat){
+    savedMat.notes = notes;
   }
   leadership.updatedAt = now;
   liderancaMatEditing = null;
   ensureCampanhaCustomTypeFromMaterial({ materialType: type.id, materialLabel: type.label });
   await saveCampanha();
   renderLiderancasUI();
+  const notesHint = notes ? ` · obs: ${notes.slice(0, 40)}${notes.length > 40 ? '…' : ''}` : '';
   showSuccessFeedback(
     wasEdit ? 'Material atualizado!' : 'Material adicionado!',
-    `${type.label} · ${leadership.name} · qtd ${(Number(qty)||0).toLocaleString('pt-BR')}`
+    `${type.label} · ${leadership.name} · qtd ${(Number(qty)||0).toLocaleString('pt-BR')}${notesHint}`
   );
 }
 async function deleteLeadershipMaterial(leadershipId, materialId){
@@ -14529,7 +14580,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-campanha-obs-espaco', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-lideranca-mat-notes', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){

@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-campanha-obs-espaco';
+const CACHE_VERSION = 'financas-pwa-v20260803-lideranca-mat-notes';
 const PRECACHE = [
   '/',
   '/index.html',
