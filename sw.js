@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-producao-materiais';
+const CACHE_VERSION = 'financas-pwa-v20260803-valores-opcionais';
 const PRECACHE = [
   '/',
   '/index.html',

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-producao-materiais -->
+<!-- deploy-v20260803-valores-opcionais -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4469,11 +4469,11 @@
             <input type="text" id="campCnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric" autocomplete="off">
           </div>
           <div class="field">
-            <label for="campValorUn">Valor unidade (R$)</label>
+            <label for="campValorUn">Valor unidade (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
             <input type="text" inputmode="decimal" class="currency-input" id="campValorUn" placeholder="0,00">
           </div>
           <div class="field">
-            <label for="campValorTotal">Valor total (R$)</label>
+            <label for="campValorTotal">Valor total (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
             <input type="text" inputmode="decimal" class="currency-input" id="campValorTotal" placeholder="0,00">
           </div>
           <div class="field span-2">
@@ -8296,11 +8296,13 @@ function readCampanhaForm(){
   const tiragem = tirRaw === '' || tirRaw == null ? 0 : Number(tirRaw);
   if(!Number.isFinite(qty) || qty < 0) return { error: 'Quantidade total inválida.' };
   if(!Number.isFinite(tiragem) || tiragem < 0) return { error: 'Tiragem inválida.' };
-  const unitValue = parseCurrencyValue(document.getElementById('campValorUn'));
+  // Valores unitário e total são opcionais
+  let unitValue = parseCurrencyValue(document.getElementById('campValorUn'));
   let totalValue = parseCurrencyValue(document.getElementById('campValorTotal'));
-  if(!Number.isFinite(unitValue) || unitValue < 0) return { error: 'Informe o valor unitário.' };
+  if(!Number.isFinite(unitValue) || unitValue < 0) unitValue = 0;
   if(!Number.isFinite(totalValue) || totalValue < 0){
-    const suggested = calcCampanhaTotalSuggested();
+    // se total vazio e unitário preenchido, sugere unitário × quantidade
+    const suggested = unitValue > 0 ? calcCampanhaTotalSuggested() : null;
     totalValue = suggested != null ? suggested : 0;
   }
   const printShop = String(document.getElementById('campGrafica')?.value || '').trim();
@@ -16204,7 +16206,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-producao-materiais', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260803-valores-opcionais', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
