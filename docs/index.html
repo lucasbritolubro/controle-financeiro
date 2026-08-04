@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-prod-ok-white-bg -->
+<!-- deploy-v20260804-campanha-relatorios -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -481,6 +481,90 @@
   }
 
   /* ===== Módulo Campanha 2026 ===== */
+  .campanha-subnav{
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+  }
+  .campanha-subnav button{
+    font-family:var(--font); font-weight:800; font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+    padding:8px 14px; border-radius:999px; border:1.5px solid var(--card-border);
+    background:var(--card-raised); color:var(--ink-soft); cursor:pointer;
+    transition: background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease);
+  }
+  .campanha-subnav button:hover{
+    border-color:rgba(5,150,105,0.35); color:#047857;
+  }
+  .campanha-subnav button.active{
+    background:linear-gradient(135deg, #059669 0%, #047857 100%);
+    border-color:rgba(5,150,105,0.45); color:#fff;
+    box-shadow:0 6px 14px rgba(5,150,105,0.28);
+  }
+  .campanha-report-controls{
+    display:grid; grid-template-columns:repeat(4, minmax(140px, 1fr)); gap:12px 14px;
+    align-items:end; margin:0 0 12px;
+  }
+  @media (max-width:900px){
+    .campanha-report-controls{ grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:560px){
+    .campanha-report-controls{ grid-template-columns:1fr; }
+  }
+  .campanha-report-controls .field{ margin:0; }
+  .campanha-report-controls label{
+    display:block; margin-bottom:5px; font-size:11px; font-weight:800;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft);
+  }
+  .campanha-report-controls select{
+    width:100%; padding:10px 12px; border:1.5px solid var(--card-border); border-radius:12px;
+    font:inherit; font-size:13px; font-weight:600; background:var(--card-raised); color:var(--ink);
+  }
+  .campanha-report-hint{
+    margin:0 0 14px; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+  }
+  .campanha-report-table-wrap{
+    overflow:auto; border:1px solid var(--card-border); border-radius:14px;
+    background:#fff; max-height:min(70vh, 720px);
+  }
+  .campanha-report-table{
+    width:100%; border-collapse:separate; border-spacing:0;
+    font-size:12.5px; font-weight:600; color:var(--ink);
+    min-width:640px;
+  }
+  .campanha-report-table thead th{
+    position:sticky; top:0; z-index:2;
+    background:linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+    border-bottom:1px solid var(--card-border);
+    padding:10px 12px; text-align:left;
+    font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--ink-soft); white-space:nowrap;
+  }
+  .campanha-report-table thead th.num,
+  .campanha-report-table tbody td.num,
+  .campanha-report-table tfoot td.num{
+    text-align:right; font-variant-numeric:tabular-nums;
+  }
+  .campanha-report-table tbody td{
+    padding:9px 12px; border-bottom:1px solid rgba(15,23,42,0.06);
+    vertical-align:top;
+  }
+  .campanha-report-table tbody tr:hover td{ background:rgba(5,150,105,0.04); }
+  .campanha-report-table .lid-name{
+    font-weight:800; color:var(--ink); text-transform:uppercase; letter-spacing:.01em;
+  }
+  .campanha-report-table .lid-meta{
+    display:block; margin-top:2px; font-size:11px; font-weight:600; color:var(--ink-soft);
+    text-transform:none; letter-spacing:0;
+  }
+  .campanha-report-table tfoot td{
+    padding:10px 12px; background:#F8FAFC; border-top:2px solid var(--card-border);
+    font-weight:800; color:var(--ink);
+  }
+  .campanha-report-table .qty-zero{ color:var(--ink-faint); font-weight:600; }
+  .campanha-report-table .qty-pos{ color:#047857; font-weight:800; }
+  body.printing-campanha #campanhaSubRelatorios .campanha-report-table-wrap{
+    max-height:none !important; overflow:visible !important; border:none !important;
+  }
+  body.printing-campanha #campanhaSubRelatorios .campanha-report-controls,
+  body.printing-campanha #campanhaSubRelatorios .campanha-report-hint{ display:none !important; }
   .campanha-hero{
     display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
     margin:0 0 16px; padding:18px 20px; border-radius:var(--radius);
@@ -1028,6 +1112,17 @@
     padding:10px 16px; border-radius:var(--radius-pill); transition:all .2s var(--ease);
   }
   .campanha-subnav button:hover{ color:var(--ink); background:rgba(15,23,42,0.05); }
+  .campanha-subnav button.active{
+    background:linear-gradient(135deg, #059669 0%, #047857 100%);
+    color:#fff; box-shadow:0 6px 14px rgba(5,150,105,0.25);
+  }
+  body.printing-campanha.printing-campanha-report #campanhaSubLiderancas,
+  body.printing-campanha.printing-campanha-report #campanhaSubMateriais{
+    display:none !important;
+  }
+  body.printing-campanha.printing-campanha-report #campanhaSubRelatorios{
+    display:block !important;
+  }
   .campanha-subnav button.active{
     color:#fff; background:linear-gradient(135deg, #059669 0%, #047857 100%);
     box-shadow:0 6px 16px rgba(5,150,105,0.28);
@@ -4786,12 +4881,12 @@
       <p id="campanhaPrintMeta">Produção de materiais e lideranças</p>
     </div>
     <div class="campanha-toolbar no-print">
-      <nav class="campanha-subnav" id="campanhaSubnav" aria-label="Seções da Campanha 2026" style="display:none;">
-        <button type="button" data-campanhasub="materiais">Produção (legado)</button>
+      <nav class="campanha-subnav" id="campanhaSubnav" aria-label="Seções da Campanha 2026">
         <button type="button" data-campanhasub="liderancas" class="active">Lideranças</button>
+        <button type="button" data-campanhasub="relatorios">Relatórios</button>
       </nav>
-      <div style="font-size:13px;font-weight:700;color:var(--ink-soft);">Campanha 2026 · Lideranças + Produção unificadas</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink-soft);" id="campanhaToolbarHint">Campanha 2026 · Lideranças + Produção</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;" id="campanhaToolbarPrintActions">
         <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="PDF: categorias (cards internos recolhidos) + todas as lideranças cadastradas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 9V3h12v6"/>
@@ -4807,6 +4902,14 @@
             <rect x="6" y="14" width="12" height="7"/>
           </svg>
           PDF completo
+        </button>
+        <button type="button" class="campanha-print-btn" id="campanhaReportPrintBtn" style="display:none;" title="Imprimir / PDF deste relatório">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9V3h12v6"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="7"/>
+          </svg>
+          PDF relatório
         </button>
       </div>
     </div>
@@ -5129,6 +5232,73 @@
         <p class="empty-note" id="liderancaEmpty" style="display:none;">Nenhuma liderança cadastrada ainda.</p>
       </div>
     </div><!-- /campanhaSubLiderancas -->
+
+    <!-- SUB: RELATÓRIOS -->
+    <div class="campanha-sub" id="campanhaSubRelatorios" data-campanhasub="relatorios" style="display:none;">
+      <div class="campanha-hero">
+        <div>
+          <h2>Campanha 2026 · relatórios</h2>
+          <p>Lista de lideranças com quantidades por tipo de material (sem duplicar itens). Ordene por nome ou por quantidade.</p>
+        </div>
+        <div class="campanha-stats" id="campanhaReportStats" aria-live="polite">
+          <div class="campanha-stat">
+            <div class="cs-label">Lideranças</div>
+            <div class="cs-value" id="campanhaReportStatLids">0</div>
+          </div>
+          <div class="campanha-stat">
+            <div class="cs-label">Tipos de material</div>
+            <div class="cs-value" id="campanhaReportStatTypes">0</div>
+          </div>
+          <div class="campanha-stat">
+            <div class="cs-label">Qtd. total</div>
+            <div class="cs-value" id="campanhaReportStatQty">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel campanha-report-panel">
+        <div class="campanha-report-controls no-print">
+          <div class="field">
+            <label for="campanhaReportSort">Ordenar por</label>
+            <select id="campanhaReportSort">
+              <option value="name-asc">Nome (A → Z)</option>
+              <option value="name-desc">Nome (Z → A)</option>
+              <option value="qty-desc" selected>Quantidade total (maior → menor)</option>
+              <option value="qty-asc">Quantidade total (menor → maior)</option>
+              <option value="type-desc">Qtd. do material selecionado (maior → menor)</option>
+              <option value="type-asc">Qtd. do material selecionado (menor → maior)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="campanhaReportSortType">Material p/ ordenação</label>
+            <select id="campanhaReportSortType">
+              <option value="">— escolha o material —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="campanhaReportFilterType">Mostrar colunas</label>
+            <select id="campanhaReportFilterType">
+              <option value="">Todos os materiais</option>
+            </select>
+          </div>
+          <div class="field campanha-report-actions">
+            <label>&nbsp;</label>
+            <button type="button" class="btn-add" id="campanhaReportRefreshBtn">Atualizar relatório</button>
+          </div>
+        </div>
+        <p class="campanha-report-hint no-print" id="campanhaReportHint">
+          Cada material de cada liderança entra uma única vez. Itens já migrados da produção legada não são contados em dobro.
+        </p>
+        <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
+          <table class="campanha-report-table" id="campanhaReportTable">
+            <thead id="campanhaReportThead"></thead>
+            <tbody id="campanhaReportTbody"></tbody>
+            <tfoot id="campanhaReportTfoot"></tfoot>
+          </table>
+        </div>
+        <p class="empty-note" id="campanhaReportEmpty" style="display:none;">Nenhuma liderança com material para listar.</p>
+      </div>
+    </div><!-- /campanhaSubRelatorios -->
   </div><!-- /moduleCampanha -->
 
   <footer class="foot-note" id="appFooter">Dados salvos na nuvem · <button type="button" id="logoutBtn" style="background:none;border:none;color:var(--ink-soft);font:inherit;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Sair</button></footer>
@@ -9501,22 +9671,41 @@ function formatPhoneBR(value){
   return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
 }
 function switchCampanhaSub(sub){
-  // Unificado: sempre lideranças (+ produção embutida). Aba produção legada ocultada.
-  sub = 'liderancas';
+  // Produção legada permanece oculta; abas ativas: lideranças | relatorios
+  const allowed = new Set(['liderancas', 'relatorios']);
+  if(!allowed.has(sub)) sub = 'liderancas';
   currentCampanhaSub = sub;
   document.querySelectorAll('#campanhaSubnav button[data-campanhasub]').forEach(b=>{
     b.classList.toggle('active', b.dataset.campanhasub === sub);
   });
   document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
-    const isLid = sec.dataset.campanhasub === 'liderancas';
-    sec.classList.toggle('active', isLid);
-    if(sec.id === 'campanhaSubMateriais'){
+    const key = sec.dataset.campanhasub;
+    if(key === 'materiais' || sec.id === 'campanhaSubMateriais'){
+      sec.classList.remove('active');
       sec.style.display = 'none';
-    } else if(isLid){
-      sec.style.display = '';
+      return;
     }
+    const on = key === sub;
+    sec.classList.toggle('active', on);
+    sec.style.display = on ? '' : 'none';
   });
-  renderLiderancasUI();
+  const printLid = document.getElementById('campanhaPrintBtn');
+  const printCat = document.getElementById('campanhaPrintCategoriesBtn');
+  const printRep = document.getElementById('campanhaReportPrintBtn');
+  const hint = document.getElementById('campanhaToolbarHint');
+  if(sub === 'relatorios'){
+    if(printLid) printLid.style.display = 'none';
+    if(printCat) printCat.style.display = 'none';
+    if(printRep) printRep.style.display = '';
+    if(hint) hint.textContent = 'Campanha 2026 · Relatórios';
+    renderCampanhaReportUI();
+  } else {
+    if(printLid) printLid.style.display = '';
+    if(printCat) printCat.style.display = '';
+    if(printRep) printRep.style.display = 'none';
+    if(hint) hint.textContent = 'Campanha 2026 · Lideranças + Produção';
+    renderLiderancasUI();
+  }
 }
 function getCampanhaQtyBase(){
   const qtyEl = document.getElementById('campQty');
@@ -10062,6 +10251,235 @@ function eachLeadershipOwnMaterial(cb, opts){
 }
 function materialTypeLabelOf(m){
   return toCampanhaTypeLabel(m?.materialLabel || m?.materialType || 'SEM TIPO') || 'SEM TIPO';
+}
+
+/* ===== Relatórios Campanha 2026 ===== */
+let campanhaReportSort = 'qty-desc';
+let campanhaReportSortType = '';
+let campanhaReportFilterType = '';
+
+/**
+ * Consolida materiais por liderança sem duplicar o mesmo id de material.
+ * Soma qty por tipo (SANTINHO 7X10, ADESIVO, …) e total geral.
+ */
+function collectLeadershipMaterialReportRows(){
+  const byLid = new Map(); // id -> row
+  const typeSet = new Set();
+  const seenMatIds = new Set(); // materialId global (own + linked) para não duplicar
+
+  const ensureRow = (l)=>{
+    const id = String(l.id);
+    if(!byLid.has(id)){
+      byLid.set(id, {
+        id,
+        name: toLeadershipName(l.name || '—'),
+        role: leadershipRoleLabel(l.role),
+        cities: leadershipCitiesLabel(l),
+        byType: new Map(), // typeLabel -> qty
+        totalQty: 0,
+        matCount: 0
+      });
+    }
+    return byLid.get(id);
+  };
+  const addMat = (l, m)=>{
+    if(!l || !m) return;
+    const mid = m.id != null ? String(m.id) : '';
+    if(mid){
+      if(seenMatIds.has(mid)) return; // já contado (evita duplicar produção legada + material próprio)
+      seenMatIds.add(mid);
+    }
+    const qty = Number(m.qty != null ? m.qty : getMaterialQtyTotal(m)) || 0;
+    if(qty < 0) return;
+    const typeLabel = materialTypeLabelOf(m);
+    typeSet.add(typeLabel);
+    const row = ensureRow(l);
+    row.byType.set(typeLabel, (row.byType.get(typeLabel) || 0) + qty);
+    row.totalQty += qty;
+    row.matCount += 1;
+  };
+
+  (campanhaLeaderships || []).forEach(l=>{
+    ensureRow(l); // inclui lideranças sem material (qtd 0)
+    (l.materials || []).forEach(m=> addMat(l, m));
+    getMaterialsLinkedToLeadership(l.id).forEach(pm=> addMat(l, pm));
+  });
+
+  const types = Array.from(typeSet).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+  const rows = Array.from(byLid.values());
+  return { rows, types };
+}
+
+function sortCampanhaReportRows(rows, sortMode, sortType){
+  const mode = sortMode || 'qty-desc';
+  const typeKey = toCampanhaTypeLabel(sortType || '');
+  const list = rows.slice();
+  const cmpName = (a,b)=> a.name.localeCompare(b.name, 'pt-BR');
+  const typeQty = (r)=> typeKey ? (Number(r.byType.get(typeKey)) || 0) : r.totalQty;
+  list.sort((a,b)=>{
+    if(mode === 'name-asc') return cmpName(a,b);
+    if(mode === 'name-desc') return cmpName(b,a);
+    if(mode === 'qty-asc') return (a.totalQty - b.totalQty) || cmpName(a,b);
+    if(mode === 'qty-desc') return (b.totalQty - a.totalQty) || cmpName(a,b);
+    if(mode === 'type-asc') return (typeQty(a) - typeQty(b)) || cmpName(a,b);
+    if(mode === 'type-desc') return (typeQty(b) - typeQty(a)) || cmpName(a,b);
+    return cmpName(a,b);
+  });
+  return list;
+}
+
+function populateCampanhaReportSelects(types){
+  const sortTypeSel = document.getElementById('campanhaReportSortType');
+  const filterSel = document.getElementById('campanhaReportFilterType');
+  const typeList = Array.isArray(types) ? types : [];
+  const fill = (sel, includeAllLabel)=>{
+    if(!sel) return;
+    const prev = sel.value || '';
+    const opts = [];
+    if(includeAllLabel) opts.push(`<option value="">${escapeHtml(includeAllLabel)}</option>`);
+    else opts.push(`<option value="">— escolha o material —</option>`);
+    typeList.forEach(t=>{
+      opts.push(`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`);
+    });
+    sel.innerHTML = opts.join('');
+    if(prev && typeList.includes(prev)) sel.value = prev;
+    else sel.value = '';
+  };
+  fill(sortTypeSel, null);
+  fill(filterSel, 'Todos os materiais');
+  if(sortTypeSel && campanhaReportSortType && typeList.includes(campanhaReportSortType)){
+    sortTypeSel.value = campanhaReportSortType;
+  }
+  if(filterSel && campanhaReportFilterType && typeList.includes(campanhaReportFilterType)){
+    filterSel.value = campanhaReportFilterType;
+  }
+}
+
+function renderCampanhaReportUI(){
+  const thead = document.getElementById('campanhaReportThead');
+  const tbody = document.getElementById('campanhaReportTbody');
+  const tfoot = document.getElementById('campanhaReportTfoot');
+  const empty = document.getElementById('campanhaReportEmpty');
+  const wrap = document.getElementById('campanhaReportTableWrap');
+  if(!thead || !tbody) return;
+
+  const sortSel = document.getElementById('campanhaReportSort');
+  if(sortSel && sortSel.value) campanhaReportSort = sortSel.value;
+  const sortTypeSel = document.getElementById('campanhaReportSortType');
+  if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
+  const filterSel = document.getElementById('campanhaReportFilterType');
+  if(filterSel) campanhaReportFilterType = filterSel.value || '';
+
+  const { rows: rawRows, types: allTypes } = collectLeadershipMaterialReportRows();
+  populateCampanhaReportSelects(allTypes);
+
+  // Colunas: filtro de material ou todos
+  let colTypes = allTypes.slice();
+  if(campanhaReportFilterType){
+    colTypes = allTypes.filter(t=> t === campanhaReportFilterType);
+  }
+  // Se ordenar por material, garante que a coluna exista
+  if((campanhaReportSort === 'type-asc' || campanhaReportSort === 'type-desc') && campanhaReportSortType){
+    if(!colTypes.includes(campanhaReportSortType) && allTypes.includes(campanhaReportSortType)){
+      colTypes = [campanhaReportSortType];
+    }
+  }
+
+  const rows = sortCampanhaReportRows(rawRows, campanhaReportSort, campanhaReportSortType);
+  const totalAll = rows.reduce((s,r)=> s + (Number(r.totalQty)||0), 0);
+  const statL = document.getElementById('campanhaReportStatLids');
+  const statT = document.getElementById('campanhaReportStatTypes');
+  const statQ = document.getElementById('campanhaReportStatQty');
+  if(statL) statL.textContent = String(rows.length);
+  if(statT) statT.textContent = String(allTypes.length);
+  if(statQ) statQ.textContent = totalAll.toLocaleString('pt-BR');
+
+  if(!rows.length){
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    if(tfoot) tfoot.innerHTML = '';
+    if(wrap) wrap.style.display = 'none';
+    if(empty) empty.style.display = '';
+    return;
+  }
+  if(wrap) wrap.style.display = '';
+  if(empty) empty.style.display = 'none';
+
+  const headCells = [
+    `<th>Liderança / candidato</th>`,
+    ...colTypes.map(t=> `<th class="num">${escapeHtml(t)}</th>`),
+    `<th class="num">Total</th>`
+  ];
+  thead.innerHTML = `<tr>${headCells.join('')}</tr>`;
+
+  const typeTotals = new Map(colTypes.map(t=> [t, 0]));
+  tbody.innerHTML = rows.map(r=>{
+    const cells = colTypes.map(t=>{
+      const q = Number(r.byType.get(t)) || 0;
+      typeTotals.set(t, (typeTotals.get(t) || 0) + q);
+      const cls = q > 0 ? 'qty-pos' : 'qty-zero';
+      return `<td class="num ${cls}">${q > 0 ? q.toLocaleString('pt-BR') : '—'}</td>`;
+    });
+    const meta = [r.role, r.cities].filter(Boolean).join(' · ');
+    return `<tr>
+      <td>
+        <span class="lid-name">${escapeHtml(r.name)}</span>
+        ${meta ? `<span class="lid-meta">${escapeHtml(meta)}</span>` : ''}
+      </td>
+      ${cells.join('')}
+      <td class="num ${r.totalQty > 0 ? 'qty-pos' : 'qty-zero'}">${r.totalQty > 0 ? r.totalQty.toLocaleString('pt-BR') : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  if(tfoot){
+    const footCells = colTypes.map(t=>{
+      const q = typeTotals.get(t) || 0;
+      return `<td class="num">${q > 0 ? q.toLocaleString('pt-BR') : '—'}</td>`;
+    });
+    tfoot.innerHTML = `<tr>
+      <td>TOTAL (${rows.length} liderança${rows.length === 1 ? '' : 's'})</td>
+      ${footCells.join('')}
+      <td class="num">${totalAll.toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }
+}
+
+function printCampanhaReport(){
+  const root = document.getElementById('moduleCampanha');
+  if(!root) return;
+  const prevSub = currentCampanhaSub || 'relatorios';
+  switchCampanhaSub('relatorios');
+  renderCampanhaReportUI();
+  const metaEl = document.getElementById('campanhaPrintMeta');
+  const printHeader = document.getElementById('campanhaPrintHeader');
+  const printHeaderTitle = printHeader?.querySelector('h1');
+  const when = new Date().toLocaleString('pt-BR', {
+    day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+  if(printHeaderTitle) printHeaderTitle.textContent = 'Campanha 2026 — Relatório por liderança e material';
+  if(metaEl){
+    const sortLabel = document.getElementById('campanhaReportSort')?.selectedOptions?.[0]?.textContent || '';
+    metaEl.textContent = `Gerado em ${when} · ordenação: ${sortLabel}`;
+  }
+  document.body.classList.add('printing-campanha');
+  document.body.classList.add('printing-campanha-report');
+  document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
+    if(sec.dataset.campanhasub === 'relatorios'){
+      sec.classList.add('active');
+      sec.style.display = '';
+    } else {
+      sec.classList.remove('active');
+      sec.style.display = 'none';
+    }
+  });
+  setTimeout(()=>{
+    try{ window.print(); }catch(_e){}
+    setTimeout(()=>{
+      document.body.classList.remove('printing-campanha');
+      document.body.classList.remove('printing-campanha-report');
+      switchCampanhaSub(prevSub);
+    }, 300);
+  }, 80);
 }
 /** Por tipo de material: TODOS os tipos e quantidades (com ou sem deputado). */
 function collectLiderancasByTipoRows(){
@@ -11572,6 +11990,12 @@ function bindCampanhaModuleEvents(){
     btn.addEventListener('click', ()=> switchCampanhaSub(btn.dataset.campanhasub));
   });
   document.getElementById('moduleCampanha')?.addEventListener('click', (e)=>{
+    const printRepBtn = e.target.closest('#campanhaReportPrintBtn');
+    if(printRepBtn){
+      e.preventDefault();
+      printCampanhaReport();
+      return;
+    }
     const printCatBtn = e.target.closest('#campanhaPrintCategoriesBtn, [data-campanha-print-categories]');
     if(printCatBtn){
       e.preventDefault();
@@ -11584,6 +12008,28 @@ function bindCampanhaModuleEvents(){
       printCampanhaModule({ mode: 'full' });
     }
   });
+  const bindReport = (id, ev, fn)=>{
+    document.getElementById(id)?.addEventListener(ev, fn);
+  };
+  bindReport('campanhaReportSort', 'change', ()=>{
+    campanhaReportSort = document.getElementById('campanhaReportSort')?.value || 'qty-desc';
+    renderCampanhaReportUI();
+  });
+  bindReport('campanhaReportSortType', 'change', ()=>{
+    campanhaReportSortType = document.getElementById('campanhaReportSortType')?.value || '';
+    // Se escolheu material e ordenação ainda é por total, muda para tipo
+    const sortSel = document.getElementById('campanhaReportSort');
+    if(campanhaReportSortType && sortSel && (sortSel.value === 'qty-desc' || sortSel.value === 'qty-asc' || !sortSel.value)){
+      sortSel.value = 'type-desc';
+      campanhaReportSort = 'type-desc';
+    }
+    renderCampanhaReportUI();
+  });
+  bindReport('campanhaReportFilterType', 'change', ()=>{
+    campanhaReportFilterType = document.getElementById('campanhaReportFilterType')?.value || '';
+    renderCampanhaReportUI();
+  });
+  bindReport('campanhaReportRefreshBtn', 'click', ()=> renderCampanhaReportUI());
 
   document.getElementById('campanhaForm')?.addEventListener('submit', submitCampanhaForm);
   document.getElementById('campanhaFormCancel')?.addEventListener('click', ()=> resetCampanhaForm());
