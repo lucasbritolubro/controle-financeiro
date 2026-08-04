@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-google-auto-lucas -->
+<!-- deploy-v20260804-report-show-lids -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -569,6 +569,36 @@
   .campanha-report-cols-empty{
     font-size:12px; font-weight:600; color:var(--ink-faint); padding:4px 2px;
   }
+  .campanha-report-opt-field{
+    display:flex; align-items:flex-end;
+  }
+  .campanha-report-opt-field .campanha-report-opt{
+    display:inline-flex; align-items:flex-start; gap:9px;
+    width:100%; padding:10px 12px;
+    border:1.5px solid var(--card-border); border-radius:14px;
+    background:var(--card-raised);
+    font-size:12.5px; font-weight:700; color:var(--ink);
+    cursor:pointer; user-select:none; line-height:1.35;
+  }
+  .campanha-report-opt-field .campanha-report-opt input{
+    width:15px; height:15px; margin:1px 0 0; accent-color:var(--primary); flex:0 0 auto;
+  }
+  .campanha-report-opt-field .campanha-report-opt span small{
+    display:block; font-weight:600; color:var(--ink-soft); font-size:11px; margin-top:2px;
+  }
+  .campanha-report-opt-field.is-disabled{ opacity:.45; pointer-events:none; }
+  .campanha-report-table .lid-lids{
+    display:block; margin-top:5px;
+    font-size:11px; font-weight:600; color:var(--ink-soft); line-height:1.4;
+  }
+  .campanha-report-table .lid-lids b{
+    font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
+    font-size:10px;
+  }
+  .campanha-report-table .lid-lids ul{
+    margin:3px 0 0; padding:0 0 0 16px;
+  }
+  .campanha-report-table .lid-lids li{ margin:1px 0; }
   .campanha-report-action-btns{
     display:flex; flex-wrap:wrap; gap:8px; align-items:center;
   }
@@ -5470,6 +5500,15 @@
               </button>
             </div>
           </div>
+          <div class="field campanha-report-opt-field" id="campanhaReportShowLidsField">
+            <label class="campanha-report-opt" for="campanhaReportShowLids">
+              <input type="checkbox" id="campanhaReportShowLids">
+              <span>
+                Mostrar lideranças de cada deputado
+                <small>Lista o nome das lideranças vinculadas a cada deputado na tabela (e no PDF)</small>
+              </span>
+            </label>
+          </div>
           <div class="field campanha-report-cols-field">
             <label id="campanhaReportColsLabel">Mostrar colunas <span style="font-weight:600;color:var(--ink-faint);text-transform:none;letter-spacing:0;">(selecione um ou mais materiais)</span></label>
             <div class="campanha-report-cols" id="campanhaReportFilterCols" role="group" aria-labelledby="campanhaReportColsLabel">
@@ -5483,7 +5522,7 @@
           </div>
         </div>
         <p class="campanha-report-hint no-print" id="campanhaReportHint">
-          Cada material entra uma única vez. Em “Deputado estadual”, materiais sem deputado aparecem pelo nome da liderança vinculada. Marque um ou mais materiais em “Mostrar colunas”. O PDF usa a mesma visão.
+          Cada material entra uma única vez. Em “Deputado estadual”, use “Mostrar lideranças de cada deputado” para ver quem está vinculado. Materiais sem deputado aparecem pelo nome da liderança. O PDF usa a mesma visão.
         </p>
         <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
           <table class="campanha-report-table" id="campanhaReportTable">
@@ -10541,6 +10580,8 @@ let campanhaReportSortType = '';
  */
 let campanhaReportFilterTypes = null;
 let campanhaReportGroupBy = 'lideranca'; // 'lideranca' | 'deputado'
+/** Quando agrupar por deputado: lista nomes das lideranças de cada um. */
+let campanhaReportShowLids = false;
 let campanhaReportKnownTypes = [];
 
 /**
@@ -10716,8 +10757,12 @@ function collectDeputadoMaterialReportRows(){
 
   // enriquece meta: deputados mostram quantas lideranças; lideranças sem dep. reforçam o papel
   byKey.forEach(row=>{
+    const lidList = row.lidNames
+      ? Array.from(row.lidNames).filter(Boolean).sort((a,b)=> a.localeCompare(b, 'pt-BR'))
+      : [];
+    row.lidList = lidList;
     if(row.kind === 'deputado'){
-      const n = row.lidNames ? row.lidNames.size : 0;
+      const n = lidList.length;
       if(n > 0){
         row.cities = n === 1 ? '1 liderança' : `${n} lideranças`;
       }
@@ -10879,10 +10924,30 @@ function renderCampanhaReportUI(){
   if(sortSel && sortSel.value) campanhaReportSort = sortSel.value;
   const sortTypeSel = document.getElementById('campanhaReportSortType');
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
+  const showLidsEl = document.getElementById('campanhaReportShowLids');
+  if(showLidsEl) campanhaReportShowLids = !!showLidsEl.checked;
   // lê multi-seleção atual (se o DOM já foi populado)
   readCampanhaReportColsFromDom();
 
   const byDeputado = campanhaReportGroupBy === 'deputado';
+  // opção de lideranças só faz sentido no agrupamento por deputado
+  const showLidsField = document.getElementById('campanhaReportShowLidsField');
+  if(showLidsField){
+    showLidsField.classList.toggle('is-disabled', !byDeputado);
+    showLidsField.title = byDeputado
+      ? ''
+      : 'Disponível apenas ao agrupar por deputado estadual';
+  }
+  if(showLidsEl){
+    showLidsEl.disabled = !byDeputado;
+    if(!byDeputado){
+      // não desmarca o valor salvo — só desativa visualmente
+    } else {
+      showLidsEl.checked = !!campanhaReportShowLids;
+    }
+  }
+  const showLids = byDeputado && campanhaReportShowLids;
+
   const { rows: rawRows, types: allTypes } = collectCampanhaReportRows();
   populateCampanhaReportSelects(allTypes);
 
@@ -10942,10 +11007,24 @@ function renderCampanhaReportUI(){
       return `<td class="num ${cls}">${q > 0 ? q.toLocaleString('pt-BR') : '—'}</td>`;
     });
     const meta = [r.role, r.cities].filter(Boolean).join(' · ');
+    let lidsBlock = '';
+    if(showLids && r.kind === 'deputado'){
+      const lids = Array.isArray(r.lidList)
+        ? r.lidList
+        : (r.lidNames ? Array.from(r.lidNames).sort((a,b)=> a.localeCompare(b, 'pt-BR')) : []);
+      if(lids.length){
+        lidsBlock = `<span class="lid-lids"><b>Lideranças (${lids.length})</b><ul>${
+          lids.map(n=> `<li>${escapeHtml(n)}</li>`).join('')
+        }</ul></span>`;
+      } else {
+        lidsBlock = `<span class="lid-lids"><b>Lideranças</b> — nenhuma vinculada</span>`;
+      }
+    }
     return `<tr>
       <td>
         <span class="lid-name">${escapeHtml(r.name)}</span>
         ${meta ? `<span class="lid-meta">${escapeHtml(meta)}</span>` : ''}
+        ${lidsBlock}
       </td>
       ${cells.join('')}
     </tr>`;
@@ -10979,6 +11058,8 @@ function printCampanhaReport(){
   if(groupSel) campanhaReportGroupBy = groupSel.value || campanhaReportGroupBy;
   if(sortSel) campanhaReportSort = sortSel.value || campanhaReportSort;
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
+  const showLidsEl = document.getElementById('campanhaReportShowLids');
+  if(showLidsEl) campanhaReportShowLids = !!showLidsEl.checked;
   readCampanhaReportColsFromDom();
   renderCampanhaReportUI();
 
@@ -11013,6 +11094,9 @@ function printCampanhaReport(){
       meta += ` · Material: ${sortTypeLabel}`;
     }
     meta += ` · Colunas: ${filterLabel}`;
+    if(byDeputado && campanhaReportShowLids){
+      meta += ' · Lideranças de cada deputado: sim';
+    }
     metaEl.textContent = meta;
   }
   if(printHeader) printHeader.setAttribute('aria-hidden', 'false');
@@ -12602,6 +12686,11 @@ function bindCampanhaModuleEvents(){
   };
   bindReport('campanhaReportGroupBy', 'change', ()=>{
     campanhaReportGroupBy = document.getElementById('campanhaReportGroupBy')?.value || 'lideranca';
+    renderCampanhaReportUI();
+  });
+  bindReport('campanhaReportShowLids', 'change', ()=>{
+    const el = document.getElementById('campanhaReportShowLids');
+    campanhaReportShowLids = !!(el && el.checked);
     renderCampanhaReportUI();
   });
   bindReport('campanhaReportSort', 'change', ()=>{

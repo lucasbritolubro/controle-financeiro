@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260804-google-auto-lucas';
+const CACHE_VERSION = 'financas-pwa-v20260804-report-show-lids';
 const PRECACHE = [
   '/',
   '/index.html',
