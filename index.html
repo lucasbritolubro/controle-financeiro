@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-campanha-relatorios -->
+<!-- deploy-v20260804-report-no-total-col -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -10407,8 +10407,7 @@ function renderCampanhaReportUI(){
 
   const headCells = [
     `<th>Liderança / candidato</th>`,
-    ...colTypes.map(t=> `<th class="num">${escapeHtml(t)}</th>`),
-    `<th class="num">Total</th>`
+    ...colTypes.map(t=> `<th class="num">${escapeHtml(t)}</th>`)
   ];
   thead.innerHTML = `<tr>${headCells.join('')}</tr>`;
 
@@ -10427,7 +10426,6 @@ function renderCampanhaReportUI(){
         ${meta ? `<span class="lid-meta">${escapeHtml(meta)}</span>` : ''}
       </td>
       ${cells.join('')}
-      <td class="num ${r.totalQty > 0 ? 'qty-pos' : 'qty-zero'}">${r.totalQty > 0 ? r.totalQty.toLocaleString('pt-BR') : '—'}</td>
     </tr>`;
   }).join('');
 
@@ -10439,7 +10437,6 @@ function renderCampanhaReportUI(){
     tfoot.innerHTML = `<tr>
       <td>TOTAL (${rows.length} liderança${rows.length === 1 ? '' : 's'})</td>
       ${footCells.join('')}
-      <td class="num">${totalAll.toLocaleString('pt-BR')}</td>
     </tr>`;
   }
 }

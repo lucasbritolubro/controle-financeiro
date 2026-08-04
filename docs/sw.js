@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260804-campanha-relatorios';
+const CACHE_VERSION = 'financas-pwa-v20260804-report-no-total-col';
 const PRECACHE = [
   '/',
   '/index.html',
