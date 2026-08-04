@@ -7,10 +7,13 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0a0a0b",
-  "theme_color": "#0a0a0b",
+  "theme_color": "#0d0b12",
   "lang": "pt-BR",
   "dir": "ltr",
-  "categories": ["finance", "productivity"],
+  "categories": [
+    "finance",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
