@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260804-cerebro-purple-icons';;
+const CACHE_VERSION = 'financas-pwa-v20260804-cerebro-black-ui';
 const PRECACHE = [
   '/',
   '/index.html',
