@@ -1,9 +1,10 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260804-cerebro-lock-black';
+const CACHE_VERSION = 'financas-pwa-v20260804-cerebro-favicon';
 const PRECACHE = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/icons/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',

@@ -7,3 +7,7 @@ config.local.js
 supabase/.temp
 .env*
 .env.vercel
+
+# Database backups (private)
+backups/
+node_modules
