@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-no-dep-lid -->
+<!-- deploy-v20260804-google-auto-lucas -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4262,7 +4262,7 @@
           <span class="ag-g-badge inativo" id="agendaGoogleBadge">Inativo</span>
           <button type="button" class="btn-mini" id="agendaGoogleReauth" style="display:none; background:var(--rose);">Reautorizar escrita</button>
         </div>
-        <p class="ag-g-hint" id="agendaGoogleHint">Conecte para sincronizar: tarefas → Google Tarefas (no Agenda); compromissos → Calendar.</p>
+        <p class="ag-g-hint" id="agendaGoogleHint">Com lucasbrito@lubro.com.br o Google Calendar sincroniza automaticamente. Tarefas → Google Tarefas; compromissos → Calendar.</p>
         <p class="ag-g-caps" id="agendaGoogleCaps"></p>
       </div>
       <div class="ag-g-actions">
@@ -5898,6 +5898,8 @@ function toCampanhaTypeLabel(label){
   return String(label || '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
 }
 const AGENDA_GOOGLE_TOKEN_KEY = 'painel-financeiro:agenda-google-token-v3';
+/** Conta Google sempre vinculada ao login lucasbrito@lubro.com.br no Cerébro. */
+const GOOGLE_PREFERRED_ACCOUNT_EMAIL = 'lucasbrito@lubro.com.br';
 /** Escopos de ESCRITA (não usar calendar.readonly). */
 const AGENDA_GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
@@ -17807,9 +17809,62 @@ document.getElementById('agendaRolloverAllToday')?.addEventListener('click', ()=
 document.getElementById('agendaRolloverConfirm')?.addEventListener('click', ()=> applyAgendaRolloverFromModal());
 
 /* —— Google Calendar + Tasks (leitura completa + escrita) —— */
+let googleAutoLinkInFlight = false;
+let googleAutoLinkTriedSilent = false;
+
 function getGoogleClientId(){
   const env = window.__ENV__ || {};
   return env.GOOGLE_CLIENT_ID || env.GOOGLE_CALENDAR_CLIENT_ID || '';
+}
+function getCurrentAppUserEmail(){
+  return String(appAccess?.email || '').trim().toLowerCase();
+}
+function shouldAutoLinkGoogleCalendar(email){
+  if(typeof isAppReadOnly === 'function' && isAppReadOnly()) return false;
+  const e = String(email || getCurrentAppUserEmail() || '').trim().toLowerCase();
+  return e === GOOGLE_PREFERRED_ACCOUNT_EMAIL.toLowerCase();
+}
+function googleTokenLocalKey(email){
+  const e = String(email || 'default').trim().toLowerCase() || 'default';
+  return AGENDA_GOOGLE_TOKEN_KEY + ':ls:' + e;
+}
+function persistGoogleAccessToken(token, email){
+  if(!token) return;
+  const em = String(email || getCurrentAppUserEmail() || GOOGLE_PREFERRED_ACCOUNT_EMAIL).trim().toLowerCase();
+  try{ sessionStorage.setItem(AGENDA_GOOGLE_TOKEN_KEY, token); }catch(e){}
+  try{
+    localStorage.setItem(googleTokenLocalKey(em), token);
+    localStorage.setItem(AGENDA_GOOGLE_TOKEN_KEY + ':preferred-email', em);
+  }catch(e){}
+}
+function loadPersistedGoogleToken(email){
+  const em = String(email || getCurrentAppUserEmail() || '').trim().toLowerCase();
+  try{
+    const ss = sessionStorage.getItem(AGENDA_GOOGLE_TOKEN_KEY);
+    if(ss) return ss;
+  }catch(e){}
+  if(em){
+    try{
+      const ls = localStorage.getItem(googleTokenLocalKey(em));
+      if(ls) return ls;
+    }catch(e){}
+  }
+  // fallback legado (sessão antiga sem e-mail na chave)
+  if(shouldAutoLinkGoogleCalendar(em)){
+    try{
+      const legacy = localStorage.getItem(AGENDA_GOOGLE_TOKEN_KEY + ':ls');
+      if(legacy) return legacy;
+    }catch(e){}
+  }
+  return null;
+}
+function clearPersistedGoogleToken(email){
+  const em = String(email || getCurrentAppUserEmail() || GOOGLE_PREFERRED_ACCOUNT_EMAIL).trim().toLowerCase();
+  try{ sessionStorage.removeItem(AGENDA_GOOGLE_TOKEN_KEY); }catch(e){}
+  try{ sessionStorage.removeItem('painel-financeiro:agenda-google-token-v2'); }catch(e){}
+  try{ sessionStorage.removeItem('painel-financeiro:agenda-google-token'); }catch(e){}
+  try{ localStorage.removeItem(googleTokenLocalKey(em)); }catch(e){}
+  try{ localStorage.removeItem(AGENDA_GOOGLE_TOKEN_KEY + ':ls'); }catch(e){}
 }
 function getLocalTimeZone(){
   try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo'; }
@@ -17901,16 +17956,19 @@ function updateGoogleAgendaUI(){
       }
     }
     if(hint){
+      const autoHint = shouldAutoLinkGoogleCalendar()
+        ? ` Conta fixa: ${GOOGLE_PREFERRED_ACCOUNT_EMAIL} (sincroniza ao entrar no Cerébro).`
+        : '';
       if(!writeOk){
-        hint.textContent = 'Conexão incompleta. Autorize ver e editar o Google Calendar e Tarefas.';
+        hint.textContent = 'Conexão incompleta. Autorize ver e editar o Google Calendar e Tarefas.' + autoHint;
       } else if(tasksApiOff){
-        hint.textContent = 'Calendar OK. Para tarefas do app irem ao Google Agenda, ative a Google Tasks API no Cloud Console e clique em Reautorizar escrita.';
+        hint.textContent = 'Calendar OK. Para tarefas do app irem ao Google Agenda, ative a Google Tasks API no Cloud Console e clique em Reautorizar escrita.' + autoHint;
       } else if(!tasksOk){
-        hint.textContent = 'Calendar OK, mas falta o escopo de Tarefas. Clique em Reautorizar escrita e aceite “Tarefas”. Novas tarefas do app só assim aparecem no Google Agenda.';
+        hint.textContent = 'Calendar OK, mas falta o escopo de Tarefas. Clique em Reautorizar escrita e aceite “Tarefas”. Novas tarefas do app só assim aparecem no Google Agenda.' + autoHint;
       } else if(hardTasksFail){
-        hint.textContent = 'Tarefas do Google com problema: ' + shortGoogleTasksError(googleTasksLastError);
+        hint.textContent = 'Tarefas do Google com problema: ' + shortGoogleTasksError(googleTasksLastError) + autoHint;
       } else {
-        hint.textContent = 'Tarefas do app → Google Tarefas (aparecem no Agenda). Compromissos → Google Calendar.';
+        hint.textContent = 'Tarefas do app → Google Tarefas (aparecem no Agenda). Compromissos → Google Calendar.' + autoHint;
       }
     }
     // Reautorizar se faltar escrita no Calendar OU escopo de Tasks
@@ -17925,7 +17983,9 @@ function updateGoogleAgendaUI(){
       capsEl.style.color = '';
     }
     if(hint){
-      hint.textContent = 'Conecte para ler e escrever no Google Calendar e nas Tarefas.';
+      hint.textContent = shouldAutoLinkGoogleCalendar()
+        ? `Ao entrar com ${GOOGLE_PREFERRED_ACCOUNT_EMAIL}, o Cerébro conecta e sincroniza este Google Calendar automaticamente.`
+        : 'Conecte para ler e escrever no Google Calendar e nas Tarefas.';
     }
     if(reauth) reauth.style.display = 'none';
     if(sync) sync.style.display = 'none';
@@ -17937,11 +17997,7 @@ function clearGoogleSession(){
   googleEventsCache = [];
   googleTokenClient = null;
   googleAuthCaps = { writeCalendar: false, tasks: false, scopes: '', checked: false };
-  try{
-    sessionStorage.removeItem(AGENDA_GOOGLE_TOKEN_KEY);
-    sessionStorage.removeItem('painel-financeiro:agenda-google-token-v2');
-    sessionStorage.removeItem('painel-financeiro:agenda-google-token');
-  }catch(e){}
+  clearPersistedGoogleToken(getCurrentAppUserEmail());
   updateGoogleAgendaUI();
 }
 function applyGoogleScopeString(scopeStr, caps){
@@ -17975,7 +18031,7 @@ async function inspectGoogleAccessToken(token){
       if(res.status === 400 || res.status === 401){
         console.warn('[Google] token inválido/expirado (tokeninfo', res.status, ')');
         googleAccessToken = null;
-        try{ sessionStorage.removeItem(AGENDA_GOOGLE_TOKEN_KEY); }catch(e){}
+        clearPersistedGoogleToken(getCurrentAppUserEmail());
         googleAuthCaps = caps;
         return caps;
       }
@@ -18737,7 +18793,8 @@ function ensureGoogleTokenClient(){
         return;
       }
       googleAccessToken = resp.access_token;
-      try{ sessionStorage.setItem(AGENDA_GOOGLE_TOKEN_KEY, googleAccessToken); }catch(e){}
+      persistGoogleAccessToken(googleAccessToken, getCurrentAppUserEmail() || GOOGLE_PREFERRED_ACCOUNT_EMAIL);
+      googleAutoLinkInFlight = false;
       // scopes às vezes vêm na resposta do GIS — aplica antes do tokeninfo
       if(resp.scope){
         googleAuthCaps = applyGoogleScopeString(resp.scope, {
@@ -18746,7 +18803,10 @@ function ensureGoogleTokenClient(){
       }
       const caps = await inspectGoogleAccessToken(googleAccessToken);
       if(caps.writeCalendar){
-        setGoogleBrandLabel('Conectado com escrita. Sincronizando…');
+        const who = shouldAutoLinkGoogleCalendar()
+          ? `Google · ${GOOGLE_PREFERRED_ACCOUNT_EMAIL}`
+          : 'Conectado com escrita';
+        setGoogleBrandLabel(who + '. Sincronizando…');
         setGoogleUiActive(true);
       } else {
         setGoogleBrandLabel('Conectou, mas só com LEITURA. Use Reautorizar escrita.');
@@ -18754,7 +18814,7 @@ function ensureGoogleTokenClient(){
       }
       updateGoogleAgendaUI();
       await fetchGoogleCalendarEvents();
-      if(!caps.writeCalendar){
+      if(!caps.writeCalendar && !googleAutoLinkTriedSilent){
         alert(
           'O Google liberou apenas LEITURA.\n\n' +
           'No Google Cloud Console:\n' +
@@ -18771,14 +18831,35 @@ function ensureGoogleTokenClient(){
     },
     error_callback: (err)=>{
       console.error('Google OAuth error_callback', err);
+      googleAutoLinkInFlight = false;
       const msg = (err && (err.message || err.type || err.error)) || 'popup fechado ou bloqueado';
-      setGoogleBrandLabel('Falha no login Google: ' + msg);
+      // auto-link: se silent falhou, tenta com consent (uma vez)
+      if(shouldAutoLinkGoogleCalendar() && !googleAutoLinkTriedSilent){
+        googleAutoLinkTriedSilent = true;
+        setTimeout(()=>{
+          connectGoogleAgenda(true, {
+            loginHint: GOOGLE_PREFERRED_ACCOUNT_EMAIL,
+            prompt: 'consent',
+            auto: true
+          });
+        }, 250);
+        return;
+      }
+      setGoogleBrandLabel(
+        shouldAutoLinkGoogleCalendar()
+          ? `Google (${GOOGLE_PREFERRED_ACCOUNT_EMAIL}): ${msg} — clique para conectar`
+          : 'Falha no login Google: ' + msg
+      );
       setGoogleUiActive(false);
     }
   });
   return googleTokenClient;
 }
-async function connectGoogleAgenda(forceReauth){
+/**
+ * @param {boolean} forceReauth
+ * @param {{ loginHint?: string, prompt?: string, auto?: boolean, skipRevoke?: boolean }} [options]
+ */
+async function connectGoogleAgenda(forceReauth, options = {}){
   const clientId = getGoogleClientId();
   if(!clientId){
     setGoogleBrandLabel('Falta configurar GOOGLE_CLIENT_ID');
@@ -18788,38 +18869,68 @@ async function connectGoogleAgenda(forceReauth){
   if(typeof google === 'undefined' || !google.accounts?.oauth2){
     setGoogleBrandLabel('Biblioteca Google carregando… tente de novo');
     setGoogleUiActive(false);
-    return;
-  }
-  // Revoga token antigo (readonly) antes de pedir escrita de novo
-  if(googleAccessToken){
-    try{ google.accounts.oauth2.revoke(googleAccessToken, ()=>{}); }catch(e){}
-  }
-  try{
-    sessionStorage.removeItem(AGENDA_GOOGLE_TOKEN_KEY);
-    sessionStorage.removeItem('painel-financeiro:agenda-google-token-v2');
-    sessionStorage.removeItem('painel-financeiro:agenda-google-token');
-  }catch(e){}
-  googleAccessToken = null;
-  googleAuthCaps = { writeCalendar: false, tasks: false, scopes: '', checked: false };
-  googleTokenClient = null;
-
-  const client = ensureGoogleTokenClient();
-  if(!client){
-    if(status){
-      status.textContent = 'Não foi possível iniciar o login Google.';
-      status.classList.remove('ok');
+    // se auto e GIS ainda não carregou, tenta de novo em breve
+    if(options.auto){
+      setTimeout(()=> connectGoogleAgenda(forceReauth, options), 600);
     }
     return;
   }
-  setGoogleBrandLabel(forceReauth
-    ? 'Reautorizando… aceite EDITAR a agenda (não só ver).'
-    : 'Abrindo login Google… aceite ver e editar Calendar + Tasks');
+  const loginHint = options.loginHint
+    || (shouldAutoLinkGoogleCalendar() ? GOOGLE_PREFERRED_ACCOUNT_EMAIL : '')
+    || getCurrentAppUserEmail()
+    || '';
+
+  // Em reauth forçada ou connect manual: revoga token antigo
+  if(!options.skipRevoke && (forceReauth || googleAccessToken)){
+    if(googleAccessToken){
+      try{ google.accounts.oauth2.revoke(googleAccessToken, ()=>{}); }catch(e){}
+    }
+    clearPersistedGoogleToken(getCurrentAppUserEmail() || loginHint);
+    googleAccessToken = null;
+    googleAuthCaps = { writeCalendar: false, tasks: false, scopes: '', checked: false };
+    googleTokenClient = null;
+  }
+
+  const client = ensureGoogleTokenClient();
+  if(!client){
+    setGoogleBrandLabel('Não foi possível iniciar o login Google.');
+    setGoogleUiActive(false);
+    return;
+  }
+
+  const preferred = loginHint || GOOGLE_PREFERRED_ACCOUNT_EMAIL;
+  if(forceReauth){
+    setGoogleBrandLabel(`Reautorizando ${preferred}… aceite EDITAR a agenda.`);
+  } else if(options.auto){
+    setGoogleBrandLabel(`Conectando Google Calendar · ${preferred}…`);
+  } else {
+    setGoogleBrandLabel(`Abrindo Google · ${preferred || 'sua conta'}…`);
+  }
   setGoogleUiActive(false);
+
+  // prompt: silent ('') se auto e ainda não tentou; consent se reauth/manual
+  let prompt = options.prompt;
+  if(prompt == null){
+    if(forceReauth) prompt = 'consent';
+    else if(options.auto && !googleAutoLinkTriedSilent) prompt = '';
+    else prompt = 'consent';
+  }
+
   try{
-    // consent + select_account evita reaproveitar permissão antiga só-leitura
-    client.requestAccessToken({ prompt: 'consent' });
+    const req = {};
+    if(prompt !== undefined && prompt !== null) req.prompt = prompt;
+    if(loginHint){
+      req.login_hint = loginHint;
+      req.hint = loginHint;
+    }
+    // força a conta preferida quando for o usuário lucas
+    if(shouldAutoLinkGoogleCalendar(loginHint) && forceReauth){
+      req.prompt = 'consent';
+    }
+    client.requestAccessToken(req);
   }catch(err){
     console.error('Google connect', err);
+    googleAutoLinkInFlight = false;
     setGoogleBrandLabel('Erro ao abrir o Google: ' + (err && err.message ? err.message : String(err)));
     setGoogleUiActive(false);
   }
@@ -18837,17 +18948,64 @@ async function tryRestoreGoogleSession(){
       sessionStorage.removeItem('painel-financeiro:agenda-google-token');
       sessionStorage.removeItem('painel-financeiro:agenda-google-token-v2');
     }catch(e){}
-    const tok = sessionStorage.getItem(AGENDA_GOOGLE_TOKEN_KEY);
+    const email = getCurrentAppUserEmail();
+    const tok = loadPersistedGoogleToken(email);
     if(tok){
       googleAccessToken = tok;
       updateGoogleAgendaUI();
-      await inspectGoogleAccessToken(tok);
+      const caps = await inspectGoogleAccessToken(tok);
+      if(!googleAccessToken){
+        // tokeninfo invalidou
+        clearPersistedGoogleToken(email);
+        updateGoogleAgendaUI();
+        return false;
+      }
+      // regrava em session/local se ainda válido
+      persistGoogleAccessToken(googleAccessToken, email || GOOGLE_PREFERRED_ACCOUNT_EMAIL);
       updateGoogleAgendaUI();
       await fetchGoogleCalendarEvents();
-    } else {
-      updateGoogleAgendaUI();
+      return true;
     }
+    updateGoogleAgendaUI();
+    return false;
   }catch(e){
+    updateGoogleAgendaUI();
+    return false;
+  }
+}
+
+/**
+ * Ao logar com lucasbrito@lubro.com.br: restaura token e sincroniza Google
+ * Calendar/Tasks sempre com essa conta (login_hint).
+ */
+async function autoLinkGoogleCalendarAfterLogin(userEmail){
+  const email = String(userEmail || getCurrentAppUserEmail() || '').trim().toLowerCase();
+  if(!shouldAutoLinkGoogleCalendar(email)){
+    // outros usuários: só tenta restaurar token próprio (não o do Lucas)
+    await tryRestoreGoogleSession();
+    return;
+  }
+  if(googleAutoLinkInFlight) return;
+  googleAutoLinkInFlight = true;
+  googleAutoLinkTriedSilent = false;
+  try{
+    setGoogleBrandLabel(`Sincronizando Google · ${GOOGLE_PREFERRED_ACCOUNT_EMAIL}…`);
+    const restored = await tryRestoreGoogleSession();
+    if(restored && googleAccessToken){
+      googleAutoLinkInFlight = false;
+      return;
+    }
+    // Sem token válido: pede OAuth com a conta fixa (login_hint).
+    // Chamar logo após o submit do login aproveita o gesto do usuário (popup).
+    await connectGoogleAgenda(false, {
+      loginHint: GOOGLE_PREFERRED_ACCOUNT_EMAIL,
+      prompt: '',
+      auto: true,
+      skipRevoke: true
+    });
+  }catch(e){
+    console.warn('autoLinkGoogleCalendarAfterLogin', e);
+    googleAutoLinkInFlight = false;
     updateGoogleAgendaUI();
   }
 }
@@ -18857,13 +19015,21 @@ document.getElementById('agendaGoogleBrandBtn')?.addEventListener('click', ()=>{
     fetchGoogleCalendarEvents();
     return;
   }
+  const hint = shouldAutoLinkGoogleCalendar() ? GOOGLE_PREFERRED_ACCOUNT_EMAIL : getCurrentAppUserEmail();
   if(googleAccessToken && !googleAuthCaps.writeCalendar){
-    connectGoogleAgenda(true);
+    connectGoogleAgenda(true, { loginHint: hint || GOOGLE_PREFERRED_ACCOUNT_EMAIL });
     return;
   }
-  connectGoogleAgenda(false);
+  connectGoogleAgenda(false, {
+    loginHint: hint || undefined,
+    prompt: shouldAutoLinkGoogleCalendar() ? 'consent' : 'consent'
+  });
 });
-document.getElementById('agendaGoogleReauth')?.addEventListener('click', ()=> connectGoogleAgenda(true));
+document.getElementById('agendaGoogleReauth')?.addEventListener('click', ()=>{
+  connectGoogleAgenda(true, {
+    loginHint: shouldAutoLinkGoogleCalendar() ? GOOGLE_PREFERRED_ACCOUNT_EMAIL : getCurrentAppUserEmail()
+  });
+});
 document.getElementById('agendaGoogleSync')?.addEventListener('click', ()=> fetchGoogleCalendarEvents());
 document.getElementById('agendaGoogleDisconnect')?.addEventListener('click', disconnectGoogleAgenda);
 
@@ -19149,7 +19315,8 @@ async function runInit(){
   const habitDay = document.getElementById('habitDayInput');
   if(habitDay) habitDay.value = habitViewDate;
   populateAgendaProjectSelect();
-  await tryRestoreGoogleSession();
+  // Lucas: conecta e sincroniza Google Calendar/Tasks com o mesmo e-mail
+  await autoLinkGoogleCalendarAfterLogin(getCurrentAppUserEmail());
   switchAgendaSub('diario');
   renderAgenda();
   await processAgendaRolloverOnOpen();
