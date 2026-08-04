@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-login-white -->
+<!-- deploy-v20260804-campanha-viewer -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -3809,6 +3809,54 @@
   }
   .lock-error{ display:none; color:#DC2626; font-size:12px; font-weight:700; margin:14px 0 0; }
 
+  /* ===== Acesso somente leitura (campanha_viewer) ===== */
+  body.access-readonly #moduleNav button[data-module]:not([data-module="campanha"]),
+  body.access-readonly #moduleNav .module-external,
+  body.access-readonly #moduleNav .module-notes{
+    display:none !important;
+  }
+  body.access-readonly #moduleAgenda,
+  body.access-readonly #moduleFinanceiro,
+  body.access-readonly #moduleNotas{
+    display:none !important;
+  }
+  body.access-readonly #moduleCampanha{ display:block !important; }
+  body.access-readonly #campanhaFormPanel,
+  body.access-readonly #liderancaFormPanel,
+  body.access-readonly .lideranca-mat-form,
+  body.access-readonly .campanha-print-lot-form,
+  body.access-readonly .campanha-card-actions,
+  body.access-readonly .campanha-print-lot-actions,
+  body.access-readonly [data-camp-edit],
+  body.access-readonly [data-camp-del],
+  body.access-readonly [data-camp-lot-edit],
+  body.access-readonly [data-camp-lot-del],
+  body.access-readonly [data-camp-lot-add],
+  body.access-readonly [data-lid-edit],
+  body.access-readonly [data-lid-del],
+  body.access-readonly [data-lid-mat-edit],
+  body.access-readonly [data-lid-mat-del],
+  body.access-readonly #liderancaNewBtn,
+  body.access-readonly .lideranca-form-collapsed,
+  body.access-readonly .campanha-panel-actions .btn-mini:not([data-break-section-toggle]),
+  body.access-readonly .campanha-city-panel-actions .btn-mini:not([data-break-section-toggle]){
+    display:none !important;
+  }
+  .access-banner{
+    display:none;
+    margin:0 0 14px;
+    padding:12px 16px;
+    border-radius:14px;
+    background:linear-gradient(90deg, rgba(15,23,42,0.06), rgba(15,23,42,0.02));
+    border:1px solid rgba(15,23,42,0.10);
+    color:#0F172A;
+    font-size:13px;
+    font-weight:700;
+    line-height:1.4;
+  }
+  body.access-readonly .access-banner{ display:block; }
+  .access-banner span{ font-weight:600; color:var(--ink-soft); }
+
   /* ===== Polish global Soft UI ===== */
   .goal-card, .meta-card, .project-card, .habit-row, .habit-stat-card{
     border-radius:18px !important;
@@ -3925,6 +3973,11 @@
 </div>
 
 <div class="app" id="appRoot" style="display:none;">
+
+  <div class="access-banner" id="accessBanner" role="status">
+    Modo visualização · Campanha 2026
+    <span id="accessBannerDetail"> — somente leitura</span>
+  </div>
 
   <header class="top">
     <div class="hero">
@@ -6024,9 +6077,83 @@ function withContasLock(fn){
   contasDataLock = next.catch(() => {});
   return next;
 }
+
+/** Controle de acesso por app_metadata do Supabase Auth */
+let appAccess = {
+  role: 'owner',
+  readOnly: false,
+  modules: null, // null = todos
+  shareFromUserId: null,
+  shareFromEmail: null,
+  email: null
+};
+function isAppReadOnly(){ return !!appAccess.readOnly; }
+function canAccessModule(mod){
+  if(!appAccess.modules) return true;
+  return appAccess.modules.includes(mod);
+}
+function applyAccessFromUser(user){
+  const meta = (user && (user.app_metadata || {})) || {};
+  const role = String(meta.role || 'owner');
+  const readOnly = meta.read_only === true || meta.readOnly === true || role === 'campanha_viewer';
+  let modules = null;
+  if(Array.isArray(meta.modules) && meta.modules.length){
+    modules = meta.modules.map(String);
+  } else if(role === 'campanha_viewer'){
+    modules = ['campanha'];
+  }
+  appAccess = {
+    role,
+    readOnly,
+    modules,
+    shareFromUserId: meta.share_from_user_id || meta.shareFromUserId || null,
+    shareFromEmail: meta.share_from_email || meta.shareFromEmail || null,
+    email: user?.email || null
+  };
+  document.body.classList.toggle('access-readonly', appAccess.readOnly);
+  const detail = document.getElementById('accessBannerDetail');
+  if(detail){
+    const src = appAccess.shareFromEmail || 'dados compartilhados';
+    detail.textContent = appAccess.readOnly
+      ? ` — dados de ${src} · sem permissão de edição`
+      : '';
+  }
+  return appAccess;
+}
+function resetAppAccess(){
+  appAccess = { role:'owner', readOnly:false, modules:null, shareFromUserId:null, shareFromEmail:null, email:null };
+  document.body.classList.remove('access-readonly');
+}
+
 window.storage = {
   async get(key){
     if(!supabaseClient) return { error: true };
+    // Viewer da campanha: lê a chave do dono via RPC (ou SELECT com policy)
+    if(
+      key === CAMPANHA_KEY &&
+      appAccess.role === 'campanha_viewer' &&
+      appAccess.shareFromUserId
+    ){
+      try{
+        const { data: rpcData, error: rpcErr } = await supabaseClient.rpc('get_shared_campanha');
+        if(!rpcErr){
+          if(rpcData == null) return { value: null, missing: true };
+          return { value: rpcData };
+        }
+        console.warn('get_shared_campanha RPC falhou, tentando SELECT compartilhado', rpcErr);
+      }catch(e){
+        console.warn('get_shared_campanha erro', e);
+      }
+      const { data, error } = await supabaseClient
+        .from('app_storage')
+        .select('value')
+        .eq('key', key)
+        .eq('user_id', appAccess.shareFromUserId)
+        .maybeSingle();
+      if(error) return { error: true };
+      if(!data) return { value: null, missing: true };
+      return { value: data.value };
+    }
     const { data, error } = await supabaseClient
       .from('app_storage')
       .select('value')
@@ -6038,6 +6165,10 @@ window.storage = {
   },
   async set(key, valueStr){
     if(!supabaseClient) throw new Error('Não autenticado');
+    if(isAppReadOnly()){
+      console.warn('storage.set bloqueado (somente leitura):', key);
+      return;
+    }
     const { data: { user } } = await supabaseClient.auth.getUser();
     if(!user) throw new Error('Não autenticado');
     let parsed;
@@ -9630,7 +9761,7 @@ async function loadCampanha(){
     const lotsFixed = ensureAllPrintLotCodes();
     // Remove produção fantasma (lote excluído mas gráfica/valores/flag ficaram)
     const orphanProdCleared = scrubAllOrphanProductionMeta();
-    if(principalFixed || lotsFixed || migratedProd || orphanProdCleared){
+    if((principalFixed || lotsFixed || migratedProd || orphanProdCleared) && !isAppReadOnly()){
       try{
         if(window.storage && typeof window.storage.set === 'function'){
           await window.storage.set(CAMPANHA_KEY, JSON.stringify({
@@ -9654,6 +9785,7 @@ async function loadCampanha(){
 }
 async function saveCampanha(){
   if(campanhaStorageError) return;
+  if(isAppReadOnly()) return; // viewer: nunca grava
   try{
     if(!window.storage || typeof window.storage.set !== 'function') return;
     // normaliza lista de deputados (objetos com urna)
@@ -12538,6 +12670,7 @@ async function openCampanhaModule(){
 async function handleLogout(){
   if(supabaseClient) await supabaseClient.auth.signOut();
   appInitialized = false;
+  resetAppAccess();
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('lockScreen').style.display = 'flex';
   const pw = document.getElementById('lockPassword');
@@ -12553,7 +12686,9 @@ function updateFooterForModule(){
   } else if(currentAppModule === 'notas'){
     foot.innerHTML = `Notas · anotações pessoais na nuvem · ${logout}`;
   } else if(currentAppModule === 'campanha'){
-    foot.innerHTML = `Campanha 2026 · materiais e artes na nuvem · ${logout}`;
+    foot.innerHTML = isAppReadOnly()
+      ? `Campanha 2026 · visualização · ${logout}`
+      : `Campanha 2026 · materiais e artes na nuvem · ${logout}`;
   } else {
     foot.innerHTML = `Financeiro · contas a pagar compartilhadas entre os três perfis · ${logout}`;
   }
@@ -12584,9 +12719,11 @@ function applyModuleChrome(){
       mark.style.background = 'linear-gradient(145deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%)';
     }
   } else if(currentAppModule === 'campanha'){
-    if(kicker) kicker.textContent = 'MÓDULO DE MATERIAIS E ARTES';
+    if(kicker) kicker.textContent = isAppReadOnly() ? 'VISUALIZAÇÃO · SOMENTE LEITURA' : 'MÓDULO DE MATERIAIS E ARTES';
     if(nameEl) nameEl.textContent = 'CAMPANHA 2026';
-    if(subEl) subEl.textContent = 'Impressos, gráficas, tiragens e links de arte';
+    if(subEl) subEl.textContent = isAppReadOnly()
+      ? `Consulta dos dados de ${appAccess.shareFromEmail || 'equipe'} · sem edição`
+      : 'Impressos, gráficas, tiragens e links de arte';
     if(mark){
       mark.textContent = 'CAMP.';
       mark.classList.add('agenda-mark');
@@ -12601,6 +12738,11 @@ function applyModuleChrome(){
 
 async function switchAppModule(mod){
   if(mod !== 'agenda' && mod !== 'financeiro' && mod !== 'notas' && mod !== 'campanha') return;
+  if(!canAccessModule(mod)){
+    // Viewer: redireciona para o único módulo permitido
+    if(appAccess.modules && appAccess.modules[0]) mod = appAccess.modules[0];
+    else return;
+  }
   currentAppModule = mod;
   document.querySelectorAll('#moduleNav button[data-module]').forEach(b=>{
     b.classList.toggle('active', b.dataset.module === mod);
@@ -18598,18 +18740,25 @@ function renderHeaderDate(){
 }
 
 async function runInit(){
-  // App abre no módulo Agenda (independente do financeiro)
-  currentAppModule = 'agenda';
+  // Viewer: abre só Campanha; owner: Agenda
+  const startMod = (appAccess.modules && appAccess.modules[0]) || 'agenda';
+  currentAppModule = startMod;
   document.querySelectorAll('#moduleNav button[data-module]').forEach(b=>{
-    b.classList.toggle('active', b.dataset.module === 'agenda');
+    b.classList.toggle('active', b.dataset.module === startMod);
   });
-  document.getElementById('moduleAgenda')?.classList.add('active');
-  document.getElementById('moduleFinanceiro')?.classList.remove('active');
-  document.getElementById('moduleNotas')?.classList.remove('active');
-  document.getElementById('moduleCampanha')?.classList.remove('active');
+  document.getElementById('moduleAgenda')?.classList.toggle('active', startMod === 'agenda');
+  document.getElementById('moduleFinanceiro')?.classList.toggle('active', startMod === 'financeiro');
+  document.getElementById('moduleNotas')?.classList.toggle('active', startMod === 'notas');
+  document.getElementById('moduleCampanha')?.classList.toggle('active', startMod === 'campanha');
   applyModuleChrome();
   bindNotesModuleEvents();
   bindCampanhaModuleEvents();
+
+  if(isAppReadOnly() && startMod === 'campanha'){
+    renderHeaderDate();
+    try{ await openCampanhaModule(); }catch(err){ console.error(err); }
+    return;
+  }
 
   document.getElementById('bVencimento').value = todayISO();
   populateBillClassificationSelect();
@@ -18674,12 +18823,21 @@ async function runInit(){
 /* ===== Login Supabase ===== */
 let appInitialized = false;
 
-function unlockApp(){
+async function unlockApp(user){
+  if(user) applyAccessFromUser(user);
+  else {
+    try{
+      const { data: { user: u } } = await supabaseClient.auth.getUser();
+      if(u) applyAccessFromUser(u);
+    }catch(_e){}
+  }
   document.getElementById('lockScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
   if(!appInitialized){
     appInitialized = true;
-    runInit();
+    await runInit();
+  } else if(isAppReadOnly() && canAccessModule('campanha')){
+    await switchAppModule('campanha');
   }
 }
 
@@ -18699,7 +18857,7 @@ async function bootstrapAuth(){
     return;
   }
   const { data: { session } } = await supabaseClient.auth.getSession();
-  if(session) unlockApp();
+  if(session) await unlockApp(session.user);
 }
 
 document.getElementById('lockForm').addEventListener('submit', async (e)=>{
@@ -18707,14 +18865,14 @@ document.getElementById('lockForm').addEventListener('submit', async (e)=>{
   document.getElementById('lockError').style.display = 'none';
   const email = document.getElementById('lockEmail').value.trim();
   const password = document.getElementById('lockPassword').value;
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if(error){
     showLockError();
     document.getElementById('lockPassword').value = '';
     document.getElementById('lockPassword').focus();
     return;
   }
-  unlockApp();
+  await unlockApp(data?.user || null);
 });
 
 document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);

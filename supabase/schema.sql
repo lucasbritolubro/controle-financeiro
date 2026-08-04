@@ -34,3 +34,6 @@ create policy "Users update own storage"
 create policy "Users delete own storage"
   on public.app_storage for delete
   using (auth.uid() = user_id);
+-- Campanha viewer (somente leitura) — ver migrations/20260804160000_campanha_viewer.sql
+-- role app_metadata.role = 'campanha_viewer'
+-- share_from_user_id = uuid do dono
