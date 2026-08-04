@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-prod-no-empty-space -->
+<!-- deploy-v20260804-prod-ok-white-bg -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -805,10 +805,11 @@
     flex:0 0 auto !important;
     min-height:0 !important;
   }
+  /* 100%: fundo branco como o normal; só check + badge OK em verde */
   .campanha-print-progress.is-complete{
-    background:linear-gradient(180deg, #F0FDF4 0%, #ECFDF5 100%);
-    border-color:rgba(5,150,105,0.28);
-    box-shadow:0 0 0 1px rgba(5,150,105,0.06);
+    background:#fff;
+    border-color:rgba(15,23,42,0.08);
+    box-shadow:none;
   }
   .campanha-print-progress-head{
     display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
@@ -822,10 +823,13 @@
     font-size:11px; font-weight:700; color:var(--ink-soft);
   }
   .campanha-print-progress.is-complete .campanha-print-progress-head strong{
-    color:#047857;
+    color:var(--ink);
   }
-  .campanha-print-progress.is-complete .campanha-print-progress-head span{
-    color:#047857; font-weight:800;
+  .campanha-print-progress.is-complete .campanha-print-progress-head strong .campanha-print-ok{
+    /* check ao lado de PRODUÇÃO permanece verde */
+  }
+  .campanha-print-progress.is-complete .campanha-print-progress-head > span:not(.campanha-print-ok-badge){
+    color:var(--ink-soft);
   }
   .campanha-print-ok{
     display:inline-flex; align-items:center; justify-content:center;
@@ -860,7 +864,7 @@
     background:linear-gradient(90deg, #34D399 0%, #059669 55%, #047857 100%);
   }
   .campanha-print-progress.is-complete .campanha-print-progress-bar{
-    background:rgba(5,150,105,0.14);
+    background:rgba(15,23,42,0.06);
   }
   .campanha-print-progress .campanha-meta{
     margin:0 !important; gap:4px 10px !important;
@@ -1321,8 +1325,8 @@
     height:auto !important; min-height:0 !important;
   }
   .lideranca-mat-row.is-prod-complete{
-    border-color:rgba(5,150,105,0.28);
-    background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+    border-color:var(--card-border);
+    background:#fff;
     height:auto !important; min-height:0 !important;
   }
   .lideranca-mat-list{
