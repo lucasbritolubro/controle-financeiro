@@ -54,30 +54,30 @@ Configuração:
 
 No app: módulo **Agenda** → **Conectar Google** → autorize **Calendar** e **Tasks** (é preciso reconectar se você já tinha conectado só leitura).
 
-### 5. Domínio próprio (agenda.lubrosolutions.com)
+### 5. Domínio próprio (cerebro.lubrosolutions.com)
 
-**Na Vercel** (já adicionado ao projeto `controle-financeiro-novo`, ou via script):
+**Na Vercel** o domínio já está no projeto `controle-financeiro-novo`. Para reaplicar:
 
 ```bash
-./scripts/add-domain.sh
-# ou:
-# DOMAIN=agenda.lubrosolutions.com ./scripts/add-domain.sh
+DOMAIN=cerebro.lubrosolutions.com ./scripts/add-domain.sh
 ```
 
 **No DNS** (Locaweb — `lubrosolutions.com`):
 
 | Tipo | Nome | Destino |
 |------|------|---------|
-| CNAME | `agenda` | `d6a2117d3759f49d.vercel-dns-017.com` |
+| CNAME | `cerebro` | `d6a2117d3759f49d.vercel-dns-017.com` |
+
+(Alternativa A: `cerebro` → `76.76.21.21`)
 
 Confirme o valor em:  
-[vercel.com/lubro/controle-financeiro-novo/settings/domains](https://vercel.com/lubro/controle-financeiro-novo/settings/domains) → `agenda.lubrosolutions.com`.
+[vercel.com/lubro/controle-financeiro-novo/settings/domains](https://vercel.com/lubro/controle-financeiro-novo/settings/domains) → `cerebro.lubrosolutions.com`.
 
-Aguarde a propagação DNS (minutos a ~1 h) e o SSL automático da Vercel. Depois acesse `https://agenda.lubrosolutions.com`.
+Aguarde a propagação DNS (minutos a ~1 h) e o SSL automático da Vercel. Depois acesse `https://cerebro.lubrosolutions.com`.
 
-**Google OAuth:** atualize também as **Origens JavaScript autorizadas** com `https://agenda.lubrosolutions.com`.
+**Google OAuth:** atualize as **Origens JavaScript autorizadas** com `https://cerebro.lubrosolutions.com`.
 
-**Domínio antigo:** `financas.lubrosolutions.com` pode continuar apontando até você remover o CNAME `financas` no DNS e o domínio no painel da Vercel.
+**Domínios antigos:** `financas.lubrosolutions.com` e `agenda.lubrosolutions.com` podem continuar apontando até você remover os CNAMEs no DNS e os domínios no painel da Vercel.
 
 ### 6. Testar localmente (opcional)
 

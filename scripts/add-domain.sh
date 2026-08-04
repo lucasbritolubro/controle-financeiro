@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export PATH="/opt/homebrew/bin:$PATH"
 
-DOMAIN="${DOMAIN:-agenda.lubrosolutions.com}"
+DOMAIN="${DOMAIN:-cerebro.lubrosolutions.com}"
 PROJECT="${VERCEL_PROJECT:-controle-financeiro-novo}"
 SCOPE="${VERCEL_SCOPE:-lubro}"
 
