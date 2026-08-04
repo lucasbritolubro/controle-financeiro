@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-print-view -->
+<!-- deploy-v20260804-report-print-only -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1135,6 +1135,7 @@
     background:linear-gradient(135deg, #059669 0%, #047857 100%);
     color:#fff; box-shadow:0 6px 14px rgba(5,150,105,0.25);
   }
+  /* reforço fora de @media print (classe no body durante window.print) */
   body.printing-campanha.printing-campanha-report #campanhaSubLiderancas,
   body.printing-campanha.printing-campanha-report #campanhaSubMateriais{
     display:none !important;
@@ -1202,14 +1203,46 @@
     body.printing-campanha #moduleCampanha{
       display:block !important;
     }
-    body.printing-campanha #moduleCampanha .campanha-sub{
+    /* PDF completo: mostra as seções ativas; relatório isola só #campanhaSubRelatorios */
+    body.printing-campanha:not(.printing-campanha-report) #moduleCampanha .campanha-sub{
       display:block !important;
       animation:none !important;
       margin-bottom:22px;
     }
-    body.printing-campanha #campanhaSubLiderancas{
+    body.printing-campanha:not(.printing-campanha-report) #campanhaSubLiderancas{
       page-break-before:always;
       break-before:page;
+    }
+    /* PDF do relatório: SOMENTE a aba Relatórios (sem lista de lideranças) */
+    body.printing-campanha.printing-campanha-report #moduleCampanha .campanha-sub{
+      display:none !important;
+      animation:none !important;
+      margin:0 !important;
+    }
+    body.printing-campanha.printing-campanha-report #campanhaSubLiderancas,
+    body.printing-campanha.printing-campanha-report #campanhaSubMateriais{
+      display:none !important;
+      visibility:hidden !important;
+      height:0 !important;
+      overflow:hidden !important;
+      page-break-before:auto !important;
+      break-before:auto !important;
+    }
+    body.printing-campanha.printing-campanha-report #campanhaSubRelatorios{
+      display:block !important;
+      visibility:visible !important;
+      height:auto !important;
+      overflow:visible !important;
+    }
+    body.printing-campanha.printing-campanha-report #liderancaList,
+    body.printing-campanha.printing-campanha-report #liderancaFilters,
+    body.printing-campanha.printing-campanha-report #liderancaFormPanel,
+    body.printing-campanha.printing-campanha-report #liderancaTypeGrid,
+    body.printing-campanha.printing-campanha-report #liderancaDepGrid,
+    body.printing-campanha.printing-campanha-report #liderancaPorLidGrid,
+    body.printing-campanha.printing-campanha-report #liderancaCidadeGrid,
+    body.printing-campanha.printing-campanha-report .campanha-break-stack{
+      display:none !important;
     }
     body.printing-campanha .campanha-print-header{
       display:block !important;
@@ -10518,23 +10551,38 @@ function printCampanhaReport(){
 
   document.body.classList.add('printing-campanha');
   document.body.classList.add('printing-campanha-report');
+  // Esconde lideranças no DOM (além do CSS) para o motor de impressão não puxar a lista
+  const hideForPrint = [];
   document.querySelectorAll('#moduleCampanha .campanha-sub').forEach(sec=>{
     if(sec.dataset.campanhasub === 'relatorios'){
       sec.classList.add('active');
-      sec.style.display = '';
+      sec.style.setProperty('display', 'block', 'important');
     } else {
       sec.classList.remove('active');
-      sec.style.display = 'none';
+      hideForPrint.push({ el: sec, prev: sec.getAttribute('style') });
+      sec.style.setProperty('display', 'none', 'important');
     }
+  });
+  // Lista de lideranças: força hide caso o sub ainda exista no print
+  ['#campanhaSubLiderancas', '#campanhaSubMateriais', '#liderancaList', '#liderancaFilters', '#liderancaFormPanel'].forEach(sel=>{
+    const el = document.querySelector(sel);
+    if(!el) return;
+    hideForPrint.push({ el, prev: el.getAttribute('style') });
+    el.style.setProperty('display', 'none', 'important');
   });
 
   const restore = ()=>{
     document.body.classList.remove('printing-campanha');
     document.body.classList.remove('printing-campanha-report');
     if(printHeader) printHeader.setAttribute('aria-hidden', 'true');
+    hideForPrint.forEach(({ el, prev })=>{
+      if(!el) return;
+      if(prev == null) el.removeAttribute('style');
+      else el.setAttribute('style', prev);
+    });
     if(prevSub !== 'relatorios') switchCampanhaSub(prevSub);
     else {
-      // mantém relatório e botões de toolbar
+      switchCampanhaSub('relatorios');
       const printRep = document.getElementById('campanhaReportPrintBtn');
       if(printRep) printRep.style.display = '';
     }
