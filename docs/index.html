@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-lot-edit-values -->
+<!-- deploy-v20260804-prod-no-empty-space -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -786,10 +786,24 @@
   .campanha-meta b{ color:var(--ink); font-weight:800; display:block; font-size:11px; letter-spacing:.04em; text-transform:uppercase; margin-bottom:2px; }
   .campanha-card-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .campanha-print-progress{
-    margin-top:6px; padding:7px 9px; border-radius:10px;
+    margin-top:6px; margin-bottom:0; padding:8px 10px; border-radius:10px;
     background:#fff; border:1px solid rgba(15,23,42,0.08);
     box-shadow:none;
-    min-height:0;
+    /* altura só pelo conteúdo — sem faixa vazia embaixo do lote */
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:6px !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+    flex:0 0 auto !important;
+  }
+  .campanha-print-progress > *{
+    flex:0 0 auto !important;
+    min-height:0 !important;
   }
   .campanha-print-progress.is-complete{
     background:linear-gradient(180deg, #F0FDF4 0%, #ECFDF5 100%);
@@ -797,8 +811,8 @@
     box-shadow:0 0 0 1px rgba(5,150,105,0.06);
   }
   .campanha-print-progress-head{
-    display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;
-    margin-bottom:4px;
+    display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+    margin:0 !important;
   }
   .campanha-print-progress-head strong{
     font-size:11px; font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
@@ -828,37 +842,65 @@
     text-transform:uppercase; white-space:nowrap;
   }
   .campanha-print-progress-bar{
-    height:4px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
+    height:4px !important; min-height:4px !important; max-height:4px !important;
+    border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
+    margin:0 !important; padding:0 !important; line-height:0 !important;
   }
-  .campanha-print-progress-bar > i{
-    display:block; height:100%; border-radius:999px; background:rgba(100,116,139,0.75);
-    min-width:0; transition:width .2s ease;
+  .campanha-print-progress-bar > i,
+  .campanha-print-progress-bar > .campanha-print-progress-fill{
+    display:block !important; height:4px !important; max-height:4px !important;
+    border-radius:999px; background:rgba(100,116,139,0.75);
+    min-width:0; min-height:0 !important; margin:0 !important; padding:0 !important;
+    transition:width .2s ease; font-size:0 !important; line-height:0 !important;
   }
-  .campanha-print-progress-bar.is-over > i{ background:#d97706; }
-  .campanha-print-progress-bar.is-complete > i{
+  .campanha-print-progress-bar.is-over > i,
+  .campanha-print-progress-bar.is-over > .campanha-print-progress-fill{ background:#d97706; }
+  .campanha-print-progress-bar.is-complete > i,
+  .campanha-print-progress-bar.is-complete > .campanha-print-progress-fill{
     background:linear-gradient(90deg, #34D399 0%, #059669 55%, #047857 100%);
   }
   .campanha-print-progress.is-complete .campanha-print-progress-bar{
     background:rgba(5,150,105,0.14);
   }
   .campanha-print-progress .campanha-meta{
-    margin-top:5px !important; margin-bottom:0 !important; gap:3px 8px;
-    grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));
+    margin:0 !important; gap:4px 10px !important;
+    grid-template-columns:repeat(auto-fit, minmax(100px, 1fr)) !important;
     font-size:11px;
+    height:auto !important;
+    min-height:0 !important;
   }
   .campanha-print-progress .campanha-meta b{
     font-size:9.5px; margin-bottom:0;
   }
   .campanha-print-lots{
-    margin-top:5px; margin-bottom:0; display:flex; flex-direction:column; gap:5px;
+    margin:0 !important; padding:0 !important;
+    display:flex !important; flex-direction:column !important;
+    gap:5px !important;
+    height:auto !important; min-height:0 !important;
+    flex:0 0 auto !important;
   }
   .campanha-print-lot{
-    display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
-    padding:6px 8px; border-radius:9px; background:#fafafa; border:1px solid rgba(15,23,42,0.08);
+    display:flex !important; align-items:center !important; justify-content:space-between !important;
+    gap:8px; flex-wrap:wrap;
+    padding:7px 9px !important; border-radius:9px;
+    background:#fafafa; border:1px solid rgba(15,23,42,0.08);
     font-size:12px; font-weight:600; color:var(--ink-soft);
     box-shadow:none;
+    height:auto !important; min-height:0 !important; max-height:none !important;
+    flex:0 0 auto !important;
   }
-  .campanha-print-lot-main{ min-width:0; flex:1 1 180px; display:flex; flex-direction:column; gap:4px; }
+  .campanha-print-lot-main{
+    min-width:0; flex:1 1 auto !important; display:flex; flex-direction:column; gap:3px;
+    height:auto !important; min-height:0 !important;
+  }
+  .lideranca-mat-row .campanha-print-progress{
+    width:100%;
+    align-self:flex-start !important;
+  }
+  .lideranca-mat-row.is-prod-complete{
+    height:auto !important;
+    min-height:0 !important;
+  }
   .campanha-print-lot-title{
     font-size:14px; font-weight:800; color:var(--ink); letter-spacing:-.01em;
     display:flex; flex-wrap:wrap; align-items:baseline; gap:6px;
@@ -1273,14 +1315,19 @@
     display:block; font-size:10.5px; font-weight:800; letter-spacing:.04em;
     text-transform:uppercase; color:#047857; margin-bottom:3px;
   }
-  .lideranca-mat-list{ display:flex; flex-direction:column; gap:8px; }
   .lideranca-mat-row{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;
     padding:10px 12px; border-radius:12px; border:1px solid var(--card-border); background:#fff;
+    height:auto !important; min-height:0 !important;
   }
   .lideranca-mat-row.is-prod-complete{
     border-color:rgba(5,150,105,0.28);
     background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+    height:auto !important; min-height:0 !important;
+  }
+  .lideranca-mat-list{
+    display:flex; flex-direction:column; gap:8px;
+    height:auto !important; min-height:0 !important;
   }
   .lideranca-mat-row .lm-main{ font-weight:800; font-size:13px; color:var(--ink); text-transform:uppercase; }
   .lideranca-mat-row .lm-meta{ font-size:12px; font-weight:600; color:var(--ink-soft); margin-top:2px; }
@@ -10538,7 +10585,7 @@ function renderCampanhaList(){
           ${progressHead}
         </div>
         <div class="campanha-print-progress-bar${barClass}" aria-hidden="true">
-          <i style="width:${Math.min(100, pct)}%;"></i>
+          <span class="campanha-print-progress-fill" style="width:${Math.min(100, pct)}%;"></span>
         </div>
         ${lotsHtml}
         <div class="campanha-print-lot-form no-print" data-camp-lot-form="${escapeHtml(String(m.id))}">
@@ -11115,7 +11162,7 @@ function leadershipMatProductionBlockHtml(leadership, m){
     <div class="campanha-print-progress-head">
       ${titleHtml}
     </div>
-    <div class="campanha-print-progress-bar${barClass}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
+    <div class="campanha-print-progress-bar${barClass}" aria-hidden="true"><span class="campanha-print-progress-fill" style="width:${Math.min(100, pct)}%;"></span></div>
     <div class="campanha-meta">${metaBits.join('')}</div>
     ${lotsHtml}
   </div>`;
@@ -11153,7 +11200,7 @@ function leadershipMaterialRowsHtml(leadership){
         : ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}`)
       : '';
     return `
-    <div class="lideranca-mat-row${prodComplete ? ' is-prod-complete' : ''}" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch;">
+    <div class="lideranca-mat-row${prodComplete ? ' is-prod-complete' : ''}" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch; height:auto; min-height:0;">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; width:100%;">
         <div style="flex:1; min-width:0;">
           <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
