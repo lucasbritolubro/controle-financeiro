@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-adriano-cnpj-v2 -->
+<!-- deploy-v20260804-prod-modal-tight -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -786,22 +786,23 @@
   .campanha-meta b{ color:var(--ink); font-weight:800; display:block; font-size:11px; letter-spacing:.04em; text-transform:uppercase; margin-bottom:2px; }
   .campanha-card-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .campanha-print-progress{
-    margin-top:8px; padding:8px 10px; border-radius:10px;
+    margin-top:6px; padding:7px 9px; border-radius:10px;
     background:#fff; border:1px solid rgba(15,23,42,0.08);
     box-shadow:none;
+    min-height:0;
   }
   .campanha-print-progress-head{
     display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;
-    margin-bottom:6px;
+    margin-bottom:4px;
   }
   .campanha-print-progress-head strong{
-    font-size:11.5px; font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
+    font-size:11px; font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
   }
   .campanha-print-progress-head span{
-    font-size:11.5px; font-weight:700; color:var(--ink-soft);
+    font-size:11px; font-weight:700; color:var(--ink-soft);
   }
   .campanha-print-progress-bar{
-    height:5px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
+    height:4px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
   }
   .campanha-print-progress-bar > i{
     display:block; height:100%; border-radius:999px; background:rgba(100,116,139,0.75);
@@ -809,19 +810,19 @@
   }
   .campanha-print-progress-bar.is-over > i{ background:#d97706; }
   .campanha-print-progress .campanha-meta{
-    margin-top:6px !important; gap:4px 10px;
-    grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));
-    font-size:11.5px;
+    margin-top:5px !important; margin-bottom:0 !important; gap:3px 8px;
+    grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));
+    font-size:11px;
   }
   .campanha-print-progress .campanha-meta b{
-    font-size:10px; margin-bottom:1px;
+    font-size:9.5px; margin-bottom:0;
   }
   .campanha-print-lots{
-    margin-top:6px; display:flex; flex-direction:column; gap:6px;
+    margin-top:5px; margin-bottom:0; display:flex; flex-direction:column; gap:5px;
   }
   .campanha-print-lot{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
-    padding:7px 9px; border-radius:10px; background:#fafafa; border:1px solid rgba(15,23,42,0.08);
+    display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
+    padding:6px 8px; border-radius:9px; background:#fafafa; border:1px solid rgba(15,23,42,0.08);
     font-size:12px; font-weight:600; color:var(--ink-soft);
     box-shadow:none;
   }
@@ -3114,67 +3115,103 @@
   }
   @keyframes modalPop{ from{ opacity:0; transform:translateY(10px) scale(.98); } to{ opacity:1; transform:none; } }
   .modal-card.modal-wide{ max-width:520px; max-height:90vh; overflow:auto; }
-  /* Modal de cadastro de PRODUÇÃO — largo, altura pelo conteúdo (sem faixa branca) */
+  /* Modal de PRODUÇÃO — altura só pelo conteúdo (sem faixa branca extra) */
   #matProdModal{
-    align-items:center; justify-content:center; padding:16px; overflow:auto;
+    align-items:flex-start; justify-content:center;
+    padding:12px 12px 20px; overflow:auto;
   }
-  #matProdModal .modal-card{
-    max-width:min(860px, 96vw);
-    width:100%;
-    height:auto;
-    max-height:min(92vh, 900px);
-    overflow:auto;
-    padding:22px 24px 18px;
-    margin:0 auto;
+  #matProdModal .modal-card,
+  #matProdModal .modal-card.modal-wide,
+  #matProdModal .mat-prod-modal-card{
+    max-width:min(760px, 96vw) !important;
+    width:100% !important;
+    height:fit-content !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+    padding:16px 18px 14px !important;
+    margin:12px auto !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:0 !important;
   }
-  #matProdModal .modal-icon{ margin-bottom:10px; width:48px; height:48px; border-radius:14px; font-size:18px; }
-  #matProdModal .modal-title{ font-size:18px; margin-bottom:4px; }
-  #matProdModal .modal-sub{ font-size:13px; max-width:56ch; margin:0 auto 12px; }
+  #matProdModal #matProdModalForm{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    min-height:0 !important;
+    height:auto !important;
+    flex:0 0 auto !important;
+  }
+  #matProdModal .modal-icon{ margin:0 auto 8px; width:40px; height:40px; border-radius:12px; font-size:16px; flex:0 0 auto; }
+  #matProdModal .modal-title{ font-size:16px; margin:0 0 2px; flex:0 0 auto; }
+  #matProdModal .modal-sub{ font-size:12.5px; max-width:56ch; margin:0 auto 10px; flex:0 0 auto; }
   #matProdModal .print-lot-modal-fields{
     display:grid !important;
     grid-template-columns:1fr 1fr !important;
-    gap:10px 14px !important;
-    margin-bottom:10px !important;
+    gap:8px 12px !important;
+    margin:0 0 8px !important;
+    flex:0 0 auto !important;
   }
-  #matProdModal .print-lot-modal-fields .field{ margin:0; }
+  #matProdModal .print-lot-modal-fields .field{ margin:0 !important; }
   #matProdModal .print-lot-modal-fields .field input{
-    padding:10px 12px;
-    font-size:14px;
-    min-height:42px;
+    padding:9px 11px;
+    font-size:13.5px;
+    min-height:38px;
   }
   #matProdModal #matProdModalHint{
-    margin:0 0 10px !important;
-    padding:8px 10px !important;
+    margin:0 0 8px !important;
+    padding:7px 9px !important;
+    flex:0 0 auto !important;
   }
-  #matProdModal #matProdModalHint:empty{ display:none !important; margin:0 !important; padding:0 !important; }
+  #matProdModal #matProdModalHint:empty{ display:none !important; margin:0 !important; padding:0 !important; height:0 !important; }
   #matProdModal #matProdLotsBox{
-    margin:0 0 10px !important;
+    margin:0 0 8px !important;
+    flex:0 0 auto !important;
+    min-height:0 !important;
+    height:auto !important;
   }
   #matProdModal #matProdLotsBox:empty,
   #matProdModal #matProdLotsBox.is-empty{
     display:none !important;
     margin:0 !important;
+    padding:0 !important;
     min-height:0 !important;
+    height:0 !important;
+    overflow:hidden !important;
+  }
+  #matProdModal #matProdLotsBox .campanha-print-lots{
+    margin-top:0 !important;
+    gap:6px !important;
+  }
+  #matProdModal #matProdLotsBox .campanha-print-lot{
+    padding:6px 8px !important;
   }
   #matProdModal .campanha-print-lot-form{
     display:grid !important;
     grid-template-columns:1fr 1fr auto !important;
-    gap:10px 12px !important;
+    gap:8px 10px !important;
     align-items:end;
-    margin:0 0 12px !important;
+    margin:0 0 10px !important;
+    flex:0 0 auto !important;
   }
-  #matProdModal .campanha-print-lot-form .field{ margin:0; }
+  #matProdModal .campanha-print-lot-form .field{ margin:0 !important; }
   #matProdModal .campanha-print-lot-form input{
-    padding:10px 12px;
-    font-size:14px;
-    min-height:42px;
+    padding:9px 11px;
+    font-size:13.5px;
+    min-height:38px;
   }
   #matProdModal .modal-actions{
-    margin-top:4px;
+    margin:0 !important;
+    padding:0 !important;
+    flex:0 0 auto !important;
   }
   #matProdModal .modal-btn{
-    padding:12px 14px;
-    font-size:13.5px;
+    padding:11px 13px;
+    font-size:13px;
   }
   @media (max-width:700px){
     #matProdModal .print-lot-modal-fields,
