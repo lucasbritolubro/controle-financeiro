@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-prod-modal-tight -->
+<!-- deploy-v20260804-prod-100-ok -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -791,15 +791,41 @@
     box-shadow:none;
     min-height:0;
   }
+  .campanha-print-progress.is-complete{
+    background:linear-gradient(180deg, #F0FDF4 0%, #ECFDF5 100%);
+    border-color:rgba(5,150,105,0.28);
+    box-shadow:0 0 0 1px rgba(5,150,105,0.06);
+  }
   .campanha-print-progress-head{
     display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;
     margin-bottom:4px;
   }
   .campanha-print-progress-head strong{
     font-size:11px; font-weight:800; color:var(--ink); letter-spacing:.02em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:6px;
   }
   .campanha-print-progress-head span{
     font-size:11px; font-weight:700; color:var(--ink-soft);
+  }
+  .campanha-print-progress.is-complete .campanha-print-progress-head strong{
+    color:#047857;
+  }
+  .campanha-print-progress.is-complete .campanha-print-progress-head span{
+    color:#047857; font-weight:800;
+  }
+  .campanha-print-ok{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; border-radius:999px; flex:0 0 auto;
+    background:linear-gradient(145deg, #34D399 0%, #059669 55%, #047857 100%);
+    color:#fff; font-size:10px; font-weight:900; line-height:1;
+    box-shadow:0 2px 6px rgba(5,150,105,0.35);
+  }
+  .campanha-print-ok-badge{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:2px 8px 2px 4px; border-radius:999px;
+    background:rgba(5,150,105,0.12); border:1px solid rgba(5,150,105,0.22);
+    color:#047857; font-size:10.5px; font-weight:800; letter-spacing:.03em;
+    text-transform:uppercase; white-space:nowrap;
   }
   .campanha-print-progress-bar{
     height:4px; border-radius:999px; background:rgba(15,23,42,0.06); overflow:hidden;
@@ -809,6 +835,12 @@
     min-width:0; transition:width .2s ease;
   }
   .campanha-print-progress-bar.is-over > i{ background:#d97706; }
+  .campanha-print-progress-bar.is-complete > i{
+    background:linear-gradient(90deg, #34D399 0%, #059669 55%, #047857 100%);
+  }
+  .campanha-print-progress.is-complete .campanha-print-progress-bar{
+    background:rgba(5,150,105,0.14);
+  }
   .campanha-print-progress .campanha-meta{
     margin-top:5px !important; margin-bottom:0 !important; gap:3px 8px;
     grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));
@@ -1239,6 +1271,10 @@
   .lideranca-mat-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
     padding:10px 12px; border-radius:12px; border:1px solid var(--card-border); background:#fff;
+  }
+  .lideranca-mat-row.is-prod-complete{
+    border-color:rgba(5,150,105,0.28);
+    background:linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
   }
   .lideranca-mat-row .lm-main{ font-weight:800; font-size:13px; color:var(--ink); text-transform:uppercase; }
   .lideranca-mat-row .lm-meta{ font-size:12px; font-weight:600; color:var(--ink-soft); margin-top:2px; }
@@ -10345,6 +10381,7 @@ function renderCampanhaList(){
     const qtyPrinted = getMaterialQtyPrinted(m);
     const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
     const isOver = qtyTotal > 0 && qtyPrinted > qtyTotal;
+    const isComplete = pct >= 100;
     const lots = Array.isArray(m.printLots) ? m.printLots.slice().sort((a,b)=>{
       const da = String(a.sendDate || a.createdAt || '');
       const db = String(b.sendDate || b.createdAt || '');
@@ -10374,6 +10411,12 @@ function renderCampanhaList(){
           </div>`;
         }).join('')}</div>`
       : `<p style="margin:8px 0 0;font-size:12px;font-weight:600;color:var(--ink-faint);">Nenhum lote impresso registrado ainda.</p>`;
+    const progressHead = isComplete
+      ? `<strong><span class="campanha-print-ok" aria-hidden="true">✓</span> Produção</strong>
+          <span class="campanha-print-ok-badge"><span class="campanha-print-ok" aria-hidden="true">✓</span> OK · ${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (100%${isOver ? ' · acima do total' : ''})</span>`
+      : `<strong>Produção</strong>
+          <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>`;
+    const barClass = isComplete ? ' is-complete' : (isOver ? ' is-over' : '');
     return `
     <article class="campanha-card" data-campid="${escapeHtml(String(m.id))}">
       <div class="campanha-card-top">
@@ -10397,12 +10440,11 @@ function renderCampanhaList(){
         <div><b>CNPJ</b>${escapeHtml(m.cnpj || '—')}</div>
         <div><b>${escapeHtml(assoc ? assoc.typeLabel : 'Associação')}</b>${escapeHtml(lidName || '—')}</div>
       </div>
-      <div class="campanha-print-progress">
+      <div class="campanha-print-progress${isComplete ? ' is-complete' : ''}">
         <div class="campanha-print-progress-head">
-          <strong>Produção</strong>
-          <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
+          ${progressHead}
         </div>
-        <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true">
+        <div class="campanha-print-progress-bar${barClass}" aria-hidden="true">
           <i style="width:${Math.min(100, pct)}%;"></i>
         </div>
         ${lotsHtml}
@@ -10931,6 +10973,7 @@ function leadershipMatProductionBlockHtml(leadership, m){
   const qtyPrinted = getMaterialQtyPrinted(m);
   const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
   const isOver = qtyTotal > 0 && qtyPrinted > qtyTotal;
+  const isComplete = pct >= 100;
   const lots = m.printLots.slice().sort((a,b)=>{
     return String(b.sendDate || b.createdAt || '').localeCompare(String(a.sendDate || a.createdAt || ''));
   });
@@ -10965,13 +11008,21 @@ function leadershipMatProductionBlockHtml(leadership, m){
   if(String(m.cnpj || '').trim()) metaBits.push(`<div><b>CNPJ</b>${escapeHtml(m.cnpj)}</div>`);
   if(Number(m.unitValue) > 0) metaBits.push(`<div><b>Valor un.</b>${fmtBRLUnit(Number(m.unitValue))}</div>`);
   if(Number(m.totalValue) > 0) metaBits.push(`<div><b>Valor total</b>${fmtBRL(Number(m.totalValue))}</div>`);
+  const statusLabel = isComplete
+    ? (isOver ? '100% · acima do total' : '100% concluída')
+    : `${pct}%`;
+  const titleHtml = isComplete
+    ? `<strong><span class="campanha-print-ok" aria-hidden="true">✓</span> Produção</strong>
+      <span class="campanha-print-ok-badge"><span class="campanha-print-ok" aria-hidden="true">✓</span> OK · ${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${statusLabel})</span>`
+    : `<strong>Produção</strong>
+      <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>`;
+  const barClass = isComplete ? ' is-complete' : (isOver ? ' is-over' : '');
   return `
-  <div class="campanha-print-progress">
+  <div class="campanha-print-progress${isComplete ? ' is-complete' : ''}">
     <div class="campanha-print-progress-head">
-      <strong>Produção</strong>
-      <span>${qtyPrinted.toLocaleString('pt-BR')} de ${qtyTotal.toLocaleString('pt-BR')} (${pct}%)${isOver ? ' · acima do total' : ''}</span>
+      ${titleHtml}
     </div>
-    <div class="campanha-print-progress-bar${isOver ? ' is-over' : ''}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
+    <div class="campanha-print-progress-bar${barClass}" aria-hidden="true"><i style="width:${Math.min(100, pct)}%;"></i></div>
     <div class="campanha-meta">${metaBits.join('')}</div>
     ${lotsHtml}
   </div>`;
@@ -11001,12 +11052,19 @@ function leadershipMaterialRowsHtml(leadership){
     const qtyTotal = getMaterialQtyTotal(m);
     // Contagem impressa só se ainda houver lote/pedido registrado
     const qtyPrinted = materialHasPrintLots(m) ? getMaterialQtyPrinted(m) : 0;
+    const prodPct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
+    const prodComplete = materialHasPrintLots(m) && prodPct >= 100;
+    const impressoMeta = qtyPrinted
+      ? (prodComplete
+        ? ` · <span class="campanha-print-ok-badge" style="vertical-align:middle;"><span class="campanha-print-ok" aria-hidden="true">✓</span> OK ${qtyPrinted.toLocaleString('pt-BR')} (100%)</span>`
+        : ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}`)
+      : '';
     return `
-    <div class="lideranca-mat-row" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch;">
+    <div class="lideranca-mat-row${prodComplete ? ' is-prod-complete' : ''}" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch;">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; width:100%;">
         <div style="flex:1; min-width:0;">
           <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
-          <div class="lm-meta">Qtd: ${qtyTotal.toLocaleString('pt-BR')}${qtyPrinted ? ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}` : ''}</div>
+          <div class="lm-meta">Qtd: ${qtyTotal.toLocaleString('pt-BR')}${impressoMeta}</div>
           ${depTag}
           ${obs}
         </div>
