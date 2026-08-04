@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-multi-cols -->
+<!-- deploy-v20260804-report-no-dep-lid -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -5483,7 +5483,7 @@
           </div>
         </div>
         <p class="campanha-report-hint no-print" id="campanhaReportHint">
-          Cada material entra uma única vez. Agrupe por liderança ou deputado e marque um ou mais materiais em “Mostrar colunas”. O PDF usa a mesma visão.
+          Cada material entra uma única vez. Em “Deputado estadual”, materiais sem deputado aparecem pelo nome da liderança vinculada. Marque um ou mais materiais em “Mostrar colunas”. O PDF usa a mesma visão.
         </p>
         <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
           <table class="campanha-report-table" id="campanhaReportTable">
@@ -10595,34 +10595,51 @@ function collectLeadershipMaterialReportRows(){
 
 /**
  * Consolida materiais por deputado estadual (campo do material).
- * Sem duplicar o mesmo id de material; itens sem deputado vão para "— SEM DEPUTADO —".
+ * Sem duplicar o mesmo id de material.
+ * Itens SEM deputado: cada linha usa o nome da liderança / vínculo do material
+ * (em vez de um balde genérico "sem deputado").
  */
 function collectDeputadoMaterialReportRows(){
-  const byDep = new Map(); // depKey -> row
+  const byKey = new Map(); // rowKey -> row
   const typeSet = new Set();
   const seenMatIds = new Set();
-  const NO_DEP = '— SEM DEPUTADO —';
 
-  const ensureRow = (depKey, urna)=>{
-    if(!byDep.has(depKey)){
-      byDep.set(depKey, {
-        id: depKey,
-        name: depKey,
-        role: urna ? `Urna ${urna}` : (depKey === NO_DEP ? 'Sem vínculo' : 'Deputado estadual'),
-        cities: '',
+  const ensureRow = (rowKey, meta)=>{
+    if(!byKey.has(rowKey)){
+      byKey.set(rowKey, {
+        id: rowKey,
+        name: meta.name || '—',
+        role: meta.role || '',
+        cities: meta.cities || '',
         byType: new Map(),
         totalQty: 0,
         matCount: 0,
         lidNames: new Set(),
-        urna: urna || ''
+        urna: meta.urna || '',
+        kind: meta.kind || 'deputado' // 'deputado' | 'lideranca'
       });
     }
-    const row = byDep.get(depKey);
-    if(urna && !row.urna){
-      row.urna = urna;
-      if(depKey !== NO_DEP) row.role = `Urna ${urna}`;
+    const row = byKey.get(rowKey);
+    if(meta.urna && !row.urna){
+      row.urna = meta.urna;
+      if(row.kind === 'deputado') row.role = `Urna ${meta.urna}`;
     }
+    if(meta.cities && !row.cities) row.cities = meta.cities;
+    if(meta.role && row.kind === 'lideranca' && !row.role) row.role = meta.role;
     return row;
+  };
+
+  const resolveLinkedName = (m, lid)=>{
+    if(lid && lid.name) return toLeadershipName(lid.name);
+    if(m){
+      if(m.leadershipId){
+        const label = resolveLeadershipLabel(m.leadershipId, m.leadershipName);
+        if(label) return toLeadershipName(label);
+      }
+      const fallback = toLeadershipName(m.leadershipName || m.liderancaNome || '');
+      if(fallback) return fallback;
+    }
+    return '';
   };
 
   const addMat = (m, lid)=>{
@@ -10636,42 +10653,91 @@ function collectDeputadoMaterialReportRows(){
     if(qty < 0) return;
     const typeLabel = materialTypeLabelOf(m);
     typeSet.add(typeLabel);
+
     const depName = toDeputadoName(m.deputadoEstadual || m.deputado || m.depEstadual || '');
-    const depKey = depName || NO_DEP;
-    const urna = normalizeNumeroUrna(m.deputadoNumeroUrna || m.depNumeroUrna || m.numeroUrnaDeputado || '');
-    // se o material não tem urna, tenta a do cadastro de deputados
-    const urnaFinal = urna || (depName ? normalizeNumeroUrna(getDeputadoUrna(depName) || '') : '');
-    const row = ensureRow(depKey, urnaFinal);
+    let rowKey, meta;
+
+    if(depName){
+      const urna = normalizeNumeroUrna(m.deputadoNumeroUrna || m.depNumeroUrna || m.numeroUrnaDeputado || '');
+      const urnaFinal = urna || normalizeNumeroUrna(getDeputadoUrna(depName) || '');
+      rowKey = 'dep:' + depName;
+      meta = {
+        name: depName,
+        role: urnaFinal ? `Urna ${urnaFinal}` : 'Deputado estadual',
+        cities: '',
+        urna: urnaFinal,
+        kind: 'deputado'
+      };
+    } else {
+      // sem deputado → agrupa pelo nome da liderança / quem está vinculado
+      const lidName = resolveLinkedName(m, lid) || '— SEM VÍNCULO —';
+      const lidId = (lid && lid.id != null)
+        ? String(lid.id)
+        : (m.leadershipId != null ? String(m.leadershipId) : lidName);
+      rowKey = 'lid:' + lidId;
+      const roleLabel = lid
+        ? leadershipRoleLabel(lid.role)
+        : 'Liderança';
+      const cities = lid ? leadershipCitiesLabel(lid) : '';
+      meta = {
+        name: lidName,
+        role: roleLabel || 'Sem deputado · liderança',
+        cities,
+        urna: '',
+        kind: 'lideranca'
+      };
+    }
+
+    const row = ensureRow(rowKey, meta);
     row.byType.set(typeLabel, (row.byType.get(typeLabel) || 0) + qty);
     row.totalQty += qty;
     row.matCount += 1;
     if(lid && lid.name) row.lidNames.add(toLeadershipName(lid.name));
+    else {
+      const linked = resolveLinkedName(m, null);
+      if(linked) row.lidNames.add(linked);
+    }
   };
 
   (campanhaLeaderships || []).forEach(l=>{
     (l.materials || []).forEach(m=> addMat(m, l));
     getMaterialsLinkedToLeadership(l.id).forEach(pm=> addMat(pm, l));
   });
-  // materiais avulsos de produção ainda não migrados
+  // materiais avulsos de produção ainda não migrados / sem liderança na lista
   (campanhaMaterials || []).forEach(m=>{
     if(!m) return;
     const mid = m.id != null ? String(m.id) : '';
     if(mid && seenMatIds.has(mid)) return;
-    addMat(m, null);
+    const lid = m.leadershipId ? getLeadershipById(m.leadershipId) : null;
+    addMat(m, lid || null);
   });
 
-  // enriquece meta com qtd de lideranças
-  byDep.forEach(row=>{
-    const n = row.lidNames ? row.lidNames.size : 0;
-    if(n > 0){
-      const base = row.role || '';
-      row.cities = n === 1 ? '1 liderança' : `${n} lideranças`;
-      if(!base || base === 'Deputado estadual') row.role = row.urna ? `Urna ${row.urna}` : 'Deputado estadual';
+  // enriquece meta: deputados mostram quantas lideranças; lideranças sem dep. reforçam o papel
+  byKey.forEach(row=>{
+    if(row.kind === 'deputado'){
+      const n = row.lidNames ? row.lidNames.size : 0;
+      if(n > 0){
+        row.cities = n === 1 ? '1 liderança' : `${n} lideranças`;
+      }
+      if(!row.role || row.role === 'Deputado estadual'){
+        row.role = row.urna ? `Urna ${row.urna}` : 'Deputado estadual';
+      }
+    } else {
+      // material sem deputado listado pela liderança
+      if(!row.role || row.role === 'Liderança'){
+        row.role = 'Sem deputado · liderança';
+      } else if(row.role && !String(row.role).toLowerCase().includes('sem deputado')){
+        row.role = `${row.role} · sem deputado`;
+      }
     }
   });
 
   const types = Array.from(typeSet).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
-  const rows = Array.from(byDep.values());
+  // ordenação estável: deputados primeiro (A-Z), depois lideranças sem dep. (A-Z)
+  const rows = Array.from(byKey.values()).sort((a,b)=>{
+    if(a.kind !== b.kind) return a.kind === 'deputado' ? -1 : 1;
+    return a.name.localeCompare(b.name, 'pt-BR');
+  });
   return { rows, types, groupBy: 'deputado' };
 }
 
@@ -10837,14 +10903,14 @@ function renderCampanhaReportUI(){
   const statLLabel = document.getElementById('campanhaReportStatLidsLabel');
   const statT = document.getElementById('campanhaReportStatTypes');
   const statQ = document.getElementById('campanhaReportStatQty');
-  if(statLLabel) statLLabel.textContent = byDeputado ? 'Deputados' : 'Lideranças';
+  if(statLLabel) statLLabel.textContent = byDeputado ? 'Linhas' : 'Lideranças';
   if(statL) statL.textContent = String(rows.length);
   if(statT) statT.textContent = String(allTypes.length);
   if(statQ) statQ.textContent = totalAll.toLocaleString('pt-BR');
 
-  const firstColLabel = byDeputado ? 'Deputado estadual' : 'Liderança / candidato';
+  const firstColLabel = byDeputado ? 'Deputado estadual / liderança' : 'Liderança / candidato';
   const emptyMsg = byDeputado
-    ? 'Nenhum material com deputado estadual para listar.'
+    ? 'Nenhum material para listar por deputado ou liderança vinculada.'
     : 'Nenhuma liderança com material para listar.';
   if(empty) empty.textContent = emptyMsg;
 
@@ -10889,7 +10955,7 @@ function renderCampanhaReportUI(){
       return `<td class="num">${q > 0 ? q.toLocaleString('pt-BR') : '—'}</td>`;
     });
     const totalLabel = byDeputado
-      ? `TOTAL (${rows.length} deputado${rows.length === 1 ? '' : 's'})`
+      ? `TOTAL (${rows.length} linha${rows.length === 1 ? '' : 's'})`
       : `TOTAL (${rows.length} liderança${rows.length === 1 ? '' : 's'})`;
     tfoot.innerHTML = `<tr>
       <td>${escapeHtml(totalLabel)}</td>
@@ -10936,7 +11002,7 @@ function printCampanhaReport(){
   const byDeputado = campanhaReportGroupBy === 'deputado';
   if(printHeaderTitle){
     printHeaderTitle.textContent = byDeputado
-      ? 'Campanha 2026 — Relatório por deputado estadual e material'
+      ? 'Campanha 2026 — Relatório por deputado (ou liderança, se sem deputado)'
       : 'Campanha 2026 — Relatório por liderança e material';
   }
   if(metaEl){
