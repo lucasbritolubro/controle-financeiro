@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-prod-100-ok -->
+<!-- deploy-v20260804-lot-edit-values -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -906,11 +906,12 @@
     .campanha-print-lot-actions{ width:100%; }
     .campanha-print-lot-actions .btn-mini{ flex:1; }
   }
-  #printLotModal .modal-card{ max-width:440px; }
+  #printLotModal .modal-card{ max-width:520px; }
   #printLotModal .print-lot-modal-fields{
     display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 14px;
   }
   #printLotModal .print-lot-modal-fields .field{ margin:0; }
+  #printLotModal .print-lot-modal-fields .field.span-all{ grid-column:1 / -1; }
   #printLotModal .print-lot-modal-fields label{
     display:block; font-size:11px; font-weight:800; letter-spacing:.05em;
     text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px;
@@ -924,6 +925,11 @@
     margin:0 0 14px; padding:10px 12px; border-radius:12px;
     background:rgba(5,150,105,0.08); border:1px solid rgba(5,150,105,0.16);
     font-size:12.5px; font-weight:700; color:var(--ink-soft); line-height:1.4;
+  }
+  #printLotModal .print-lot-values-label{
+    grid-column:1 / -1; margin:2px 0 -4px;
+    font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--ink); opacity:.85;
   }
   @media (max-width:520px){
     #printLotModal .print-lot-modal-fields{ grid-template-columns:1fr; }
@@ -5159,7 +5165,7 @@
   <div class="modal-card">
     <div class="modal-icon primary" aria-hidden="true">✎</div>
     <h3 class="modal-title" id="printLotModalTitle">Editar lote de impressão</h3>
-    <p class="modal-sub" id="printLotModalSub">Ajuste a quantidade impressa e a data de envio deste lote.</p>
+    <p class="modal-sub" id="printLotModalSub">Ajuste quantidade, data e valores deste lote/produção.</p>
     <div class="print-lot-modal-hint" id="printLotModalHint"></div>
     <form id="printLotModalForm" autocomplete="off">
       <input type="hidden" id="printLotModalLeadershipId" value="">
@@ -5173,6 +5179,23 @@
         <div class="field">
           <label for="printLotModalDate">Data de envio p/ impressão</label>
           <input type="date" id="printLotModalDate" required>
+        </div>
+        <div class="print-lot-values-label">Valores da produção</div>
+        <div class="field">
+          <label for="printLotModalQtyTotal">Quantidade total planejada</label>
+          <input type="number" id="printLotModalQtyTotal" min="0" step="1" placeholder="Ex: 5000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="printLotModalTiragem">Tiragem</label>
+          <input type="number" id="printLotModalTiragem" min="0" step="1" placeholder="Ex: 10000" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="printLotModalValorUn">Valor unidade (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional · até 4 decimais)</span></label>
+          <input type="text" inputmode="decimal" class="currency-input currency-input-4dec" id="printLotModalValorUn" placeholder="0,0000">
+        </div>
+        <div class="field">
+          <label for="printLotModalValorTotal">Valor total (R$) <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+          <input type="text" inputmode="decimal" class="currency-input" id="printLotModalValorTotal" placeholder="0,00">
         </div>
       </div>
       <div class="modal-actions">
@@ -8533,6 +8556,54 @@ async function addLidMatPrintLot(leadershipId, materialId, qtyRaw, sendDateRaw){
   renderLiderancasUI();
   showSuccessFeedback('Lote registrado!', `${lotCode} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`);
 }
+function fillPrintLotModalProductionValues(mat){
+  const qtyTotalEl = document.getElementById('printLotModalQtyTotal');
+  const tirEl = document.getElementById('printLotModalTiragem');
+  const unEl = document.getElementById('printLotModalValorUn');
+  const totEl = document.getElementById('printLotModalValorTotal');
+  if(!mat){
+    if(qtyTotalEl) qtyTotalEl.value = '';
+    if(tirEl) tirEl.value = '';
+    if(unEl) unEl.value = '';
+    if(totEl) totEl.value = '';
+    return;
+  }
+  const qtyTotal = getMaterialQtyTotal(mat);
+  if(qtyTotalEl) qtyTotalEl.value = qtyTotal > 0 ? String(qtyTotal) : '';
+  if(tirEl) tirEl.value = Number(mat.tiragem) > 0 ? String(Number(mat.tiragem)) : '';
+  if(unEl) unEl.value = Number(mat.unitValue) > 0 ? toCurrencyDisplay(mat.unitValue, 4) : '';
+  if(totEl) totEl.value = Number(mat.totalValue) > 0 ? toCurrencyDisplay(mat.totalValue) : '';
+}
+/** Lê e normaliza valores de produção do modal de edição de lote. */
+function readPrintLotModalProductionValues(baseQtyForCalc){
+  const qtyTotalRaw = document.getElementById('printLotModalQtyTotal')?.value;
+  const tirRaw = document.getElementById('printLotModalTiragem')?.value;
+  let qtyTotal = qtyTotalRaw === '' || qtyTotalRaw == null ? 0 : Number(qtyTotalRaw);
+  let tiragem = tirRaw === '' || tirRaw == null ? 0 : Number(tirRaw);
+  if(!Number.isFinite(qtyTotal) || qtyTotal < 0) qtyTotal = 0;
+  if(!Number.isFinite(tiragem) || tiragem < 0) tiragem = 0;
+  let unitValue = parseCurrencyValue(document.getElementById('printLotModalValorUn'));
+  let totalValue = parseCurrencyValue(document.getElementById('printLotModalValorTotal'));
+  if(!Number.isFinite(unitValue) || unitValue < 0) unitValue = 0;
+  if(!Number.isFinite(totalValue) || totalValue < 0) totalValue = 0;
+  const calcBase = qtyTotal > 0 ? qtyTotal : (Number(baseQtyForCalc) > 0 ? Number(baseQtyForCalc) : 0);
+  if(totalValue <= 0 && unitValue > 0 && calcBase > 0){
+    totalValue = Math.round(unitValue * calcBase * 100) / 100;
+  } else if(unitValue <= 0 && totalValue > 0 && calcBase > 0){
+    unitValue = Math.round((totalValue / calcBase) * 10000) / 10000;
+  }
+  return { qtyTotal, tiragem, unitValue, totalValue };
+}
+function applyProductionValuesToMaterial(mat, vals){
+  if(!mat || !vals) return mat;
+  mat.qtyTotal = vals.qtyTotal;
+  if(vals.qtyTotal > 0) mat.qty = vals.qtyTotal;
+  mat.tiragem = vals.tiragem;
+  mat.unitValue = vals.unitValue;
+  mat.totalValue = vals.totalValue;
+  mat.updatedAt = new Date().toISOString();
+  return mat;
+}
 function openLidMatLotEditModal(leadershipId, materialId, lotId){
   const found = findLeadershipMaterial(leadershipId, materialId);
   if(!found || !found.mat) return;
@@ -8543,11 +8614,16 @@ function openLidMatLotEditModal(leadershipId, materialId, lotId){
   document.getElementById('printLotModalLotId').value = String(lot.id);
   document.getElementById('printLotModalQty').value = String(Number(lot.qty) || '');
   document.getElementById('printLotModalDate').value = String(lot.sendDate || todayISODateLocal());
+  fillPrintLotModalProductionValues(found.mat);
   document.getElementById('printLotModalSub').textContent =
     `${found.mat.materialLabel || 'Material'} · ${toLeadershipName(found.lid.name)}`;
   const hint = document.getElementById('printLotModalHint');
   if(hint){
-    hint.innerHTML = `<strong style="color:var(--ink);">ID:</strong> <span style="font-family:ui-monospace,Menlo,monospace;font-weight:800;">${escapeHtml(formatPrintLotCode(lot.lotCode))}</span>`;
+    const total = getMaterialQtyTotal(found.mat);
+    const printed = getMaterialQtyPrinted(found.mat);
+    hint.innerHTML =
+      `<strong style="color:var(--ink);">ID:</strong> <span style="font-family:ui-monospace,Menlo,monospace;font-weight:800;">${escapeHtml(formatPrintLotCode(lot.lotCode))}</span><br>` +
+      `<strong style="color:var(--ink);">Progresso:</strong> ${printed.toLocaleString('pt-BR')} de ${total.toLocaleString('pt-BR')} un. impressas`;
   }
   document.getElementById('printLotModal').style.display = 'flex';
 }
@@ -8577,6 +8653,8 @@ async function saveLidMatLotEditFromModal(e){
   lot.qty = Math.round(qty);
   lot.sendDate = sendDate;
   lot.updatedAt = new Date().toISOString();
+  const vals = readPrintLotModalProductionValues(getMaterialQtyTotal(found.mat) || qty);
+  applyProductionValuesToMaterial(found.mat, vals);
   syncLidMatPrintLots(found.mat);
   found.lid.updatedAt = new Date().toISOString();
   await saveCampanha();
@@ -8585,7 +8663,10 @@ async function saveLidMatLotEditFromModal(e){
   if(document.getElementById('matProdModal')?.style.display === 'flex'){
     openMatProdModal(leadershipId, materialId);
   }
-  showSuccessFeedback('Lote atualizado!', `${formatPrintLotCode(lot.lotCode)} · ${Math.round(qty).toLocaleString('pt-BR')} un.`);
+  const moneyHint = vals.totalValue > 0
+    ? ` · total ${fmtBRL(vals.totalValue)}`
+    : (vals.unitValue > 0 ? ` · un. ${fmtBRLUnit(vals.unitValue)}` : '');
+  showSuccessFeedback('Lote atualizado!', `${formatPrintLotCode(lot.lotCode)} · ${Math.round(qty).toLocaleString('pt-BR')} un.${moneyHint}`);
 }
 function askDeleteLidMatPrintLot(leadershipId, materialId, lotId){
   const found = findLeadershipMaterial(leadershipId, materialId);
@@ -9701,16 +9782,19 @@ function openPrintLotEditModal(materialId, lotId){
   if(!found || !found.lot) return;
   const { item, lot } = found;
   const modal = document.getElementById('printLotModal');
+  const lidIdEl = document.getElementById('printLotModalLeadershipId');
   const matIdEl = document.getElementById('printLotModalMaterialId');
   const lotIdEl = document.getElementById('printLotModalLotId');
   const qtyEl = document.getElementById('printLotModalQty');
   const dateEl = document.getElementById('printLotModalDate');
   const hintEl = document.getElementById('printLotModalHint');
   const subEl = document.getElementById('printLotModalSub');
+  if(lidIdEl) lidIdEl.value = '';
   if(matIdEl) matIdEl.value = String(item.id);
   if(lotIdEl) lotIdEl.value = String(lot.id);
   if(qtyEl) qtyEl.value = String(Number(lot.qty) || '');
   if(dateEl) dateEl.value = String(lot.sendDate || todayISODateLocal());
+  fillPrintLotModalProductionValues(item);
   if(subEl){
     subEl.textContent = `Material: ${item.materialLabel || item.materialType || 'Produção'}` +
       (item.printShop ? ` · ${item.printShop}` : '');
@@ -9734,10 +9818,13 @@ function closePrintLotEditModal(){
   if(modal) modal.style.display = 'none';
   const form = document.getElementById('printLotModalForm');
   if(form) form.reset();
+  const lidIdEl = document.getElementById('printLotModalLeadershipId');
   const matIdEl = document.getElementById('printLotModalMaterialId');
   const lotIdEl = document.getElementById('printLotModalLotId');
+  if(lidIdEl) lidIdEl.value = '';
   if(matIdEl) matIdEl.value = '';
   if(lotIdEl) lotIdEl.value = '';
+  fillPrintLotModalProductionValues(null);
 }
 async function savePrintLotEditFromModal(e){
   e?.preventDefault?.();
@@ -9771,14 +9858,20 @@ async function savePrintLotEditFromModal(e){
       updatedAt: new Date().toISOString()
     };
   });
-  campanhaMaterials[idx] = syncMaterialPrintLotsQty(item, printLots);
+  const vals = readPrintLotModalProductionValues(getMaterialQtyTotal(item) || qty);
+  const next = syncMaterialPrintLotsQty(item, printLots);
+  applyProductionValuesToMaterial(next, vals);
+  campanhaMaterials[idx] = next;
   await saveCampanha();
   closePrintLotEditModal();
   renderCampanhaMaterialsUI();
   const code = formatPrintLotCode(found.lot.lotCode);
+  const moneyHint = vals.totalValue > 0
+    ? ` · total ${fmtBRL(vals.totalValue)}`
+    : (vals.unitValue > 0 ? ` · un. ${fmtBRLUnit(vals.unitValue)}` : '');
   showSuccessFeedback(
     'Lote atualizado!',
-    `${code} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}`
+    `${code} · ${Math.round(qty).toLocaleString('pt-BR')} un. · envio ${formatCampanhaDateBR(sendDate)}${moneyHint}`
   );
 }
 function askDeleteCampanhaPrintLot(materialId, lotId){
