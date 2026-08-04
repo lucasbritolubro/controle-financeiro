@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-group-deputado -->
+<!-- deploy-v20260804-report-multi-cols -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -520,6 +520,54 @@
   .campanha-report-controls select{
     width:100%; padding:10px 12px; border:1.5px solid var(--card-border); border-radius:12px;
     font:inherit; font-size:13px; font-weight:600; background:var(--card-raised); color:var(--ink);
+  }
+  .campanha-report-cols-field{
+    grid-column:1 / -1;
+  }
+  .campanha-report-cols{
+    border:1.5px solid var(--card-border);
+    border-radius:14px;
+    background:var(--card-raised);
+    padding:10px 12px;
+  }
+  .campanha-report-cols-toolbar{
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px;
+    margin-bottom:8px;
+  }
+  .campanha-report-cols-toolbar .btn-mini{
+    padding:5px 10px; font-size:11px; font-weight:800;
+  }
+  .campanha-report-cols-count{
+    margin-left:auto; font-size:11.5px; font-weight:700; color:var(--ink-soft);
+  }
+  .campanha-report-cols-list{
+    display:flex; flex-wrap:wrap; gap:6px 8px;
+    max-height:148px; overflow:auto;
+    padding:2px 0;
+  }
+  .campanha-report-cols-list label.campanha-report-col{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:6px 10px;
+    border:1px solid var(--card-border);
+    border-radius:999px;
+    background:#fff;
+    font-size:12px; font-weight:700; color:var(--ink);
+    cursor:pointer; user-select:none;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .campanha-report-cols-list label.campanha-report-col:hover{
+    border-color:rgba(15,23,42,0.28);
+  }
+  .campanha-report-cols-list label.campanha-report-col.is-on{
+    background:rgba(15,23,42,0.06);
+    border-color:rgba(15,23,42,0.35);
+    box-shadow:0 0 0 1px rgba(15,23,42,0.06);
+  }
+  .campanha-report-cols-list label.campanha-report-col input{
+    width:14px; height:14px; margin:0; accent-color:var(--primary); flex:0 0 auto;
+  }
+  .campanha-report-cols-empty{
+    font-size:12px; font-weight:600; color:var(--ink-faint); padding:4px 2px;
   }
   .campanha-report-action-btns{
     display:flex; flex-wrap:wrap; gap:8px; align-items:center;
@@ -5408,12 +5456,6 @@
               <option value="">— escolha o material —</option>
             </select>
           </div>
-          <div class="field">
-            <label for="campanhaReportFilterType">Mostrar colunas</label>
-            <select id="campanhaReportFilterType">
-              <option value="">Todos os materiais</option>
-            </select>
-          </div>
           <div class="field campanha-report-actions">
             <label>&nbsp;</label>
             <div class="campanha-report-action-btns">
@@ -5428,9 +5470,20 @@
               </button>
             </div>
           </div>
+          <div class="field campanha-report-cols-field">
+            <label id="campanhaReportColsLabel">Mostrar colunas <span style="font-weight:600;color:var(--ink-faint);text-transform:none;letter-spacing:0;">(selecione um ou mais materiais)</span></label>
+            <div class="campanha-report-cols" id="campanhaReportFilterCols" role="group" aria-labelledby="campanhaReportColsLabel">
+              <div class="campanha-report-cols-toolbar">
+                <button type="button" class="btn-mini ghost" id="campanhaReportColsAll" title="Exibir todos os materiais">Todos</button>
+                <button type="button" class="btn-mini ghost" id="campanhaReportColsNone" title="Limpar seleção">Nenhum</button>
+                <span class="campanha-report-cols-count" id="campanhaReportColsCount">Todos os materiais</span>
+              </div>
+              <div class="campanha-report-cols-list" id="campanhaReportColsList"></div>
+            </div>
+          </div>
         </div>
         <p class="campanha-report-hint no-print" id="campanhaReportHint">
-          Cada material entra uma única vez. Agrupe por liderança ou por deputado estadual. O PDF/impressão usa a mesma visão selecionada abaixo.
+          Cada material entra uma única vez. Agrupe por liderança ou deputado e marque um ou mais materiais em “Mostrar colunas”. O PDF usa a mesma visão.
         </p>
         <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
           <table class="campanha-report-table" id="campanhaReportTable">
@@ -10478,8 +10531,15 @@ function materialTypeLabelOf(m){
 /* ===== Relatórios Campanha 2026 ===== */
 let campanhaReportSort = 'qty-desc';
 let campanhaReportSortType = '';
-let campanhaReportFilterType = '';
+/**
+ * Materiais selecionados para colunas:
+ *   null  → todos
+ *   []    → nenhum
+ *   [...] → só esses
+ */
+let campanhaReportFilterTypes = null;
 let campanhaReportGroupBy = 'lideranca'; // 'lideranca' | 'deputado'
+let campanhaReportKnownTypes = [];
 
 /**
  * Consolida materiais por liderança sem duplicar o mesmo id de material.
@@ -10638,31 +10698,103 @@ function sortCampanhaReportRows(rows, sortMode, sortType){
   return list;
 }
 
+function getSelectedReportColumnTypes(allTypes){
+  const typeList = Array.isArray(allTypes) ? allTypes : [];
+  if(campanhaReportFilterTypes == null) return typeList.slice(); // todos
+  const selected = campanhaReportFilterTypes.filter(t=> typeList.includes(t));
+  campanhaReportFilterTypes = selected; // limpa inválidos, mantém [] = nenhum
+  return typeList.filter(t=> selected.includes(t));
+}
+
+function updateCampanhaReportColsCount(allTypes){
+  const el = document.getElementById('campanhaReportColsCount');
+  if(!el) return;
+  const total = (allTypes || []).length;
+  if(!total){
+    el.textContent = 'Nenhum material';
+    return;
+  }
+  if(campanhaReportFilterTypes == null){
+    el.textContent = `Todos os materiais (${total})`;
+    return;
+  }
+  const selected = campanhaReportFilterTypes.length;
+  if(!selected){
+    el.textContent = 'Nenhuma coluna';
+    return;
+  }
+  if(selected === total){
+    el.textContent = `Todos os materiais (${total})`;
+  } else {
+    el.textContent = `${selected} de ${total} selecionado${selected === 1 ? '' : 's'}`;
+  }
+}
+
+function formatCampanhaReportColsLabel(allTypes){
+  const total = (allTypes || []).length;
+  if(!total) return 'Nenhum material';
+  if(campanhaReportFilterTypes == null) return 'Todos os materiais';
+  const selected = campanhaReportFilterTypes.filter(t=> (allTypes || []).includes(t));
+  if(!selected.length) return 'Nenhuma coluna';
+  if(selected.length === total) return 'Todos os materiais';
+  if(selected.length <= 3) return selected.join(', ');
+  return `${selected.slice(0, 3).join(', ')} +${selected.length - 3}`;
+}
+
 function populateCampanhaReportSelects(types){
   const sortTypeSel = document.getElementById('campanhaReportSortType');
-  const filterSel = document.getElementById('campanhaReportFilterType');
+  const colsList = document.getElementById('campanhaReportColsList');
   const typeList = Array.isArray(types) ? types : [];
-  const fill = (sel, includeAllLabel)=>{
-    if(!sel) return;
-    const prev = sel.value || '';
-    const opts = [];
-    if(includeAllLabel) opts.push(`<option value="">${escapeHtml(includeAllLabel)}</option>`);
-    else opts.push(`<option value="">— escolha o material —</option>`);
+  campanhaReportKnownTypes = typeList.slice();
+
+  // select de ordenação (único)
+  if(sortTypeSel){
+    const prev = sortTypeSel.value || campanhaReportSortType || '';
+    const opts = ['<option value="">— escolha o material —</option>'];
     typeList.forEach(t=>{
       opts.push(`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`);
     });
-    sel.innerHTML = opts.join('');
-    if(prev && typeList.includes(prev)) sel.value = prev;
-    else sel.value = '';
-  };
-  fill(sortTypeSel, null);
-  fill(filterSel, 'Todos os materiais');
-  if(sortTypeSel && campanhaReportSortType && typeList.includes(campanhaReportSortType)){
-    sortTypeSel.value = campanhaReportSortType;
+    sortTypeSel.innerHTML = opts.join('');
+    if(prev && typeList.includes(prev)) sortTypeSel.value = prev;
+    else sortTypeSel.value = '';
+    if(campanhaReportSortType && typeList.includes(campanhaReportSortType)){
+      sortTypeSel.value = campanhaReportSortType;
+    }
   }
-  if(filterSel && campanhaReportFilterType && typeList.includes(campanhaReportFilterType)){
-    filterSel.value = campanhaReportFilterType;
+
+  // multi-seleção de colunas
+  if(campanhaReportFilterTypes != null){
+    campanhaReportFilterTypes = campanhaReportFilterTypes.filter(t=> typeList.includes(t));
   }
+  if(colsList){
+    if(!typeList.length){
+      colsList.innerHTML = `<span class="campanha-report-cols-empty">Nenhum tipo de material cadastrado.</span>`;
+    } else {
+      colsList.innerHTML = typeList.map(t=>{
+        const on = campanhaReportFilterTypes == null || campanhaReportFilterTypes.includes(t);
+        return `<label class="campanha-report-col${on ? ' is-on' : ''}">
+          <input type="checkbox" data-report-col="${escapeHtml(t)}" ${on ? 'checked' : ''}>
+          <span>${escapeHtml(t)}</span>
+        </label>`;
+      }).join('');
+    }
+  }
+  updateCampanhaReportColsCount(typeList);
+}
+
+function readCampanhaReportColsFromDom(){
+  const colsList = document.getElementById('campanhaReportColsList');
+  if(!colsList) return;
+  const boxes = Array.from(colsList.querySelectorAll('input[data-report-col]'));
+  if(!boxes.length) return;
+  const selected = boxes.filter(b=> b.checked).map(b=> b.dataset.reportCol || '').filter(Boolean);
+  if(selected.length === boxes.length) campanhaReportFilterTypes = null; // todos
+  else campanhaReportFilterTypes = selected; // parcial ou nenhum ([])
+  boxes.forEach(b=>{
+    const lab = b.closest('label.campanha-report-col');
+    if(lab) lab.classList.toggle('is-on', !!b.checked);
+  });
+  updateCampanhaReportColsCount(campanhaReportKnownTypes);
 }
 
 function renderCampanhaReportUI(){
@@ -10679,27 +10811,28 @@ function renderCampanhaReportUI(){
   if(sortSel && sortSel.value) campanhaReportSort = sortSel.value;
   const sortTypeSel = document.getElementById('campanhaReportSortType');
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
-  const filterSel = document.getElementById('campanhaReportFilterType');
-  if(filterSel) campanhaReportFilterType = filterSel.value || '';
+  // lê multi-seleção atual (se o DOM já foi populado)
+  readCampanhaReportColsFromDom();
 
   const byDeputado = campanhaReportGroupBy === 'deputado';
   const { rows: rawRows, types: allTypes } = collectCampanhaReportRows();
   populateCampanhaReportSelects(allTypes);
 
-  // Colunas: filtro de material ou todos
-  let colTypes = allTypes.slice();
-  if(campanhaReportFilterType){
-    colTypes = allTypes.filter(t=> t === campanhaReportFilterType);
-  }
-  // Se ordenar por material, garante que a coluna exista
-  if((campanhaReportSort === 'type-asc' || campanhaReportSort === 'type-desc') && campanhaReportSortType){
+  // Colunas: um, vários, todos ou nenhum
+  let colTypes = getSelectedReportColumnTypes(allTypes);
+  // Se ordenar por material e há colunas, garante a coluna do material de ordenação
+  if(colTypes.length && (campanhaReportSort === 'type-asc' || campanhaReportSort === 'type-desc') && campanhaReportSortType){
     if(!colTypes.includes(campanhaReportSortType) && allTypes.includes(campanhaReportSortType)){
-      colTypes = [campanhaReportSortType];
+      colTypes = [...colTypes, campanhaReportSortType];
     }
   }
 
   const rows = sortCampanhaReportRows(rawRows, campanhaReportSort, campanhaReportSortType);
-  const totalAll = rows.reduce((s,r)=> s + (Number(r.totalQty)||0), 0);
+  // total da visão = soma só das colunas exibidas
+  const totalAll = rows.reduce((s,r)=>{
+    if(!colTypes.length) return s + (Number(r.totalQty)||0);
+    return s + colTypes.reduce((ss,t)=> ss + (Number(r.byType.get(t)) || 0), 0);
+  }, 0);
   const statL = document.getElementById('campanhaReportStatLids');
   const statLLabel = document.getElementById('campanhaReportStatLidsLabel');
   const statT = document.getElementById('campanhaReportStatTypes');
@@ -10775,11 +10908,10 @@ function printCampanhaReport(){
   const groupSel = document.getElementById('campanhaReportGroupBy');
   const sortSel = document.getElementById('campanhaReportSort');
   const sortTypeSel = document.getElementById('campanhaReportSortType');
-  const filterSel = document.getElementById('campanhaReportFilterType');
   if(groupSel) campanhaReportGroupBy = groupSel.value || campanhaReportGroupBy;
   if(sortSel) campanhaReportSort = sortSel.value || campanhaReportSort;
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
-  if(filterSel) campanhaReportFilterType = filterSel.value || '';
+  readCampanhaReportColsFromDom();
   renderCampanhaReportUI();
 
   const empty = document.getElementById('campanhaReportEmpty');
@@ -10797,9 +10929,7 @@ function printCampanhaReport(){
   });
   const groupLabel = groupSel?.selectedOptions?.[0]?.textContent?.trim() || 'Liderança / candidato';
   const sortLabel = sortSel?.selectedOptions?.[0]?.textContent?.trim() || '—';
-  const filterLabel = filterSel?.value
-    ? (filterSel.selectedOptions?.[0]?.textContent?.trim() || filterSel.value)
-    : 'Todos os materiais';
+  const filterLabel = formatCampanhaReportColsLabel(campanhaReportKnownTypes);
   const sortTypeLabel = sortTypeSel?.value
     ? (sortTypeSel.selectedOptions?.[0]?.textContent?.trim() || sortTypeSel.value)
     : '';
@@ -12420,8 +12550,30 @@ function bindCampanhaModuleEvents(){
     }
     renderCampanhaReportUI();
   });
-  bindReport('campanhaReportFilterType', 'change', ()=>{
-    campanhaReportFilterType = document.getElementById('campanhaReportFilterType')?.value || '';
+  // multi-colunas: checkboxes
+  document.getElementById('campanhaReportColsList')?.addEventListener('change', (e)=>{
+    if(!e.target || !e.target.matches('input[data-report-col]')) return;
+    readCampanhaReportColsFromDom();
+    renderCampanhaReportUI();
+  });
+  document.getElementById('campanhaReportColsAll')?.addEventListener('click', ()=>{
+    campanhaReportFilterTypes = null; // todos
+    const list = document.getElementById('campanhaReportColsList');
+    list?.querySelectorAll('input[data-report-col]').forEach(b=>{
+      b.checked = true;
+      b.closest('label.campanha-report-col')?.classList.add('is-on');
+    });
+    updateCampanhaReportColsCount(campanhaReportKnownTypes);
+    renderCampanhaReportUI();
+  });
+  document.getElementById('campanhaReportColsNone')?.addEventListener('click', ()=>{
+    campanhaReportFilterTypes = []; // nenhum
+    const list = document.getElementById('campanhaReportColsList');
+    list?.querySelectorAll('input[data-report-col]').forEach(b=>{
+      b.checked = false;
+      b.closest('label.campanha-report-col')?.classList.remove('is-on');
+    });
+    updateCampanhaReportColsCount(campanhaReportKnownTypes);
     renderCampanhaReportUI();
   });
   bindReport('campanhaReportRefreshBtn', 'click', ()=> renderCampanhaReportUI());
