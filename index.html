@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260803-lid-form-btn -->
+<!-- deploy-v20260804-adriano-cnpj-v2 -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1096,6 +1096,16 @@
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   }
   .lideranca-name{ margin:0; font-family:var(--font); font-weight:800; font-size:16px; color:var(--ink); text-transform:uppercase; letter-spacing:.02em; }
+  .lideranca-cnpj-line{
+    margin:6px 0 0; font-size:12.5px; font-weight:700; color:var(--ink-soft); letter-spacing:.01em;
+  }
+  .lideranca-cnpj-line b{
+    color:var(--ink); font-weight:800; letter-spacing:.04em; text-transform:uppercase; margin-right:6px;
+  }
+  .lideranca-cnpj-line code{
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:800; color:var(--ink);
+    font-size:12.5px; letter-spacing:.02em;
+  }
   #lidNome{ text-transform:uppercase; }
   .lideranca-role-tag{
     display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px;
@@ -4944,6 +4954,10 @@
               <label for="lidNumeroUrna">Número de urna do candidato <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
               <input type="text" id="lidNumeroUrna" placeholder="Ex: 12345" maxlength="6" inputmode="numeric" autocomplete="off">
             </div>
+            <div class="field" id="lidCnpjWrap" style="display:none;">
+              <label for="lidCnpj">CNPJ do candidato <span style="font-weight:600;color:var(--ink-faint);">(opcional)</span></label>
+              <input type="text" id="lidCnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric" autocomplete="off">
+            </div>
             <div class="field span-all">
               <label for="lidCidades">Cidades <span style="font-weight:600;color:var(--ink-faint);">(pode ser mais de uma, separadas por vírgula)</span></label>
               <input type="text" id="lidCidades" placeholder="Ex: Salvador, Feira de Santana, Camaçari" maxlength="300" autocomplete="address-level2" style="text-transform:uppercase;">
@@ -8210,16 +8224,65 @@ function getMaterialQtyPrinted(m){
   }
   return 0;
 }
-/** Produção só conta após cadastro real (modal PRODUÇÃO), não só pela qtd do material. */
-function materialHasProduction(m){
+/** Há lote/pedido de impressão ainda registrado (não excluído). */
+function materialHasPrintLots(m){
+  return !!(m && Array.isArray(m.printLots) && m.printLots.length > 0);
+}
+/** Metadados de produção (gráfica/valores) ainda preenchidos. */
+function materialHasProductionMeta(m){
   if(!m) return false;
-  if(m.productionRegistered === true || m.productionRegistered === 1 || m.productionRegistered === '1') return true;
-  if(Array.isArray(m.printLots) && m.printLots.length > 0) return true;
   if(String(m.printShop || m.grafica || '').trim()) return true;
+  if(String(m.cnpj || '').trim()) return true;
   if(Number(m.tiragem) > 0) return true;
   if(Number(m.unitValue) > 0 || Number(m.totalValue) > 0) return true;
-  // qtyTotal sozinho NÃO basta (é espelho da quantidade do material)
   return false;
+}
+/**
+ * Bloco/contagem de PRODUÇÃO só aparece se ainda houver lote/pedido registrado.
+ * Gráfica/valores sozinhos, flag sticky ou qtyTotal NÃO bastam.
+ */
+function materialHasProduction(m){
+  return materialHasPrintLots(m);
+}
+/**
+ * Se não restou nenhum lote, zera meta residual de produção para não deixar
+ * bloco "Produção" fantasma (ex.: santinho com gráfica/tiragem sem pedidos).
+ * Mantém qty/qtyTotal do material.
+ */
+function clearOrphanProductionMeta(mat){
+  if(!mat || materialHasPrintLots(mat)) return mat;
+  mat.printLots = Array.isArray(mat.printLots) ? mat.printLots : [];
+  mat.qtyPrinted = 0;
+  mat.productionRegistered = false;
+  mat.printShop = '';
+  mat.grafica = '';
+  mat.cnpj = '';
+  mat.tiragem = 0;
+  mat.unitValue = 0;
+  mat.totalValue = 0;
+  mat.updatedAt = new Date().toISOString();
+  return mat;
+}
+/** True se há resíduo de produção sem nenhum lote (fantasma na UI). */
+function materialHasOrphanProduction(m){
+  if(!m || materialHasPrintLots(m)) return false;
+  if(m.productionRegistered === true || m.productionRegistered === 1 || m.productionRegistered === '1') return true;
+  if(Number(m.qtyPrinted) > 0) return true;
+  return materialHasProductionMeta(m);
+}
+/** Limpa produção residual em todos os materiais sem lotes. Retorna true se algo mudou. */
+function scrubAllOrphanProductionMeta(){
+  let changed = false;
+  const scrub = (m)=>{
+    if(!materialHasOrphanProduction(m)) return;
+    clearOrphanProductionMeta(m);
+    changed = true;
+  };
+  (campanhaLeaderships || []).forEach(l=>{
+    (l.materials || []).forEach(scrub);
+  });
+  (campanhaMaterials || []).forEach(scrub);
+  return changed;
 }
 function findLeadershipMaterial(leadershipId, materialId){
   const lid = getLeadershipById(leadershipId);
@@ -8234,6 +8297,12 @@ function syncLidMatPrintLots(mat){
   mat.printLots = printLots;
   mat.qtyPrinted = printLots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
   if(!(Number(mat.qtyTotal) > 0) && Number(mat.qty) > 0) mat.qtyTotal = Number(mat.qty);
+  if(printLots.length){
+    mat.productionRegistered = true;
+  } else {
+    // Sem pedidos: some produção residual (contagem + meta) da UI e dos dados
+    clearOrphanProductionMeta(mat);
+  }
   mat.updatedAt = new Date().toISOString();
   return mat;
 }
@@ -8338,8 +8407,12 @@ async function saveMatProdFromModal(e){
   mat.cnpj = formatCnpjInput(document.getElementById('matProdCnpj')?.value || '');
   mat.unitValue = unitValue;
   mat.totalValue = totalValue;
-  mat.productionRegistered = true;
-  syncLidMatPrintLots(mat);
+  // Contagem/bloco na lista só com lotes; meta fica salva para o próximo pedido
+  const printLots = Array.isArray(mat.printLots) ? mat.printLots : [];
+  mat.printLots = printLots;
+  mat.qtyPrinted = printLots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
+  mat.productionRegistered = printLots.length > 0;
+  mat.updatedAt = new Date().toISOString();
   lid.updatedAt = new Date().toISOString();
   await saveCampanha();
   closeMatProdModal();
@@ -8641,6 +8714,7 @@ function normalizeLeadershipMaterial(raw){
     ? raw.printLots.map(normalizePrintLot).filter(Boolean)
     : (Array.isArray(raw.lotesImpressao) ? raw.lotesImpressao.map(normalizePrintLot).filter(Boolean) : []);
   const qtyPrintedSum = printLots.reduce((s, lot)=> s + (Number(lot.qty) || 0), 0);
+  const hasLots = printLots.length > 0;
   const tiragem = Number(raw.tiragem);
   const unitValue = Number(raw.unitValue ?? raw.valorUnidade);
   const totalValue = Number(raw.totalValue ?? raw.valorTotal);
@@ -8651,18 +8725,10 @@ function normalizeLeadershipMaterial(raw){
     materialLabel: materialLabel || toCampanhaTypeLabel(materialType),
     qty: qtySafe,
     qtyTotal,
-    qtyPrinted: qtyPrintedSum,
+    qtyPrinted: hasLots ? qtyPrintedSum : 0,
     printLots,
-    productionRegistered: !!(
-      raw.productionRegistered === true ||
-      raw.productionRegistered === 1 ||
-      raw.productionRegistered === '1' ||
-      printLots.length ||
-      String(raw.printShop || raw.grafica || '').trim() ||
-      (Number.isFinite(tiragem) && tiragem > 0) ||
-      (Number.isFinite(unitValue) && unitValue > 0) ||
-      (Number.isFinite(totalValue) && totalValue > 0)
-    ),
+    // Bloco Produção na lista só com lote/pedido ainda registrado
+    productionRegistered: hasLots,
     tiragem: Number.isFinite(tiragem) && tiragem >= 0 ? tiragem : 0,
     printShop: String(raw.printShop || raw.grafica || '').trim(),
     cnpj: String(raw.cnpj || '').trim(),
@@ -8716,7 +8782,7 @@ function migrateProductionMaterialsIntoLeaderships(){
         changed = true;
       }
     } else {
-      // mescla campos de produção se vazios no material da liderança
+      // mescla campos de produção se o material da liderança ainda não tem lotes
       if(!materialHasProduction(mat)){
         mat.qtyTotal = getMaterialQtyTotal(pm) || mat.qtyTotal || mat.qty;
         mat.tiragem = Number(pm.tiragem) || mat.tiragem || 0;
@@ -8726,6 +8792,7 @@ function migrateProductionMaterialsIntoLeaderships(){
         mat.totalValue = Number(pm.totalValue) || mat.totalValue || 0;
         mat.printLots = Array.isArray(pm.printLots) ? pm.printLots.map(normalizePrintLot).filter(Boolean) : (mat.printLots || []);
         mat.qtyPrinted = (mat.printLots || []).reduce((s,l)=> s + (Number(l.qty)||0), 0);
+        mat.productionRegistered = materialHasPrintLots(mat);
         if(pm.artLink && !mat.artLink) mat.artLink = pm.artLink;
         if(pm.notes && !mat.notes) mat.notes = pm.notes;
         changed = true;
@@ -8743,6 +8810,7 @@ function migrateProductionMaterialsIntoLeaderships(){
           changed = true;
         });
         mat.qtyPrinted = (mat.printLots || []).reduce((s,l)=> s + (Number(l.qty)||0), 0);
+        mat.productionRegistered = materialHasPrintLots(mat);
       }
     }
     lid.updatedAt = new Date().toISOString();
@@ -8957,6 +9025,10 @@ function isCandidateRole(role){
 }
 /** Nomes que devem permanecer sempre como CANDIDATO PRINCIPAL (evita sobrescrita de aba antiga). */
 const PRINCIPAL_CANDIDATE_NAMES = new Set(['ADRIANO LIMA']);
+/** CNPJ fixo dos candidatos principais (dados oficiais). */
+const PRINCIPAL_CANDIDATE_CNPJ = {
+  'ADRIANO LIMA': '68.237.955/0001-09'
+};
 function ensurePrincipalCandidatesInMemory(){
   let changed = false;
   (campanhaLeaderships || []).forEach(l=>{
@@ -8964,6 +9036,11 @@ function ensurePrincipalCandidatesInMemory(){
     if(!name || !PRINCIPAL_CANDIDATE_NAMES.has(name)) return;
     if(normalizeLeadershipRole(l.role) !== 'candidato_principal'){
       l.role = 'candidato_principal';
+      changed = true;
+    }
+    const fixedCnpj = formatCnpjInput(PRINCIPAL_CANDIDATE_CNPJ[name] || '');
+    if(fixedCnpj && formatCnpjInput(l.cnpj || '') !== fixedCnpj){
+      l.cnpj = fixedCnpj;
       changed = true;
     }
   });
@@ -8981,10 +9058,11 @@ function setLiderancaRoleToggle(role){
   updateLiderancaUrnaFieldVisibility();
 }
 function updateLiderancaUrnaFieldVisibility(){
-  const wrap = document.getElementById('lidNumeroUrnaWrap');
-  if(!wrap) return;
   const isCand = isCandidateRole(getLiderancaRoleFromToggle());
-  wrap.style.display = isCand ? '' : 'none';
+  const urnaWrap = document.getElementById('lidNumeroUrnaWrap');
+  if(urnaWrap) urnaWrap.style.display = isCand ? '' : 'none';
+  const cnpjWrap = document.getElementById('lidCnpjWrap');
+  if(cnpjWrap) cnpjWrap.style.display = isCand ? '' : 'none';
   // mantém valor no DOM ao esconder; no read ignora se não for candidato
 }
 function normalizeLeadership(raw){
@@ -9002,6 +9080,13 @@ function normalizeLeadership(raw){
   let role = normalizeLeadershipRole(raw.role || raw.tipo || raw.tag || 'lideranca');
   // Adriano Lima (e nomes em PRINCIPAL_CANDIDATE_NAMES) sempre como candidato principal
   if(PRINCIPAL_CANDIDATE_NAMES.has(name)) role = 'candidato_principal';
+  let cnpj = isCandidateRole(role)
+    ? formatCnpjInput(raw.cnpj || raw.CNPJ || '')
+    : '';
+  // CNPJ oficial do candidato principal (se configurado)
+  if(PRINCIPAL_CANDIDATE_CNPJ[name]){
+    cnpj = formatCnpjInput(PRINCIPAL_CANDIDATE_CNPJ[name]);
+  }
   return {
     id: raw.id || uid(),
     name,
@@ -9011,6 +9096,7 @@ function normalizeLeadership(raw){
     numeroUrna: isCandidateRole(role)
       ? normalizeNumeroUrna(raw.numeroUrna || raw.urna || raw.numeroCandidato || '')
       : '',
+    cnpj,
     phone: String(raw.phone || raw.telefone || '').trim(),
     assessoriaName: String(raw.assessoriaName || raw.assessoriaNome || raw.nomeAssessoria || '').trim(),
     assessoriaPhone: String(raw.assessoriaPhone || raw.assessoriaTel || raw.telefoneAssessoria || '').trim(),
@@ -9087,7 +9173,9 @@ async function loadCampanha(){
     const principalFixed = ensurePrincipalCandidatesInMemory();
     // códigos únicos de lote (#XXXXXXX) para impressões antigas
     const lotsFixed = ensureAllPrintLotCodes();
-    if(principalFixed || lotsFixed || migratedProd){
+    // Remove produção fantasma (lote excluído mas gráfica/valores/flag ficaram)
+    const orphanProdCleared = scrubAllOrphanProductionMeta();
+    if(principalFixed || lotsFixed || migratedProd || orphanProdCleared){
       try{
         if(window.storage && typeof window.storage.set === 'function'){
           await window.storage.set(CAMPANHA_KEY, JSON.stringify({
@@ -9483,12 +9571,26 @@ function findCampanhaMaterialAndLot(materialId, lotId){
   return { idx, item, lot: item.printLots[lotIdx], lotIdx };
 }
 function syncMaterialPrintLotsQty(item, printLots){
-  return {
+  const next = {
     ...item,
     printLots,
     qtyPrinted: printLots.reduce((s, l)=> s + (Number(l.qty) || 0), 0),
     updatedAt: new Date().toISOString()
   };
+  if(printLots.length){
+    next.productionRegistered = true;
+  } else {
+    // Sem pedidos: zera produção residual
+    next.productionRegistered = false;
+    next.qtyPrinted = 0;
+    next.printShop = '';
+    next.grafica = '';
+    next.cnpj = '';
+    next.tiragem = 0;
+    next.unitValue = 0;
+    next.totalValue = 0;
+  }
+  return next;
 }
 async function addCampanhaPrintLot(materialId, qtyRaw, sendDateRaw){
   const idx = (campanhaMaterials || []).findIndex(m=> sameId(m.id, materialId));
@@ -10493,6 +10595,8 @@ function resetLiderancaForm(collapse = true){
   setLiderancaRoleToggle('lideranca');
   const urna = document.getElementById('lidNumeroUrna');
   if(urna) urna.value = '';
+  const cnpj = document.getElementById('lidCnpj');
+  if(cnpj) cnpj.value = '';
   updateLiderancaUrnaFieldVisibility();
   const title = document.getElementById('liderancaFormTitle');
   const submit = document.getElementById('liderancaSubmitLabel');
@@ -10509,6 +10613,7 @@ function fillLiderancaForm(item){
   const nome = document.getElementById('lidNome');
   const cidades = document.getElementById('lidCidades');
   const urna = document.getElementById('lidNumeroUrna');
+  const cnpj = document.getElementById('lidCnpj');
   const tel = document.getElementById('lidTelefone');
   const assNome = document.getElementById('lidAssessoriaNome');
   const assTel = document.getElementById('lidAssessoriaTel');
@@ -10518,6 +10623,10 @@ function fillLiderancaForm(item){
   setLiderancaRoleToggle(item.role || 'lideranca');
   if(cidades) cidades.value = leadershipCitiesLabel(item);
   if(urna) urna.value = normalizeNumeroUrna(item.numeroUrna || '');
+  if(cnpj){
+    const fixed = PRINCIPAL_CANDIDATE_CNPJ[toLeadershipName(item.name || '')];
+    cnpj.value = formatCnpjInput(fixed || item.cnpj || '');
+  }
   if(tel) tel.value = formatPhoneBR(item.phone || '');
   if(assNome) assNome.value = item.assessoriaName || '';
   if(assTel) assTel.value = formatPhoneBR(item.assessoriaPhone || '');
@@ -10543,12 +10652,19 @@ function readLiderancaForm(){
   const numeroUrna = isCandidateRole(role)
     ? normalizeNumeroUrna(document.getElementById('lidNumeroUrna')?.value || '')
     : '';
+  let cnpj = isCandidateRole(role)
+    ? formatCnpjInput(document.getElementById('lidCnpj')?.value || '')
+    : '';
+  if(PRINCIPAL_CANDIDATE_CNPJ[name]){
+    cnpj = formatCnpjInput(PRINCIPAL_CANDIDATE_CNPJ[name]);
+  }
   return {
     name,
     role,
     cities,
     city: cities[0] || '',
     numeroUrna,
+    cnpj,
     phone: formatPhoneBR(document.getElementById('lidTelefone')?.value || ''),
     assessoriaName: String(document.getElementById('lidAssessoriaNome')?.value || '').trim(),
     assessoriaPhone: formatPhoneBR(document.getElementById('lidAssessoriaTel')?.value || ''),
@@ -10614,10 +10730,11 @@ async function submitLiderancaForm(e){
   resetLiderancaForm();
   renderLiderancasUI();
   const urnaHint = isCandidateRole(data.role) && data.numeroUrna ? ` · urna ${data.numeroUrna}` : '';
+  const cnpjHint = isCandidateRole(data.role) && data.cnpj ? ` · CNPJ ${data.cnpj}` : '';
   const roleHint = leadershipRoleLabel(data.role);
   showSuccessFeedback(
     wasEdit ? 'Cadastro atualizado!' : 'Cadastro adicionado!',
-    `${data.name || 'Registro'} · ${roleHint}${urnaHint}`
+    `${data.name || 'Registro'} · ${roleHint}${urnaHint}${cnpjHint}`
   );
 }
 async function deleteLideranca(id){
@@ -10672,7 +10789,7 @@ function filteredLeaderships(){
     const cities = leadershipCitiesLabel(l);
     const mats = (l.materials || []).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''} ${m.deputadoEstadual || ''}`).join(' ');
     const linkedMats = getMaterialsLinkedToLeadership(l.id).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''}`).join(' ');
-    const hay = `${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${cities}\n${l.city||''}\n${l.phone}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase();
+    const hay = `${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${cities}\n${l.city||''}\n${l.phone}\n${l.cnpj||''}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase();
     return hay.includes(q);
   });
 }
@@ -10771,17 +10888,16 @@ function renderLiderancaStats(){
   renderLiderancaTypeBreakdown();
 }
 function leadershipMatProductionBlockHtml(leadership, m){
-  // Só após o primeiro cadastro real de produção (modal PRODUÇÃO / lotes / gráfica)
-  if(!materialHasProduction(m)) return '';
+  // Sem pedido/lote registrado → não mostra nada de produção (nem contagem residual)
+  if(!materialHasPrintLots(m)) return '';
   const qtyTotal = getMaterialQtyTotal(m);
   const qtyPrinted = getMaterialQtyPrinted(m);
   const pct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
   const isOver = qtyTotal > 0 && qtyPrinted > qtyTotal;
-  const lots = Array.isArray(m.printLots) ? m.printLots.slice().sort((a,b)=>{
+  const lots = m.printLots.slice().sort((a,b)=>{
     return String(b.sendDate || b.createdAt || '').localeCompare(String(a.sendDate || a.createdAt || ''));
-  }) : [];
-  const lotsHtml = lots.length
-    ? `<div class="campanha-print-lots">${lots.map((lot)=>{
+  });
+  const lotsHtml = `<div class="campanha-print-lots">${lots.map((lot)=>{
         const lotQty = (Number(lot.qty)||0).toLocaleString('pt-BR');
         const lotDate = formatCampanhaDateBR(lot.sendDate);
         const lotCode = formatPrintLotCode(lot.lotCode);
@@ -10802,8 +10918,7 @@ function leadershipMatProductionBlockHtml(leadership, m){
             <button type="button" class="btn-mini ghost" data-lid-lot-del="${escapeHtml(String(lot.id))}" data-lid-id="${escapeHtml(String(leadership.id))}" data-mat-id="${escapeHtml(String(m.id))}" style="color:var(--rose);">Remover</button>
           </div>
         </div>`;
-      }).join('')}</div>`
-    : '';
+      }).join('')}</div>`;
   const metaBits = [
     `<div><b>Qtd. total</b>${qtyTotal.toLocaleString('pt-BR')}</div>`,
     `<div><b>Impresso</b>${qtyPrinted.toLocaleString('pt-BR')}</div>`
@@ -10847,7 +10962,8 @@ function leadershipMaterialRowsHtml(leadership){
       ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
     const qtyTotal = getMaterialQtyTotal(m);
-    const qtyPrinted = getMaterialQtyPrinted(m);
+    // Contagem impressa só se ainda houver lote/pedido registrado
+    const qtyPrinted = materialHasPrintLots(m) ? getMaterialQtyPrinted(m) : 0;
     return `
     <div class="lideranca-mat-row" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch;">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; width:100%;">
@@ -10978,6 +11094,15 @@ function renderLiderancasList(){
     const cityTags = cities.length
       ? `<div class="lideranca-cities">${cities.map(c=> `<span class="lideranca-city">${escapeHtml(c)}</span>`).join('')}</div>`
       : '';
+    // CNPJ: do cadastro, ou fixo do candidato principal (ex.: Adriano Lima)
+    const lidNameKey = toLeadershipName(l.name);
+    const cnpjDisplay = formatCnpjInput(
+      (PRINCIPAL_CANDIDATE_CNPJ && PRINCIPAL_CANDIDATE_CNPJ[lidNameKey]) || l.cnpj || ''
+    );
+    const showCandidateMeta = isCandidateRole(l.role) || !!PRINCIPAL_CANDIDATE_NAMES.has(lidNameKey);
+    const cnpjLine = cnpjDisplay
+      ? `<p class="lideranca-cnpj-line"><b>CNPJ</b><code>${escapeHtml(cnpjDisplay)}</code></p>`
+      : '';
     return `
     <article class="lideranca-card" data-lid="${escapeHtml(String(l.id))}">
       <div class="lideranca-card-top">
@@ -10987,6 +11112,7 @@ function renderLiderancasList(){
             <span class="lideranca-role-tag role-${escapeHtml(normalizeLeadershipRole(l.role))}">${escapeHtml(leadershipRoleLabel(l.role))}</span>
             ${semMaterialTag}
           </div>
+          ${cnpjLine}
           ${cityTags}
         </div>
         <div class="campanha-card-actions">
@@ -10999,8 +11125,11 @@ function renderLiderancasList(){
       </div>
       <div class="campanha-meta">
         <div><b>Cidades</b>${escapeHtml(cities.length ? cities.join(', ') : '—')}</div>
-        ${isCandidateRole(l.role)
+        ${showCandidateMeta
           ? `<div><b>Nº urna</b>${escapeHtml(normalizeNumeroUrna(l.numeroUrna) || '—')}</div>`
+          : ''}
+        ${cnpjDisplay
+          ? `<div><b>CNPJ</b>${escapeHtml(cnpjDisplay)}</div>`
           : ''}
         <div><b>Telefone</b>${escapeHtml(l.phone || '—')}</div>
         <div><b>Assessoria</b>${escapeHtml(l.assessoriaName || '—')}</div>
@@ -11124,13 +11253,15 @@ async function submitLeadershipMaterialForm(form){
     if(idx >= 0){
       const prev = leadership.materials[idx];
       const keepProd = materialHasProduction(prev);
-      leadership.materials[idx] = {
+      const merged = {
         ...prev,
         ...materialPayload,
         // qty do material; qtyTotal de produção só se já houver produção
-        qtyTotal: keepProd && Number(prev.qtyTotal) > 0 ? Number(prev.qtyTotal) : qty,
-        productionRegistered: keepProd ? true : (prev.productionRegistered || false)
+        qtyTotal: keepProd && Number(prev.qtyTotal) > 0 ? Number(prev.qtyTotal) : qty
       };
+      // Recalcula a partir do que ainda existe (lotes/meta), sem sticky
+      merged.productionRegistered = materialHasProduction(merged);
+      leadership.materials[idx] = merged;
     } else {
       leadership.materials.unshift({
         id: uid(),
@@ -11222,6 +11353,9 @@ function bindCampanhaModuleEvents(){
   // Maiúsculas via CSS text-transform; normalização em toCampanhaTypeLabel no save.
   document.getElementById('campMaterialOther')?.addEventListener('blur', (e)=>{
     e.target.value = toCampanhaTypeLabel(e.target.value);
+  });
+  document.getElementById('lidCnpj')?.addEventListener('input', (e)=>{
+    e.target.value = formatCnpjInput(e.target.value);
   });
   document.getElementById('campCnpj')?.addEventListener('input', (e)=>{
     e.target.value = formatCnpjInput(e.target.value);

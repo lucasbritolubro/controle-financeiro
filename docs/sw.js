@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260803-lid-form-btn';
+const CACHE_VERSION = 'financas-pwa-v20260804-adriano-cnpj-v2';
 const PRECACHE = [
   '/',
   '/index.html',
