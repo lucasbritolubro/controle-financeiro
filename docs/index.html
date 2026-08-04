@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-show-lids -->
+<!-- deploy-v20260804-agenda-bills-due -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -2607,6 +2607,12 @@
   }
 
 
+  #moduleAgenda .agenda-bills-due-panel{
+    width:100%; margin:0 0 16px; padding:20px 20px 18px;
+    background:linear-gradient(180deg, #FFFFFF 0%, #FFFCF9 100%);
+    border:1px solid rgba(249,115,22,0.12);
+  }
+  #moduleAgenda .agenda-bills-due-panel .panel-title{ margin-bottom:12px; }
   #moduleAgenda .agenda-cal-panel{
     width:100%; margin:0 0 16px; padding:22px 20px 24px;
     background:linear-gradient(180deg, #FFFFFF 0%, #FAFBFF 100%);
@@ -4265,6 +4271,12 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Contas a pagar (hoje + atrasadas) — acima do calendário da Agenda -->
+    <div class="panel agenda-bills-due-panel" id="agendaTodayDuePanel" style="margin-top:16px;">
+      <h2 class="panel-title" id="agendaTodayDueTitle">Contas a pagar · hoje e atrasadas · todos os perfis</h2>
+      <div id="agendaTodayDueBox"></div>
     </div>
 
     <!-- Calendário em tela cheia -->
@@ -7442,6 +7454,7 @@ function switchAgendaSub(sub){
   if(currentAgendaSub === 'diario'){
     populateAgendaProjectSelect();
     renderAgenda();
+    try{ renderTodayDue(); }catch(_e){}
   }
 }
 
@@ -13203,6 +13216,7 @@ async function switchAppModule(mod){
       switchAgendaSub(currentAgendaSub || 'diario');
       if(currentAgendaSub === 'diario'){
         renderAgenda();
+        try{ renderTodayDue(); }catch(_e){}
         await processAgendaRolloverOnOpen();
         if(googleAccessToken) await fetchGoogleCalendarEvents();
       }
@@ -15310,18 +15324,21 @@ function renderDueItemRow(b, { compact } = {}){
 }
 
 /**
- * Bloco fixo do painel: vencimentos de HOJE + ATRASADOS (pendentes).
+ * Bloco fixo: vencimentos de HOJE + ATRASADOS (pendentes).
  * No Lucas: inclui folha/contas de PESSOAL, Lubro e Nexo (ex.: Bruno Reis dia 20).
+ * Renderiza no Painel financeiro e na Agenda (acima do calendário).
  */
 function renderTodayDue(){
-  const box = document.getElementById('todayDueBox');
-  const title = document.getElementById('todayDueTitle');
-  if(!box) return;
-  if(title){
-    title.textContent = isConsolidatedPanelProfile()
-      ? 'Contas a pagar · hoje e atrasadas · todos os perfis'
-      : 'Contas a pagar · hoje e atrasadas';
-  }
+  const targets = [
+    { box: document.getElementById('todayDueBox'), title: document.getElementById('todayDueTitle') },
+    { box: document.getElementById('agendaTodayDueBox'), title: document.getElementById('agendaTodayDueTitle') }
+  ].filter(t => t.box);
+  if(!targets.length) return;
+
+  const titleText = isConsolidatedPanelProfile()
+    ? 'Contas a pagar · hoje e atrasadas · todos os perfis'
+    : 'Contas a pagar · hoje e atrasadas';
+
   // Hoje (qualquer status) + atrasadas ainda não pagas — cobre o caso "Bruno Reis dia 20" no dia 21
   const items = getPanelDueItems()
     .filter(b=>{
@@ -15335,17 +15352,24 @@ function renderTodayDue(){
       if(da !== db) return da - db;
       return (a.paid?1:0)-(b.paid?1:0) || String(a.desc||'').localeCompare(String(b.desc||''));
     });
+
+  let html;
   if(items.length === 0){
-    box.innerHTML = `<p class="alerts-empty">Nada a pagar hoje e nenhuma conta atrasada${isConsolidatedPanelProfile() ? ' (todos os perfis)' : ''}.</p>`;
-    return;
-  }
-  const pend = items.filter(i=>!i.paid);
-  const totalPend = pend.reduce((s,i)=>s+(Number(i.value)||0),0);
-  box.innerHTML = items.map(b => renderDueItemRow(b)).join('') + `
+    html = `<p class="alerts-empty">Nada a pagar hoje e nenhuma conta atrasada${isConsolidatedPanelProfile() ? ' (todos os perfis)' : ''}.</p>`;
+  } else {
+    const pend = items.filter(i=>!i.paid);
+    const totalPend = pend.reduce((s,i)=>s+(Number(i.value)||0),0);
+    html = items.map(b => renderDueItemRow(b)).join('') + `
     <div class="day-total">
       <span class="dt-label">${items.length} item(ns) · ${pend.length} pendente(s)</span>
       <span class="dt-value">${fmtBRL(totalPend)}</span>
     </div>`;
+  }
+
+  targets.forEach(({ box, title })=>{
+    if(title) title.textContent = titleText;
+    box.innerHTML = html;
+  });
 }
 
 function renderCalendar(){
