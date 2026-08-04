@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-print-only -->
+<!-- deploy-v20260804-menu-materiais -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -4934,10 +4934,10 @@
     </div>
     <div class="campanha-toolbar no-print">
       <nav class="campanha-subnav" id="campanhaSubnav" aria-label="Seções da Campanha 2026">
-        <button type="button" data-campanhasub="liderancas" class="active">Lideranças</button>
+        <button type="button" data-campanhasub="liderancas" class="active">Materiais</button>
         <button type="button" data-campanhasub="relatorios">Relatórios</button>
       </nav>
-      <div style="font-size:13px;font-weight:700;color:var(--ink-soft);" id="campanhaToolbarHint">Campanha 2026 · Lideranças + Produção</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink-soft);" id="campanhaToolbarHint">Campanha 2026 · Materiais</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;" id="campanhaToolbarPrintActions">
         <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="PDF: categorias (cards internos recolhidos) + todas as lideranças cadastradas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -9765,7 +9765,7 @@ function switchCampanhaSub(sub){
     if(printLid) printLid.style.display = '';
     if(printCat) printCat.style.display = '';
     if(printRep) printRep.style.display = 'none';
-    if(hint) hint.textContent = 'Campanha 2026 · Lideranças + Produção';
+    if(hint) hint.textContent = 'Campanha 2026 · Materiais';
     renderLiderancasUI();
   }
 }
