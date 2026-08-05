@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260805-remove-materiais-resumos -->
+<!-- deploy-v20260805-report-type-totals -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -608,6 +608,20 @@
   }
   .campanha-report-hint{
     margin:0 0 14px; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+  }
+  .campanha-report-type-totals{
+    margin:0 0 16px;
+  }
+  .campanha-report-type-totals .campanha-type-panel-head{
+    margin-bottom:12px;
+  }
+  body.printing-campanha.printing-campanha-report .campanha-report-type-totals{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  body.printing-campanha.printing-campanha-report .campanha-report-type-totals .campanha-type-card{
+    box-shadow:none !important;
+    background:#fff !important;
   }
   .campanha-report-table-wrap{
     overflow:auto; border:1px solid var(--card-border); border-radius:14px;
@@ -5521,6 +5535,16 @@
         <p class="campanha-report-hint no-print" id="campanhaReportHint">
           Cada material entra uma única vez. Filtre por liderança/candidato e/ou por cidade. Em “Deputado estadual”, marque “Mostrar lideranças de cada deputado” se quiser ver os vínculos. O PDF usa a mesma visão.
         </p>
+        <div class="campanha-type-panel campanha-report-type-totals" id="campanhaReportTypeTotalsPanel" aria-live="polite">
+          <div class="campanha-type-panel-head">
+            <div>
+              <h3>📦 Totais por tipo de material</h3>
+              <span class="ctp-sub" id="campanhaReportTypeTotalsSub">Quantidade consolidada da visão atual do relatório</span>
+            </div>
+          </div>
+          <div class="campanha-type-grid" id="campanhaReportTypeTotalsGrid"></div>
+          <p class="campanha-type-panel-empty" id="campanhaReportTypeTotalsEmpty" style="display:none;">Nenhum total de material para os filtros atuais.</p>
+        </div>
         <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
           <table class="campanha-report-table" id="campanhaReportTable">
             <thead id="campanhaReportThead"></thead>
@@ -11041,6 +11065,55 @@ function readCampanhaReportColsFromDom(){
   updateCampanhaReportColsCount(campanhaReportKnownTypes);
 }
 
+/** Painel de totais por tipo de material (visão filtrada do relatório). */
+function renderCampanhaReportTypeTotals(typeTotalsMap, typesOrder){
+  const panel = document.getElementById('campanhaReportTypeTotalsPanel');
+  const grid = document.getElementById('campanhaReportTypeTotalsGrid');
+  const empty = document.getElementById('campanhaReportTypeTotalsEmpty');
+  const sub = document.getElementById('campanhaReportTypeTotalsSub');
+  if(!grid) return;
+  const order = Array.isArray(typesOrder) ? typesOrder.slice() : [];
+  const map = typeTotalsMap instanceof Map ? typeTotalsMap : new Map();
+  const entries = order
+    .map(t=>{
+      const label = toCampanhaTypeLabel(t) || String(t || '');
+      const qty = Number(map.get(t) ?? map.get(label)) || 0;
+      return { label, qty };
+    })
+    .filter(e=> e.label && e.qty > 0)
+    .sort((a,b)=> b.qty - a.qty || a.label.localeCompare(b.label, 'pt-BR'));
+  const totalQty = entries.reduce((s,e)=> s + e.qty, 0);
+  const maxQty = entries.reduce((m,e)=> Math.max(m, e.qty), 0) || 1;
+  if(sub){
+    sub.textContent = entries.length
+      ? `${entries.length} tipo(s) · ${totalQty.toLocaleString('pt-BR')} un. no total (filtros atuais)`
+      : 'Quantidade consolidada da visão atual do relatório';
+  }
+  if(!entries.length){
+    grid.innerHTML = '';
+    if(empty) empty.style.display = '';
+    if(panel) panel.style.display = '';
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  if(panel) panel.style.display = '';
+  const colors = (typeof CAMPANHA_TYPE_COLORS !== 'undefined' && CAMPANHA_TYPE_COLORS.length)
+    ? CAMPANHA_TYPE_COLORS
+    : ['#059669', '#0F172A', '#D97706', '#2563EB', '#7C3AED', '#DC2626'];
+  grid.innerHTML = entries.map((e, i)=>{
+    const accent = colors[i % colors.length];
+    const pct = Math.max(4, Math.round((e.qty / maxQty) * 100));
+    const share = totalQty > 0 ? Math.round((e.qty / totalQty) * 100) : 0;
+    return `
+    <article class="campanha-type-card" style="--ctp-accent:${accent}; --ctp-pct:${pct}%;">
+      <div class="ctp-label">${escapeHtml(e.label)}</div>
+      <div class="ctp-qty">${e.qty.toLocaleString('pt-BR')}</div>
+      <div class="ctp-meta">${share}% do total · un.</div>
+      <div class="ctp-bar" aria-hidden="true"><i></i></div>
+    </article>`;
+  }).join('');
+}
+
 function renderCampanhaReportUI(){
   const thead = document.getElementById('campanhaReportThead');
   const tbody = document.getElementById('campanhaReportTbody');
@@ -11135,6 +11208,17 @@ function renderCampanhaReportUI(){
       : 'Nenhuma liderança com material para listar.');
   if(empty) empty.textContent = emptyMsg;
 
+  // Totais por tipo na visão filtrada (todas as colunas selecionadas)
+  const typeTotals = new Map();
+  const typesForTotals = colTypes.length ? colTypes : allTypes;
+  typesForTotals.forEach(t=> typeTotals.set(t, 0));
+  rows.forEach(r=>{
+    typesForTotals.forEach(t=>{
+      typeTotals.set(t, (typeTotals.get(t) || 0) + (Number(r.byType.get(t)) || 0));
+    });
+  });
+  renderCampanhaReportTypeTotals(typeTotals, typesForTotals);
+
   if(!rows.length){
     thead.innerHTML = '';
     tbody.innerHTML = '';
@@ -11152,11 +11236,9 @@ function renderCampanhaReportUI(){
   ];
   thead.innerHTML = `<tr>${headCells.join('')}</tr>`;
 
-  const typeTotals = new Map(colTypes.map(t=> [t, 0]));
   tbody.innerHTML = rows.map(r=>{
     const cells = colTypes.map(t=>{
       const q = Number(r.byType.get(t)) || 0;
-      typeTotals.set(t, (typeTotals.get(t) || 0) + q);
       const cls = q > 0 ? 'qty-pos' : 'qty-zero';
       return `<td class="num ${cls}">${q > 0 ? q.toLocaleString('pt-BR') : '—'}</td>`;
     });
@@ -19706,7 +19788,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260805-remove-materiais-resumos', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260805-report-type-totals', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
