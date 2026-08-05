@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260804-report-lid-filter';
+const CACHE_VERSION = 'financas-pwa-v20260805-remove-materiais-resumos';
 const PRECACHE = [
   '/',
   '/index.html',

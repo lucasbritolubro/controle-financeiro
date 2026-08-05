@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- deploy-v20260804-report-lid-filter -->
+<!-- deploy-v20260805-remove-materiais-resumos -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -1381,12 +1381,55 @@
   .lideranca-form .lideranca-form-actions{
     grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:4px;
   }
+  .lideranca-action-bar{
+    display:flex; align-items:center; justify-content:flex-start; gap:10px; flex-wrap:wrap;
+    margin:0 0 16px;
+  }
   .lideranca-form-collapsed{
-    display:flex; align-items:center; justify-content:flex-start;
+    display:flex; align-items:center; justify-content:flex-start; gap:10px; flex-wrap:wrap;
   }
   .lideranca-new-btn{
     display:inline-flex; align-items:center; gap:8px;
     font-size:14.5px; padding:12px 18px;
+  }
+  .lideranca-resumos-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font); font-weight:800; font-size:14.5px;
+    padding:12px 18px; border-radius:14px; cursor:pointer;
+    border:1.5px solid rgba(5,150,105,0.32);
+    background:linear-gradient(135deg, rgba(5,150,105,0.12) 0%, rgba(16,185,129,0.08) 100%);
+    color:#047857;
+    box-shadow:var(--shadow-sm);
+    transition: transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease), border-color .15s var(--ease);
+    white-space:nowrap;
+  }
+  .lideranca-resumos-btn:hover{
+    transform:translateY(-2px);
+    background:linear-gradient(135deg, rgba(5,150,105,0.18) 0%, rgba(16,185,129,0.12) 100%);
+    border-color:rgba(5,150,105,0.45);
+    box-shadow:0 8px 20px rgba(5,150,105,0.14);
+  }
+  .lideranca-resumos-btn:active{ transform:translateY(0); }
+  .lideranca-resumos-btn .resumos-emoji{
+    font-size:16px; line-height:1;
+  }
+  .lideranca-resumos-btn .chev{
+    display:inline-block; transition:transform .2s var(--ease); line-height:1;
+    font-size:12px; opacity:.85;
+  }
+  .lideranca-resumos-btn[aria-expanded="false"] .chev{
+    transform:rotate(-90deg);
+  }
+  .lideranca-resumos-btn[aria-expanded="true"]{
+    background:linear-gradient(135deg, rgba(5,150,105,0.22) 0%, rgba(16,185,129,0.14) 100%);
+    border-color:rgba(5,150,105,0.5);
+  }
+  .campanha-break-stack.is-resumos-collapsed{
+    display:none;
+  }
+  body.printing-campanha.printing-campanha-categories .campanha-break-stack.is-resumos-collapsed,
+  body.printing-campanha.printing-campanha-categories #liderancaBreakStack[hidden]{
+    display:flex !important;
   }
   .lideranca-form-expanded[hidden]{ display:none !important; }
   .lideranca-form textarea{
@@ -1535,6 +1578,29 @@
   .lideranca-mat-form .lideranca-mat-form-actions{
     grid-column:1/-1; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
   }
+  .lideranca-mat-form-collapsed{
+    display:flex; align-items:center; justify-content:flex-start; margin:0 0 4px;
+  }
+  .lideranca-mat-new-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font); font-weight:800; font-size:13px;
+    padding:10px 14px; border-radius:12px; cursor:pointer;
+    border:1.5px solid rgba(5,150,105,0.32);
+    background:linear-gradient(135deg, rgba(5,150,105,0.12) 0%, rgba(16,185,129,0.08) 100%);
+    color:#047857;
+    box-shadow:var(--shadow-sm);
+    transition: transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease), border-color .15s var(--ease);
+    white-space:nowrap;
+  }
+  .lideranca-mat-new-btn:hover{
+    transform:translateY(-1px);
+    background:linear-gradient(135deg, rgba(5,150,105,0.18) 0%, rgba(16,185,129,0.12) 100%);
+    border-color:rgba(5,150,105,0.45);
+    box-shadow:0 6px 16px rgba(5,150,105,0.12);
+  }
+  .lideranca-mat-new-btn:active{ transform:translateY(0); }
+  body.printing-campanha .lideranca-mat-form-collapsed,
+  body.printing-campanha .lideranca-mat-new-btn{ display:none !important; }
   .lideranca-mat-other-wrap,
   .lideranca-mat-dep-other-wrap{ display:none; grid-column:1/-1; }
   .lideranca-mat-other-wrap.show,
@@ -1552,11 +1618,13 @@
     display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;
     padding:10px 12px; border-radius:12px; border:1px solid var(--card-border); background:#fff;
     height:auto !important; min-height:0 !important;
+    order:2; /* incompletos abaixo */
   }
   .lideranca-mat-row.is-prod-complete{
     border-color:var(--card-border);
     background:#fff;
     height:auto !important; min-height:0 !important;
+    order:1; /* 100% impressão no topo da lista */
   }
   .lideranca-mat-list{
     display:flex; flex-direction:column; gap:8px;
@@ -3911,6 +3979,8 @@
   body.access-readonly #campanhaFormPanel,
   body.access-readonly #liderancaFormPanel,
   body.access-readonly .lideranca-mat-form,
+  body.access-readonly .lideranca-mat-form-collapsed,
+  body.access-readonly .lideranca-mat-new-btn,
   body.access-readonly .campanha-print-lot-form,
   body.access-readonly .campanha-card-actions,
   body.access-readonly .campanha-print-lot-actions,
@@ -5103,14 +5173,6 @@
       </nav>
       <div style="font-size:13px;font-weight:700;color:var(--ink-soft);" id="campanhaToolbarHint">Campanha 2026 · Materiais</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;" id="campanhaToolbarPrintActions">
-        <button type="button" class="campanha-print-btn" id="campanhaPrintCategoriesBtn" title="PDF: categorias (cards internos recolhidos) + todas as lideranças cadastradas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M6 9V3h12v6"/>
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-            <rect x="6" y="14" width="12" height="7"/>
-          </svg>
-          PDF categorias + lideranças
-        </button>
         <button type="button" class="campanha-print-btn" id="campanhaPrintBtn" title="Imprimir ou salvar PDF completo (tudo expandido)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M6 9V3h12v6"/>
@@ -5161,15 +5223,6 @@
             <div class="cs-value" id="campanhaStatTotal">R$ 0,00</div>
           </div>
         </div>
-      </div>
-
-      <div class="campanha-type-panel" id="campanhaTypePanel" aria-live="polite">
-        <div class="campanha-type-panel-head">
-          <h3>Por tipo de material</h3>
-          <span class="ctp-sub" id="campanhaTypePanelSub">Quantitativo consolidado</span>
-        </div>
-        <div class="campanha-type-grid" id="campanhaTypeGrid"></div>
-        <p class="campanha-type-panel-empty" id="campanhaTypeEmpty" style="display:none;">Nenhum material cadastrado para consolidar por tipo.</p>
       </div>
 
       <div class="panel" id="campanhaFormPanel">
@@ -5267,86 +5320,11 @@
         </div>
       </div>
 
-      <div class="campanha-break-stack" id="liderancaBreakStack">
-        <div class="campanha-type-panel is-section-collapsible" id="liderancaTypePanel" data-break-section="type" aria-live="polite">
-          <div class="campanha-type-panel-head">
-            <div>
-              <h3>Por tipo de material</h3>
-              <span class="ctp-sub" id="liderancaTypePanelSub">Todos os materiais da liderança (com ou sem deputado)</span>
-            </div>
-            <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="type" aria-expanded="false">
-                <span class="toggle-label">Expandir seção</span>
-                <span class="chev" aria-hidden="true">▾</span>
-              </button>
-              <button type="button" class="btn-mini ghost" id="lidTypeExpandAll">Expandir cards</button>
-              <button type="button" class="btn-mini ghost" id="lidTypeCollapseAll">Recolher cards</button>
-            </div>
-          </div>
-          <div class="campanha-type-panel-body">
-            <div class="campanha-type-grid" id="liderancaTypeGrid"></div>
-            <p class="campanha-type-panel-empty" id="liderancaTypeEmpty" style="display:none;">Nenhum material de liderança cadastrado.</p>
-          </div>
-        </div>
-        <div class="campanha-type-panel is-section-collapsible" id="liderancaDepPanel" data-break-section="dep" aria-live="polite">
-          <div class="campanha-type-panel-head">
-            <div>
-              <h3>Por deputado estadual</h3>
-              <span class="ctp-sub" id="liderancaDepPanelSub">Quantidade, tipos e lideranças por deputado</span>
-            </div>
-            <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="dep" aria-expanded="false">
-                <span class="toggle-label">Expandir seção</span>
-                <span class="chev" aria-hidden="true">▾</span>
-              </button>
-              <button type="button" class="btn-mini ghost" id="lidDepExpandAll">Expandir cards</button>
-              <button type="button" class="btn-mini ghost" id="lidDepCollapseAll">Recolher cards</button>
-            </div>
-          </div>
-          <div class="campanha-type-panel-body">
-            <div class="campanha-type-grid" id="liderancaDepGrid"></div>
-            <p class="campanha-type-panel-empty" id="liderancaDepEmpty" style="display:none;">Nenhum material com deputado estadual informado.</p>
-          </div>
-        </div>
-        <div class="campanha-type-panel is-section-collapsible" id="liderancaPorLidPanel" data-break-section="lid" aria-live="polite">
-          <div class="campanha-type-panel-head">
-            <div>
-              <h3>Por liderança</h3>
-              <span class="ctp-sub" id="liderancaPorLidPanelSub">Quantidade de material por liderança</span>
-            </div>
-            <div class="campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="lid" aria-expanded="false">
-                <span class="toggle-label">Expandir seção</span>
-                <span class="chev" aria-hidden="true">▾</span>
-              </button>
-              <button type="button" class="btn-mini ghost" id="lidPorLidExpandAll">Expandir cards</button>
-              <button type="button" class="btn-mini ghost" id="lidPorLidCollapseAll">Recolher cards</button>
-            </div>
-          </div>
-          <div class="campanha-type-panel-body">
-            <div class="campanha-type-grid" id="liderancaPorLidGrid"></div>
-            <p class="campanha-type-panel-empty" id="liderancaPorLidEmpty" style="display:none;">Nenhuma liderança com material cadastrado.</p>
-          </div>
-        </div>
-        <div class="campanha-type-panel is-section-collapsible" id="liderancaCidadePanel" data-break-section="cidade" aria-live="polite">
-          <div class="campanha-type-panel-head">
-            <div>
-              <h3>Por cidade</h3>
-              <span class="ctp-sub" id="liderancaCidadePanelSub">Cidades e lideranças associadas</span>
-            </div>
-            <div class="campanha-city-panel-actions campanha-panel-actions no-print">
-              <button type="button" class="campanha-section-toggle" data-break-section-toggle="cidade" aria-expanded="false">
-                <span class="toggle-label">Expandir seção</span>
-                <span class="chev" aria-hidden="true">▾</span>
-              </button>
-              <button type="button" class="btn-mini ghost" id="lidCidadeExpandAll">Expandir cards</button>
-              <button type="button" class="btn-mini ghost" id="lidCidadeCollapseAll">Recolher cards</button>
-            </div>
-          </div>
-          <div class="campanha-type-panel-body">
-            <div class="campanha-city-grid" id="liderancaCidadeGrid"></div>
-            <p class="campanha-type-panel-empty" id="liderancaCidadeEmpty" style="display:none;">Nenhuma cidade cadastrada nas lideranças.</p>
-          </div>
+      <div class="lideranca-action-bar no-print" id="liderancaActionBar">
+        <div class="lideranca-form-collapsed" id="liderancaFormCollapsed">
+          <button type="button" class="btn-add lideranca-new-btn" id="liderancaNewBtn" title="Cadastrar nova liderança ou candidato">
+            👤 + Nova liderança
+          </button>
         </div>
       </div>
 
@@ -5378,13 +5356,8 @@
         </div>
       </div>
 
-      <div class="panel" id="liderancaFormPanel">
-        <div class="lideranca-form-collapsed no-print" id="liderancaFormCollapsed">
-          <button type="button" class="btn-add lideranca-new-btn" id="liderancaNewBtn" title="Cadastrar nova liderança ou candidato">
-            👤 + Nova liderança
-          </button>
-        </div>
-        <div class="lideranca-form-expanded" id="liderancaFormExpanded" style="display:none;" hidden>
+      <div class="panel" id="liderancaFormPanel" style="display:none;" hidden>
+        <div class="lideranca-form-expanded" id="liderancaFormExpanded">
           <h2 class="panel-title" id="liderancaFormTitle">Nova liderança</h2>
           <form class="lideranca-form" id="liderancaForm">
             <div class="field">
@@ -5488,6 +5461,12 @@
             </select>
           </div>
           <div class="field">
+            <label for="campanhaReportCityFilter">Cidade</label>
+            <select id="campanhaReportCityFilter" title="Filtrar por cidade das lideranças">
+              <option value="">Todas as cidades</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="campanhaReportSort">Ordenar por</label>
             <select id="campanhaReportSort">
               <option value="name-asc">Nome (A → Z)</option>
@@ -5540,7 +5519,7 @@
           </div>
         </div>
         <p class="campanha-report-hint no-print" id="campanhaReportHint">
-          Cada material entra uma única vez. Use “Liderança / candidato” para filtrar por um nome da lista. Em “Deputado estadual”, marque “Mostrar lideranças de cada deputado” se quiser ver os vínculos. O PDF usa a mesma visão.
+          Cada material entra uma única vez. Filtre por liderança/candidato e/ou por cidade. Em “Deputado estadual”, marque “Mostrar lideranças de cada deputado” se quiser ver os vínculos. O PDF usa a mesma visão.
         </p>
         <div class="campanha-report-table-wrap" id="campanhaReportTableWrap">
           <table class="campanha-report-table" id="campanhaReportTable">
@@ -8329,6 +8308,8 @@ let liderancaFilterDeputado = '';
 let liderancaFilterCidade = '';
 let liderancaFilterLideranca = ''; // id da liderança
 let liderancaMatEditing = null; // { leadershipId, materialId }
+/** IDs de lideranças com formulário "Cadastrar novo material" aberto */
+let liderancaMatFormOpen = new Set();
 /** IDs de lideranças com bloco de materiais expandido na UI */
 let liderancaMatsExpanded = new Set();
 let liderancaMatsForceExpandAll = false; // usado na impressão
@@ -8879,6 +8860,36 @@ function getMaterialQtyPrinted(m){
 function materialHasPrintLots(m){
   return !!(m && Array.isArray(m.printLots) && m.printLots.length > 0);
 }
+/** Progresso de impressão do material (lotes / total). */
+function getMaterialPrintProgress(m){
+  const hasLots = materialHasPrintLots(m);
+  const printed = hasLots ? getMaterialQtyPrinted(m) : 0;
+  const total = getMaterialQtyTotal(m);
+  let pct = 0;
+  if(total > 0) pct = Math.min(100, Math.round((printed / total) * 100));
+  else if(printed > 0) pct = 100;
+  // 100%: há lote e impresso cobre o total (ou há impresso sem total definido)
+  const complete = hasLots && printed > 0 && (total <= 0 || printed >= total);
+  return { hasLots, printed, total, pct, complete };
+}
+/** Material com impressão OK 100% (há lotes e impresso cobre o total). */
+function isMaterialPrintComplete(m){
+  return getMaterialPrintProgress(m).complete;
+}
+/** Ordena materiais: 100% impressão no topo, depois maior progresso. */
+function compareMaterialsByPrintComplete(a, b){
+  const pa = getMaterialPrintProgress(a);
+  const pb = getMaterialPrintProgress(b);
+  if(pa.complete !== pb.complete) return pa.complete ? -1 : 1;
+  if(pa.pct !== pb.pct) return pb.pct - pa.pct;
+  if(pa.printed !== pb.printed) return pb.printed - pa.printed;
+  return 0;
+}
+/** Reordena in-place a lista de materiais da liderança (100% no topo). */
+function sortLeadershipMaterialsByPrintComplete(leadership){
+  if(!leadership || !Array.isArray(leadership.materials) || leadership.materials.length < 2) return;
+  leadership.materials.sort(compareMaterialsByPrintComplete);
+}
 /** Metadados de produção (gráfica/valores) ainda preenchidos. */
 function materialHasProductionMeta(m){
   if(!m) return false;
@@ -9064,6 +9075,7 @@ async function saveMatProdFromModal(e){
   mat.qtyPrinted = printLots.reduce((s,l)=> s + (Number(l.qty)||0), 0);
   mat.productionRegistered = printLots.length > 0;
   mat.updatedAt = new Date().toISOString();
+  sortLeadershipMaterialsByPrintComplete(lid);
   lid.updatedAt = new Date().toISOString();
   await saveCampanha();
   closeMatProdModal();
@@ -9096,6 +9108,7 @@ async function addLidMatPrintLot(leadershipId, materialId, qtyRaw, sendDateRaw){
   mat.productionRegistered = true;
   syncLidMatPrintLots(mat);
   if(!(Number(mat.qtyTotal) > 0) && Number(mat.qty) > 0) mat.qtyTotal = Number(mat.qty);
+  sortLeadershipMaterialsByPrintComplete(lid);
   lid.updatedAt = new Date().toISOString();
   await saveCampanha();
   // se modal de produção aberto, atualiza lotes
@@ -9211,6 +9224,7 @@ async function saveLidMatLotEditFromModal(e){
   const vals = readPrintLotModalProductionValues(getMaterialQtyTotal(found.mat) || qty);
   applyProductionValuesToMaterial(found.mat, vals);
   syncLidMatPrintLots(found.mat);
+  sortLeadershipMaterialsByPrintComplete(found.lid);
   found.lid.updatedAt = new Date().toISOString();
   await saveCampanha();
   closePrintLotEditModal();
@@ -9235,6 +9249,7 @@ function askDeleteLidMatPrintLot(leadershipId, materialId, lotId){
     async ()=>{
       found.mat.printLots = (found.mat.printLots || []).filter(l=> !sameId(l.id, lotId));
       syncLidMatPrintLots(found.mat);
+      sortLeadershipMaterialsByPrintComplete(found.lid);
       found.lid.updatedAt = new Date().toISOString();
       await saveCampanha();
       renderLiderancasUI();
@@ -9875,6 +9890,8 @@ async function loadCampanha(){
         ensureCampanhaCustomTypeFromMaterial(m);
         if(m.deputadoEstadual) ensureDeputadoName(m.deputadoEstadual, m.deputadoNumeroUrna);
       });
+      // 100% impressão no topo da lista de cada liderança/candidato
+      sortLeadershipMaterialsByPrintComplete(l);
     });
     // limpa lista de deputados: só quem aparece em materiais
     getDeputadoOptions();
@@ -10601,6 +10618,8 @@ let campanhaReportFilterTypes = null;
 let campanhaReportGroupBy = 'lideranca'; // 'lideranca' | 'deputado'
 /** Filtro por liderança/candidato (id) — '' = todas. */
 let campanhaReportLidFilter = '';
+/** Filtro por cidade (nome normalizado) — '' = todas. */
+let campanhaReportCityFilter = '';
 /** Quando agrupar por deputado: lista nomes das lideranças de cada um. */
 let campanhaReportShowLids = false;
 let campanhaReportKnownTypes = [];
@@ -10608,10 +10627,11 @@ let campanhaReportKnownTypes = [];
 /**
  * Consolida materiais por liderança sem duplicar o mesmo id de material.
  * Soma qty por tipo (SANTINHO 7X10, ADESIVO, …) e total geral.
- * @param {{ leadershipId?: string }} [opts]
+ * @param {{ leadershipId?: string, city?: string }} [opts]
  */
 function collectLeadershipMaterialReportRows(opts = {}){
   const onlyLidId = opts.leadershipId ? String(opts.leadershipId) : '';
+  const onlyCity = toCityName(opts.city || '');
   const byLid = new Map(); // id -> row
   const typeSet = new Set();
   const seenMatIds = new Set(); // materialId global (own + linked) para não duplicar
@@ -10650,6 +10670,7 @@ function collectLeadershipMaterialReportRows(opts = {}){
 
   (campanhaLeaderships || []).forEach(l=>{
     if(onlyLidId && !sameId(l.id, onlyLidId)) return;
+    if(onlyCity && !leadershipHasCidade(l, onlyCity)) return;
     ensureRow(l); // inclui lideranças sem material (qtd 0)
     (l.materials || []).forEach(m=> addMat(l, m));
     getMaterialsLinkedToLeadership(l.id).forEach(pm=> addMat(l, pm));
@@ -10665,10 +10686,11 @@ function collectLeadershipMaterialReportRows(opts = {}){
  * Sem duplicar o mesmo id de material.
  * Itens SEM deputado: cada linha usa o nome da liderança / vínculo do material
  * (em vez de um balde genérico "sem deputado").
- * @param {{ leadershipId?: string }} [opts]
+ * @param {{ leadershipId?: string, city?: string }} [opts]
  */
 function collectDeputadoMaterialReportRows(opts = {}){
   const onlyLidId = opts.leadershipId ? String(opts.leadershipId) : '';
+  const onlyCity = toCityName(opts.city || '');
   const byKey = new Map(); // rowKey -> row
   const typeSet = new Set();
   const seenMatIds = new Set();
@@ -10770,6 +10792,7 @@ function collectDeputadoMaterialReportRows(opts = {}){
 
   (campanhaLeaderships || []).forEach(l=>{
     if(onlyLidId && !sameId(l.id, onlyLidId)) return;
+    if(onlyCity && !leadershipHasCidade(l, onlyCity)) return;
     (l.materials || []).forEach(m=> addMat(m, l));
     getMaterialsLinkedToLeadership(l.id).forEach(pm=> addMat(pm, l));
   });
@@ -10782,6 +10805,9 @@ function collectDeputadoMaterialReportRows(opts = {}){
       if(!m.leadershipId || !sameId(m.leadershipId, onlyLidId)) return;
     }
     const lid = m.leadershipId ? getLeadershipById(m.leadershipId) : null;
+    if(onlyCity){
+      if(!lid || !leadershipHasCidade(lid, onlyCity)) return;
+    }
     addMat(m, lid || null);
   });
 
@@ -10819,18 +10845,55 @@ function collectDeputadoMaterialReportRows(opts = {}){
 }
 
 function collectCampanhaReportRows(){
-  const opts = campanhaReportLidFilter
-    ? { leadershipId: campanhaReportLidFilter }
-    : {};
+  const opts = {};
+  if(campanhaReportLidFilter) opts.leadershipId = campanhaReportLidFilter;
+  if(campanhaReportCityFilter) opts.city = campanhaReportCityFilter;
   if(campanhaReportGroupBy === 'deputado') return collectDeputadoMaterialReportRows(opts);
   return collectLeadershipMaterialReportRows(opts);
+}
+
+function populateCampanhaReportCityFilter(){
+  const sel = document.getElementById('campanhaReportCityFilter');
+  if(!sel) return;
+  const prev = campanhaReportCityFilter || sel.value || '';
+  const citySet = new Set();
+  (campanhaLeaderships || []).forEach(l=>{
+    leadershipCities(l).forEach(c=>{
+      const n = toCityName(c);
+      if(n) citySet.add(n);
+    });
+  });
+  const cities = Array.from(citySet).sort((a,b)=> a.localeCompare(b, 'pt-BR'));
+  const opts = ['<option value="">Todas as cidades</option>'];
+  cities.forEach(c=>{
+    opts.push(`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  if(prev && cities.includes(toCityName(prev))){
+    sel.value = toCityName(prev);
+    campanhaReportCityFilter = toCityName(prev);
+  } else {
+    sel.value = '';
+    campanhaReportCityFilter = '';
+  }
+}
+
+function getCampanhaReportCityFilterLabel(){
+  if(!campanhaReportCityFilter) return 'Todas as cidades';
+  const sel = document.getElementById('campanhaReportCityFilter');
+  if(sel && sel.selectedOptions && sel.selectedOptions[0]){
+    return sel.selectedOptions[0].textContent.trim() || campanhaReportCityFilter;
+  }
+  return campanhaReportCityFilter;
 }
 
 function populateCampanhaReportLidFilter(){
   const sel = document.getElementById('campanhaReportLidFilter');
   if(!sel) return;
   const prev = campanhaReportLidFilter || sel.value || '';
+  const city = toCityName(campanhaReportCityFilter || '');
   const lids = (campanhaLeaderships || [])
+    .filter(l=> !city || leadershipHasCidade(l, city))
     .slice()
     .sort((a,b)=> toLeadershipName(a.name||'').localeCompare(toLeadershipName(b.name||''), 'pt-BR'));
   const opts = ['<option value="">Todas as lideranças</option>'];
@@ -10994,6 +11057,8 @@ function renderCampanhaReportUI(){
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
   const lidFilterSel = document.getElementById('campanhaReportLidFilter');
   if(lidFilterSel) campanhaReportLidFilter = lidFilterSel.value || '';
+  const cityFilterSel = document.getElementById('campanhaReportCityFilter');
+  if(cityFilterSel) campanhaReportCityFilter = toCityName(cityFilterSel.value || '');
   const showLidsEl = document.getElementById('campanhaReportShowLids');
   if(showLidsEl) campanhaReportShowLids = !!showLidsEl.checked;
   // lê multi-seleção atual (se o DOM já foi populado)
@@ -11018,7 +11083,11 @@ function renderCampanhaReportUI(){
   }
   const showLids = byDeputado && campanhaReportShowLids;
 
-  // lista de nomes existentes no select (preserva filtro)
+  // filtros de cidade e liderança (cidade primeiro — restringe a lista de lideranças)
+  populateCampanhaReportCityFilter();
+  if(cityFilterSel && campanhaReportCityFilter){
+    cityFilterSel.value = campanhaReportCityFilter;
+  }
   populateCampanhaReportLidFilter();
   if(lidFilterSel && campanhaReportLidFilter){
     lidFilterSel.value = campanhaReportLidFilter;
@@ -11053,10 +11122,14 @@ function renderCampanhaReportUI(){
 
   const firstColLabel = byDeputado ? 'Deputado estadual / liderança' : 'Liderança / candidato';
   const lidFilterLabel = getCampanhaReportLidFilterLabel();
-  const emptyMsg = campanhaReportLidFilter
+  const cityFilterLabel = getCampanhaReportCityFilterLabel();
+  const filterBits = [];
+  if(campanhaReportCityFilter) filterBits.push(`cidade “${cityFilterLabel}”`);
+  if(campanhaReportLidFilter) filterBits.push(`“${lidFilterLabel}”`);
+  const emptyMsg = filterBits.length
     ? (byDeputado
-      ? `Nenhum material de “${lidFilterLabel}” para listar por deputado.`
-      : `Nenhum dado para “${lidFilterLabel}”.`)
+      ? `Nenhum material para ${filterBits.join(' · ')} ao listar por deputado.`
+      : `Nenhum dado para ${filterBits.join(' · ')}.`)
     : (byDeputado
       ? 'Nenhum material para listar por deputado ou liderança vinculada.'
       : 'Nenhuma liderança com material para listar.');
@@ -11141,6 +11214,8 @@ function printCampanhaReport(){
   if(sortTypeSel) campanhaReportSortType = sortTypeSel.value || '';
   const lidFilterSel = document.getElementById('campanhaReportLidFilter');
   if(lidFilterSel) campanhaReportLidFilter = lidFilterSel.value || '';
+  const cityFilterSel = document.getElementById('campanhaReportCityFilter');
+  if(cityFilterSel) campanhaReportCityFilter = toCityName(cityFilterSel.value || '');
   const showLidsEl = document.getElementById('campanhaReportShowLids');
   if(showLidsEl) campanhaReportShowLids = !!showLidsEl.checked;
   readCampanhaReportColsFromDom();
@@ -11173,6 +11248,9 @@ function printCampanhaReport(){
   }
   if(metaEl){
     let meta = `Gerado em ${when} · Agrupado por: ${groupLabel} · Ordenação: ${sortLabel}`;
+    if(campanhaReportCityFilter){
+      meta += ` · Cidade: ${getCampanhaReportCityFilterLabel()}`;
+    }
     if(campanhaReportLidFilter){
       meta += ` · Liderança: ${getCampanhaReportLidFilterLabel()}`;
     }
@@ -11600,63 +11678,9 @@ function renderCampanhaTypeBreakdown(){
   );
 }
 function renderLiderancaTypeBreakdown(){
-  const typeRows = collectLiderancasByTipoRows();
-  const depRows = collectLiderancasByDeputadoRows();
-  const lidRows = collectLiderancasByLiderancaRows();
-  renderMaterialTypePanel(
-    'liderancaTypeGrid',
-    'liderancaTypeEmpty',
-    'liderancaTypePanelSub',
-    typeRows,
-    { showValue: false, emptySub: 'Nenhum material de liderança cadastrado', collapsible: true, expandGroup: 'type', skipSubText: true }
-  );
-  renderMaterialTypePanel(
-    'liderancaDepGrid',
-    'liderancaDepEmpty',
-    'liderancaDepPanelSub',
-    depRows,
-    { showValue: false, emptySub: 'Nenhum material com deputado estadual', collapsible: true, expandGroup: 'dep', skipSubText: true }
-  );
-  renderMaterialTypePanel(
-    'liderancaPorLidGrid',
-    'liderancaPorLidEmpty',
-    'liderancaPorLidPanelSub',
-    lidRows,
-    { showValue: false, emptySub: 'Nenhuma liderança com material cadastrado', collapsible: true, expandGroup: 'lid', skipSubText: true }
-  );
-  // Ajusta subtítulos com totais
-  const depSub = document.getElementById('liderancaDepPanelSub');
-  if(depSub){
-    if(depRows.length){
-      const q = depRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-      const c = depRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-      depSub.textContent = `${depRows.length} deputado(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
-    } else {
-      depSub.textContent = 'Quantidade, tipos e lideranças por deputado';
-    }
-  }
-  const typeSub = document.getElementById('liderancaTypePanelSub');
-  if(typeSub){
-    if(typeRows.length){
-      const q = typeRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-      const c = typeRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-      typeSub.textContent = `${typeRows.length} tipo(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un. (com e sem deputado)`;
-    } else {
-      typeSub.textContent = 'Todos os materiais da liderança (com ou sem deputado)';
-    }
-  }
-  const lidSub = document.getElementById('liderancaPorLidPanelSub');
-  if(lidSub){
-    if(lidRows.length){
-      const q = lidRows.reduce((s,r)=> s + (Number(r.qty)||0), 0);
-      const c = lidRows.reduce((s,r)=> s + (Number(r.count)||0), 0);
-      lidSub.textContent = `${lidRows.length} liderança(s) · ${c.toLocaleString('pt-BR')} material(is) · ${q.toLocaleString('pt-BR')} un.`;
-    } else {
-      lidSub.textContent = 'Quantidade de material por liderança';
-    }
-  }
-  renderLiderancaCidadePanel();
-  applyLiderancaBreakSectionState();
+  // Painéis de classificação (tipo / dep / lid / cidade) foram removidos da aba Materiais.
+  // Relatórios cobrem esses recortes; não recria UI aqui.
+  return;
 }
 function renderCampanhaStats(){
   const list = campanhaMaterials || [];
@@ -11971,7 +11995,17 @@ function getLeadershipById(id){
 function setLiderancaFormOpen(open){
   const collapsed = document.getElementById('liderancaFormCollapsed');
   const expanded = document.getElementById('liderancaFormExpanded');
+  const panel = document.getElementById('liderancaFormPanel');
   if(collapsed) collapsed.style.display = open ? 'none' : '';
+  if(panel){
+    if(open){
+      panel.hidden = false;
+      panel.style.display = '';
+    } else {
+      panel.hidden = true;
+      panel.style.display = 'none';
+    }
+  }
   if(expanded){
     if(open){
       expanded.hidden = false;
@@ -11981,6 +12015,24 @@ function setLiderancaFormOpen(open){
       expanded.style.display = 'none';
     }
   }
+}
+
+/** Painel mestre "Resumos de materiais" (por tipo / dep / lid / cidade). Default: recolhido. */
+let liderancaResumosOpen = false;
+function setLiderancaResumosOpen(open){
+  liderancaResumosOpen = !!open;
+  const stack = document.getElementById('liderancaBreakStack');
+  const btn = document.getElementById('liderancaResumosBtn');
+  if(stack){
+    stack.classList.toggle('is-resumos-collapsed', !liderancaResumosOpen);
+    stack.hidden = !liderancaResumosOpen;
+  }
+  if(btn){
+    btn.setAttribute('aria-expanded', liderancaResumosOpen ? 'true' : 'false');
+  }
+}
+function toggleLiderancaResumos(){
+  setLiderancaResumosOpen(!liderancaResumosOpen);
 }
 function openLiderancaFormNew(){
   resetLiderancaForm(false);
@@ -12354,10 +12406,22 @@ function leadershipMaterialRowsHtml(leadership){
     return `<p class="lideranca-mat-empty">Nenhum material vinculado a esta liderança.</p>`;
   }
   const depFilter = toDeputadoName(liderancaFilterDeputado || '');
-  const ownRows = mats.filter(m=>{
+  // 100% impressão no topo; em seguida maior progresso
+  const filtered = mats.filter(m=>{
     if(!depFilter) return true;
     return toDeputadoName(m.deputadoEstadual) === depFilter;
-  }).map(m=>{
+  });
+  const complete = [];
+  const rest = [];
+  filtered.forEach(m=>{
+    if(isMaterialPrintComplete(m)) complete.push(m);
+    else rest.push(m);
+  });
+  // Dentro de cada grupo: maior % / mais impresso primeiro
+  complete.sort(compareMaterialsByPrintComplete);
+  rest.sort(compareMaterialsByPrintComplete);
+  const ordered = complete.concat(rest);
+  const ownRows = ordered.map(m=>{
     const art = m.artLink
       ? `<a class="campanha-art-link" href="${escapeHtml(m.artLink)}" target="_blank" rel="noopener noreferrer">↗ Arte</a>`
       : `<span class="campanha-art-missing">Sem arte</span>`;
@@ -12370,18 +12434,17 @@ function leadershipMaterialRowsHtml(leadership){
     const obs = notesTxt
       ? `<p class="lideranca-mat-obs"><b>Observação</b>${escapeHtml(notesTxt)}</p>`
       : '';
-    const qtyTotal = getMaterialQtyTotal(m);
-    // Contagem impressa só se ainda houver lote/pedido registrado
-    const qtyPrinted = materialHasPrintLots(m) ? getMaterialQtyPrinted(m) : 0;
-    const prodPct = qtyTotal > 0 ? Math.min(100, Math.round((qtyPrinted / qtyTotal) * 100)) : (qtyPrinted > 0 ? 100 : 0);
-    const prodComplete = materialHasPrintLots(m) && prodPct >= 100;
+    const prog = getMaterialPrintProgress(m);
+    const qtyTotal = prog.total;
+    const qtyPrinted = prog.printed;
+    const prodComplete = prog.complete;
     const impressoMeta = qtyPrinted
       ? (prodComplete
         ? ` · <span class="campanha-print-ok-badge" style="vertical-align:middle;"><span class="campanha-print-ok" aria-hidden="true">✓</span> OK ${qtyPrinted.toLocaleString('pt-BR')} (100%)</span>`
-        : ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}`)
+        : ` · impresso: ${qtyPrinted.toLocaleString('pt-BR')}${prog.pct > 0 ? ` (${prog.pct}%)` : ''}`)
       : '';
     return `
-    <div class="lideranca-mat-row${prodComplete ? ' is-prod-complete' : ''}" data-lid-mat-id="${escapeHtml(String(m.id))}" style="flex-direction:column; align-items:stretch; height:auto; min-height:0;">
+    <div class="lideranca-mat-row${prodComplete ? ' is-prod-complete' : ''}" data-lid-mat-id="${escapeHtml(String(m.id))}" data-print-complete="${prodComplete ? '1' : '0'}" style="flex-direction:column; align-items:stretch; height:auto; min-height:0;">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; width:100%;">
         <div style="flex:1; min-width:0;">
           <div class="lm-main">${escapeHtml(m.materialLabel || m.materialType)}</div>
@@ -12405,9 +12468,20 @@ function leadershipMaterialRowsHtml(leadership){
   return `<div class="lideranca-mat-list">${ownRows}</div>`;
 }
 function leadershipMaterialFormHtml(leadership){
+  const lidKey = String(leadership.id);
   const editing = liderancaMatEditing && sameId(liderancaMatEditing.leadershipId, leadership.id)
     ? (leadership.materials || []).find(m=> sameId(m.id, liderancaMatEditing.materialId))
     : null;
+  const formOpen = !!editing || !!(liderancaMatFormOpen && liderancaMatFormOpen.has(lidKey));
+  const formId = escapeHtml(lidKey);
+  if(!formOpen){
+    return `
+  <div class="lideranca-mat-form-collapsed no-print">
+    <button type="button" class="lideranca-mat-new-btn" data-lid-mat-new="${formId}" title="Abrir formulário para cadastrar material nesta liderança">
+      <span aria-hidden="true">📦</span> Cadastrar novo material
+    </button>
+  </div>`;
+  }
   let selectedType = editing ? editing.materialType : (CAMPANHA_DEFAULT_TYPES[0]?.id || '');
   let otherVal = '';
   let showOther = false;
@@ -12431,9 +12505,8 @@ function leadershipMaterialFormHtml(leadership){
   if(!depUrnaVal && depVal && toLeadershipName(leadership.name) === depVal && isCandidateRole(leadership.role)){
     depUrnaVal = normalizeNumeroUrna(leadership.numeroUrna || '');
   }
-  const formId = escapeHtml(String(leadership.id));
   return `
-  <form class="lideranca-mat-form" data-lid-mat-form="${formId}" data-lid-name="${escapeHtml(toLeadershipName(leadership.name || ''))}" data-lid-role="${escapeHtml(normalizeLeadershipRole(leadership.role))}" data-lid-urna="${escapeHtml(normalizeNumeroUrna(leadership.numeroUrna || ''))}" autocomplete="off">
+  <form class="lideranca-mat-form no-print" data-lid-mat-form="${formId}" data-lid-name="${escapeHtml(toLeadershipName(leadership.name || ''))}" data-lid-role="${escapeHtml(normalizeLeadershipRole(leadership.role))}" data-lid-urna="${escapeHtml(normalizeNumeroUrna(leadership.numeroUrna || ''))}" autocomplete="off">
     <div class="field">
       <label>Tipo de material</label>
       <select name="lidMatType" data-lid-mat-type style="text-transform:uppercase;">${campanhaTypeOptionsHtml(selectedType)}</select>
@@ -12474,7 +12547,9 @@ function leadershipMaterialFormHtml(leadership){
     </div>
     <div class="lideranca-mat-form-actions">
       <button type="submit" class="btn-mini">${editing ? 'Salvar material' : '+ Adicionar material'}</button>
-      ${editing ? `<button type="button" class="btn-mini ghost" data-lid-mat-cancel="${formId}">Cancelar edição</button>` : ''}
+      ${editing
+        ? `<button type="button" class="btn-mini ghost" data-lid-mat-cancel="${formId}">Cancelar edição</button>`
+        : `<button type="button" class="btn-mini ghost" data-lid-mat-form-close="${formId}">Cancelar</button>`}
     </div>
   </form>`;
 }
@@ -12712,6 +12787,8 @@ async function submitLeadershipMaterialForm(form){
   }
   leadership.updatedAt = now;
   liderancaMatEditing = null;
+  if(liderancaMatFormOpen) liderancaMatFormOpen.delete(String(leadershipId));
+  sortLeadershipMaterialsByPrintComplete(leadership);
   if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
   liderancaMatsExpanded.add(String(leadershipId));
   ensureCampanhaCustomTypeFromMaterial({ materialType: type.id, materialLabel: type.label });
@@ -12776,6 +12853,14 @@ function bindCampanhaModuleEvents(){
   });
   bindReport('campanhaReportLidFilter', 'change', ()=>{
     campanhaReportLidFilter = document.getElementById('campanhaReportLidFilter')?.value || '';
+    renderCampanhaReportUI();
+  });
+  bindReport('campanhaReportCityFilter', 'change', ()=>{
+    campanhaReportCityFilter = toCityName(document.getElementById('campanhaReportCityFilter')?.value || '');
+    // Cidade restringe a lista de lideranças — limpa liderança se não for da cidade
+    campanhaReportLidFilter = '';
+    const lidSel = document.getElementById('campanhaReportLidFilter');
+    if(lidSel) lidSel.value = '';
     renderCampanhaReportUI();
   });
   bindReport('campanhaReportShowLids', 'change', ()=>{
@@ -12891,7 +12976,9 @@ function bindCampanhaModuleEvents(){
   document.getElementById('liderancaForm')?.addEventListener('submit', submitLiderancaForm);
   document.getElementById('liderancaFormCancel')?.addEventListener('click', ()=> resetLiderancaForm(true));
   document.getElementById('liderancaNewBtn')?.addEventListener('click', ()=> openLiderancaFormNew());
+  document.getElementById('liderancaResumosBtn')?.addEventListener('click', ()=> toggleLiderancaResumos());
   setLiderancaFormOpen(false);
+  setLiderancaResumosOpen(false);
   document.getElementById('lidRoleToggle')?.addEventListener('click', (e)=>{
     const btn = e.target.closest('button[data-lidrole]');
     if(!btn) return;
@@ -13135,13 +13222,37 @@ function bindCampanhaModuleEvents(){
       askDeleteLidMatPrintLot(lotDel.dataset.lidId, lotDel.dataset.matId, lotDel.dataset.lidLotDel);
       return;
     }
+    const matNew = e.target.closest('[data-lid-mat-new]');
+    if(matNew){
+      e.preventDefault();
+      const lidId = String(matNew.dataset.lidMatNew || '');
+      if(!lidId) return;
+      if(!liderancaMatFormOpen) liderancaMatFormOpen = new Set();
+      liderancaMatFormOpen.add(lidId);
+      liderancaMatEditing = null;
+      if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
+      liderancaMatsExpanded.add(lidId);
+      renderLiderancasList();
+      return;
+    }
+    const matFormClose = e.target.closest('[data-lid-mat-form-close]');
+    if(matFormClose){
+      e.preventDefault();
+      const lidId = String(matFormClose.dataset.lidMatFormClose || '');
+      if(liderancaMatFormOpen && lidId) liderancaMatFormOpen.delete(lidId);
+      liderancaMatEditing = null;
+      renderLiderancasList();
+      return;
+    }
     const matEdit = e.target.closest('[data-lid-mat-edit]');
     if(matEdit){
       liderancaMatEditing = { leadershipId: matEdit.dataset.lidMatEdit, materialId: matEdit.dataset.matId };
       // Mantém expandido ao editar material
       if(liderancaMatEditing.leadershipId){
+        const lidId = String(liderancaMatEditing.leadershipId);
         if(!liderancaMatsExpanded) liderancaMatsExpanded = new Set();
-        liderancaMatsExpanded.add(String(liderancaMatEditing.leadershipId));
+        liderancaMatsExpanded.add(lidId);
+        if(liderancaMatFormOpen) liderancaMatFormOpen.delete(lidId);
       }
       renderLiderancasList();
       return;
@@ -13154,6 +13265,8 @@ function bindCampanhaModuleEvents(){
     const matCancel = e.target.closest('[data-lid-mat-cancel]');
     if(matCancel){
       liderancaMatEditing = null;
+      const lidId = String(matCancel.dataset.lidMatCancel || '');
+      if(liderancaMatFormOpen && lidId) liderancaMatFormOpen.delete(lidId);
       renderLiderancasList();
     }
   });
@@ -19593,7 +19706,7 @@ bootstrapAuth();
     location.reload();
   });
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js?v=20260803-lid-form-btn', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js?v=20260805-remove-materiais-resumos', { scope: '/' })
       .then((reg)=>{
         console.info('[PWA] service worker ativo', reg.scope);
         if(reg.waiting){
