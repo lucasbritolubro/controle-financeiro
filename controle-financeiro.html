@@ -13519,7 +13519,8 @@ function leadershipArtesTagHtml(l, opts){
   return `<span class="lideranca-artes-tag faltam-artes" title="${st.withArt} de ${st.total} material(is) com arte · ${st.missing} sem arte">${label}</span>`;
 }
 function filteredLeaderships(){
-  const q = String(liderancaSearchQuery || '').trim().toLowerCase();
+  // Busca sem acento: "jose" encontra "José", "sao" encontra "São"...
+  const q = stripAccents(String(liderancaSearchQuery || '').trim().toLowerCase());
   const dep = toDeputadoName(liderancaFilterDeputado || '');
   const cidade = toCityName(liderancaFilterCidade || '');
   const lidId = String(liderancaFilterLideranca || '').trim();
@@ -13542,7 +13543,7 @@ function filteredLeaderships(){
     const cities = leadershipCitiesLabel(l);
     const mats = (l.materials || []).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''} ${m.deputadoEstadual || ''}`).join(' ');
     const linkedMats = getMaterialsLinkedToLeadership(l.id).map(m=> `${m.materialLabel} ${m.artLink} ${m.notes || ''}`).join(' ');
-    const hay = `${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${cities}\n${l.city||''}\n${l.phone}\n${l.cnpj||''}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase();
+    const hay = stripAccents(`${l.name}\n${leadershipRoleLabel(l.role)}\n${l.role||''}\n${cities}\n${l.city||''}\n${l.phone}\n${l.cnpj||''}\n${l.assessoriaName||''}\n${l.assessoriaPhone||''}\n${l.photoFolderLink||''}\n${l.notes}\n${mats}\n${linkedMats}`.toLowerCase());
     return hay.includes(q);
   });
 }
