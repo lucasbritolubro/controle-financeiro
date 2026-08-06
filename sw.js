@@ -1,5 +1,5 @@
 /* Service Worker — Agenda · Finanças PWA */
-const CACHE_VERSION = 'financas-pwa-v20260805-report-type-totals';
+const CACHE_VERSION = 'financas-pwa-v20260806-lideranca-artes-tag-v2';
 const PRECACHE = [
   '/',
   '/index.html',
